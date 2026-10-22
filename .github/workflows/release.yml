@@ -1,0 +1,25 @@
+# Builds the Windows installer and publishes it as a release when a version tag (v0.7.0) is pushed.
+# Nightjar's updater finds new versions here.
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: sudo apt-get update && sudo apt-get install -y nsis unzip
+      - run: npm ci
+      - run: bash installer/build.sh
+      - run: bash installer/release.sh "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
