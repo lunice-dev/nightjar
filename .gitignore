@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-demo/
+*.log
+.DS_Store
+installer/stage/
+installer/cache/
+installer/out/
+installer/app-bin/
+desktop/Nightjar/bin/
+desktop/Nightjar/obj/
+*.js
+!public/**/*.js
+*.tsbuildinfo

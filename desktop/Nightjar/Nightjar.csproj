@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Nightjar for Windows: the app window (WebView2), the icon next to the clock,
+    the slskd engine's supervisor and the page's local helper, in one small exe.
+    Targets .NET Framework 4.8, which every Windows 10 and 11 already has, so
+    testers install nothing else. WebView2 also ships with Windows.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>Nightjar</AssemblyName>
+    <RootNamespace>Nightjar</RootNamespace>
+    <ApplicationIcon>..\nightjar.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.7.0</Version>
+    <Product>Nightjar</Product>
+    <Company>lunice</Company>
+    <Description>Nightjar, a Soulseek client</Description>
+    <Copyright>AGPL-3.0</Copyright>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <PackageReference Include="NLayer" Version="1.16.0" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\nightjar.ico" LogicalName="nightjar.ico" />
+    <EmbeddedResource Include="splash.html" LogicalName="splash.html" />
+  </ItemGroup>
+</Project>
