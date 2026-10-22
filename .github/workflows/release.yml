@@ -1,9 +1,11 @@
-# Builds the Windows installer and publishes it as a release when a version tag (v0.7.0) is pushed.
-# Nightjar's updater finds new versions here.
+# When the version in package.json changes on main, builds the Windows installer and publishes it as
+# release vX.Y.Z (the tag is made here). Nightjar's updater finds new versions in these releases.
 name: Release
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: [package.json, .github/workflows/release.yml]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -11,15 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Is this version already released?
+        id: v
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "new=false" >> "$GITHUB_OUTPUT"; else echo "new=true" >> "$GITHUB_OUTPUT"; fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: steps.v.outputs.new == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-dotnet@v4
+      - if: steps.v.outputs.new == 'true'
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - run: sudo apt-get update && sudo apt-get install -y nsis unzip
-      - run: npm ci
-      - run: bash installer/build.sh
-      - run: bash installer/release.sh "$GITHUB_REPOSITORY"
+      - if: steps.v.outputs.new == 'true'
+        run: sudo apt-get update && sudo apt-get install -y nsis unzip
+      - if: steps.v.outputs.new == 'true'
+        run: npm ci
+      - if: steps.v.outputs.new == 'true'
+        run: bash installer/build.sh
+      - if: steps.v.outputs.new == 'true'
+        run: bash installer/release.sh "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
