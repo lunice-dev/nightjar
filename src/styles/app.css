@@ -1238,3 +1238,17 @@ html.in-app, html.in-app body { overflow: hidden; }
   .hide-narrow { display: none; }
   .player-bar { gap: 8px; }
 }
+
+/* ---------- phones: titles get the full width, buttons go underneath ---------- */
+@media (max-width: 640px) {
+  .dl-head { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .dl-actions { justify-content: flex-start; }
+  .dl-title, .lib-title { overflow-wrap: break-word; }
+  .lib-row { grid-template-columns: 44px minmax(0, 1fr); }
+  .lib-actions { grid-column: 2; justify-content: flex-start; }
+  .waiting-head { flex-wrap: wrap; }
+  .waiting-title { flex: 1 1 100%; }
+  .waiting-title b { white-space: normal; }
+  .pulse-tile { padding: 16px; }
+  .pulse-big { font-size: 26px; }
+}
