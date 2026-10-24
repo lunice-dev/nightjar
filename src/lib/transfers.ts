@@ -30,6 +30,10 @@ export interface DownloadGroup {
   placeInQueue?: number;
   /** When you queued it, for newest-first order. */
   time: number;
+  /** When the first file was asked for, the first one started, and the last one ended (ms; 0 if not yet). */
+  requestedAt: number;
+  startedAt: number;
+  endedAt: number;
   plan?: DownloadPlan;
 }
 
@@ -76,10 +80,14 @@ export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []
     let speed = 0;
     let place: number | undefined;
     let time = Infinity;
+    let started = Infinity;
+    let ended = 0;
     for (const f of files) {
       const p = phaseOf(f.state);
       counts[p]++;
-      time = Math.min(time, Date.parse(f.requestedAt) || Infinity);
+      time = Math.min(time, timeOf(f.requestedAt) || Infinity);
+      started = Math.min(started, timeOf(f.startedAt) || Infinity);
+      ended = Math.max(ended, timeOf(f.endedAt));
       if (p === 'cancelled') continue;
       size += f.size;
       transferred += p === 'done' ? f.size : f.bytesTransferred;
@@ -112,6 +120,9 @@ export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []
       counts,
       placeInQueue: place,
       time: b.plan ? b.plan.createdAt : Number.isFinite(time) ? time : 0,
+      requestedAt: Number.isFinite(time) ? time : 0,
+      startedAt: Number.isFinite(started) ? started : 0,
+      endedAt: ended,
       plan: b.plan,
     });
   }
@@ -119,6 +130,44 @@ export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []
 }
 
 export const fileName = (t: Transfer) => basename(t.filename);
+
+/** A transfer timestamp in ms. The engine stores UTC; a time without a zone is read as UTC, not local time. */
+export function timeOf(iso?: string | null) {
+  if (!iso) return 0;
+  const t = Date.parse(/(?:[zZ]|[+-]\d\d:?\d\d)$/.test(iso) ? iso : `${iso}Z`);
+  return Number.isFinite(t) ? t : 0;
+}
+
+/** "13:42" today, "Yesterday 21:05", "Wed 22 Oct 09:10" this year, with the year after that. */
+export function clock(t: number, now = Date.now()) {
+  const d = new Date(t);
+  const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const day = dayLabel(t, now);
+  return day === 'Today' ? hm : `${day} ${hm}`;
+}
+
+/** The heading for a day: Today, Yesterday, then "Wed 22 Oct". */
+export function dayLabel(t: number, now = Date.now()) {
+  const d = new Date(t);
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  if (t >= start.getTime()) return 'Today';
+  if (t >= start.getTime() - 86_400_000) return 'Yesterday';
+  const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
+  if (d.getFullYear() !== start.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString([], opts);
+}
+
+/** A span of time in words: "40 s", "12 min", "2 h 5 min", "3 days". */
+export function span(ms: number) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s} s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return m % 60 ? `${h} h ${m % 60} min` : `${h} h`;
+  return `${Math.round(h / 24)} days`;
+}
 
 export function eta(remaining: number, speed: number) {
   if (speed <= 0 || remaining <= 0) return '';

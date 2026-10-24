@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Direction } from '../api/backend';
 import { Icon } from '../components/Icon';
-import { bytes, speed } from '../lib/quality';
-import { eta, fileName, groupDownloads, phaseOf, type DownloadGroup } from '../lib/transfers';
+import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
+import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
 import { failureReason } from '../lib/smart';
 import { usePrefs, type ActivityEvent } from '../prefs';
@@ -49,7 +49,10 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
   const active = groups.filter((g) => g.phase === 'active');
   const queued = groups.filter((g) => g.phase === 'queued');
   const failedGroups = groups.filter((g) => g.phase === 'failed');
-  const done = groups.filter((g) => g.phase === 'done' || g.phase === 'cancelled');
+  // Finished: most recently ended first, so the newest is always at the top of its day.
+  const done = groups
+    .filter((g) => g.phase === 'done' || g.phase === 'cancelled')
+    .sort((a, b) => (b.endedAt || b.time) - (a.endedAt || a.time));
   const finished = [...failedGroups, ...done];
   const totalSpeed = active.reduce((s, g) => s + g.speed, 0);
   const where = useStore((s) => s.local);
@@ -65,7 +68,7 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
   };
 
   const summary = [
-    active.length && `${active.length} ${copy.verb} at ${speed(totalSpeed)}`,
+    active.length && (totalSpeed > 0 ? `${active.length} ${copy.verb} at ${speed(totalSpeed)}` : `${active.length} starting`),
     queued.length && `${queued.length} waiting`,
     failedGroups.length && `${failedGroups.length} with problems`,
     done.length && `${done.length} finished`,
@@ -120,9 +123,16 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
                   <h2 className="dl-section-head">
                     {label} <span className="n">{list.length}</span>
                   </h2>
-                  {list.map((g) => (
-                    <TransferRow key={g.key} g={g} direction={direction} local={local} />
-                  ))}
+                  {label === 'Finished'
+                    ? byDay(list).map(([day, items]) => (
+                        <div key={day} className="dl-day-group">
+                          <h3 className="dl-day">{day}</h3>
+                          {items.map((g) => (
+                            <TransferRow key={g.key} g={g} direction={direction} local={local} />
+                          ))}
+                        </div>
+                      ))
+                    : list.map((g) => <TransferRow key={g.key} g={g} direction={direction} local={local} />)}
                 </section>
               ) : null,
             )}
@@ -367,13 +377,72 @@ function SpeedLimit({ direction, label }: { direction: Direction; label: string 
   );
 }
 
+/** Finished rows under Today / Yesterday / "Wed 22 Oct" headings, newest day first. */
+function byDay(list: readonly DownloadGroup[]) {
+  const days = new Map<string, DownloadGroup[]>();
+  for (const g of list) {
+    const d = dayLabel(g.endedAt || g.time);
+    days.set(d, [...(days.get(d) ?? []), g]);
+  }
+  return [...days];
+}
+
+/** When it happened, in the words that matter for its state. The full date is in the tooltip. */
+function whenLine(g: DownloadGroup, now: number): { text: string; at: number } | null {
+  const asked = g.requestedAt || g.time;
+  switch (g.phase) {
+    case 'queued':
+      return asked ? { text: `Asked ${clock(asked, now)} · waiting ${span(now - asked)}`, at: asked } : null;
+    case 'active': {
+      const t = g.startedAt || asked;
+      if (!t) return null;
+      const waited = g.startedAt && asked && g.startedAt - asked > 60_000 ? ` after waiting ${span(g.startedAt - asked)}` : '';
+      return { text: `Started ${clock(t, now)}${waited}`, at: t };
+    }
+    case 'done': {
+      const end = g.endedAt || asked;
+      if (!end) return null;
+      const took = g.startedAt && g.endedAt > g.startedAt ? ` · took ${span(g.endedAt - g.startedAt)}` : '';
+      return { text: `${new Date(end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${took}`, at: end };
+    }
+    case 'failed':
+    case 'cancelled': {
+      const end = g.endedAt || asked;
+      return end ? { text: `${g.phase === 'failed' ? 'Stopped' : 'Cancelled'} ${clock(end, now)}`, at: end } : null;
+    }
+  }
+}
+
+/** "FLAC · 14 tracks", "MP3 + FLAC · 3 tracks"; nothing for folders without music. */
+function formatLine(g: DownloadGroup) {
+  const exts = new Map<string, number>();
+  for (const f of g.files) {
+    const e = extOf(f.filename);
+    if (AUDIO_EXT.has(e)) exts.set(e, (exts.get(e) ?? 0) + 1);
+  }
+  const tracks = [...exts.values()].reduce((a, b) => a + b, 0);
+  if (!tracks) return '';
+  const kinds = [...exts].sort((a, b) => b[1] - a[1]).map(([e]) => e.replace(/^\./, '').toUpperCase());
+  return `${kinds.join(' + ')} · ${tracks} ${tracks === 1 ? 'track' : 'tracks'}`;
+}
+
+/** Re-renders every 30 s so "waiting 12 min" keeps counting. */
+function useNow(ms = 30_000) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return now;
+}
+
 function stateLine(g: DownloadGroup, direction: Direction) {
   const n = g.files.length;
   switch (g.phase) {
     case 'active':
-      return `${g.counts.done} of ${n - g.counts.cancelled} files, ${speed(g.speed)}`;
+      return `${g.counts.done} of ${n - g.counts.cancelled} files, ${g.speed > 0 ? speed(g.speed) : 'connecting…'}`;
     case 'queued':
-      if (direction === 'upload') return 'Waiting for a free upload slot';
+      if (direction === 'upload') return g.placeInQueue ? `Waiting for a free upload slot, #${g.placeInQueue} in line` : 'Waiting for a free upload slot';
       if (g.usernames.length > 1) return g.placeInQueue ? `Waiting in ${g.usernames.length} queues, best position ${g.placeInQueue}` : 'Waiting to start';
       return g.placeInQueue ? `Waiting in ${g.username}'s queue, position ${g.placeInQueue}` : 'Waiting to start';
     case 'failed':
@@ -413,6 +482,17 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
     return () => window.removeEventListener('nightjar-library-undone', reset);
   }, []);
   const finishedEntry = usePrefs((s) => s.finished.find((a) => a.key === g.key));
+  const now = useNow();
+  const when = whenLine(g, now);
+  const format = formatLine(g);
+  // Uploads: what this person has had from you before (as far as Nightjar has kept count), not counting this album.
+  const sentBefore = usePrefs((s) => s.sent);
+  const before = useMemo(() => {
+    if (direction !== 'upload') return null;
+    const ids = new Set(g.files.map((f) => f.id));
+    const mine = sentBefore.filter((f) => f.user === g.username && !ids.has(f.id));
+    return mine.length ? { files: mine.length, bytes: mine.reduce((n, f) => n + f.bytes, 0), since: Math.min(...mine.map((f) => f.at)) } : null;
+  }, [direction, g.files, g.username, sentBefore]);
 
   const pct = g.size ? Math.min(100, (g.transferred / g.size) * 100) : 0;
   const unfinished = g.files.filter((f) => ['active', 'queued'].includes(phaseOf(f.state)));
@@ -503,8 +583,14 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
         <div>
           <h2 className="dl-title">{g.title}</h2>
           {g.parent && <div className="release-artist">{g.parent}</div>}
+          {format && <div className="dl-format">{format}</div>}
         </div>
         <div className="dl-actions">
+          {direction === 'upload' && coverDir && canFiles && (
+            <button className="btn quiet small" onClick={() => reveal(coverDir)} title={coverDir}>
+              <Icon name="reveal" size={16} /> Show in folder
+            </button>
+          )}
           {direction === 'download' && saved.length > 0 && canFiles && !gone && (
             <button className="btn quiet small" onClick={() => reveal(inLibrary && albumDir ? albumDir : saved[0])}>
               <Icon name="reveal" size={16} /> Show in folder
@@ -564,6 +650,11 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
         <i style={{ width: `${pct}%` }} />
       </div>
       <div className="dl-meta">
+        {when && (
+          <time className="dl-when" dateTime={new Date(when.at).toISOString()} title={new Date(when.at).toLocaleString()}>
+            {when.text}
+          </time>
+        )}
         <span className={g.phase === 'failed' ? 'state-failed' : g.phase === 'done' ? 'state-done' : ''}>
           {stateLine(g, direction)}
         </span>
@@ -586,6 +677,11 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           <button className="link" onClick={() => message(g.username)}>
             Message
           </button>
+        )}
+        {before && (
+          <span className="dim" title={`Since ${new Date(before.since).toLocaleDateString()}, as far as Nightjar has kept count`}>
+            {bytes(before.bytes)} from you before ({before.files} {before.files === 1 ? 'file' : 'files'})
+          </span>
         )}
         <button className="link" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
           {open ? 'Hide files' : `Show ${g.files.length} ${g.files.length === 1 ? 'file' : 'files'}`}

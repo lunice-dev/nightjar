@@ -737,6 +737,10 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .dl-section + .dl-section { margin-top: 28px; }
 .dl-section-head { display: flex; align-items: baseline; gap: 8px; margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--rule-strong); font-size: 13px; font-weight: 650; color: var(--ink-2); }
 .dl-section-head .n { color: var(--ink-3); font-weight: 500; }
+.dl-day { margin: 18px 0 0; font-size: 12px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.dl-day-group:first-child .dl-day { margin-top: 12px; }
+.dl-format { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.dl-when { color: var(--ink); font-variant-numeric: tabular-nums; }
 .dl-files .from { margin-left: 8px; font-size: 12px; color: var(--ink-3); }
 
 /* ---------- search: newcomers wait behind a button ---------- */
