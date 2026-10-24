@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DemoBackend } from '../api/demo';
 import { API_BASE, HELPER, SlskdBackend } from '../api/slskd';
-import { isIos, pair, standalone, viaTailscale } from '../api/remote';
+import { deviceName, isIos, pair, standalone, viaTailscale } from '../api/remote';
 import { useStore } from '../store';
 import { Mark } from '../components/Mark';
 import { sharePrefsThrough } from '../prefs';
@@ -128,7 +128,7 @@ function PairDevice({ onDone }: { onDone: () => void }) {
         </p>
         <ol className="pair-steps">
           <li>
-            Tap the <strong>Share</strong> button <ShareGlyph /> at the bottom of Safari.
+            Tap the <strong>Share</strong> button <ShareGlyph /> {deviceName() === 'iPad' ? 'at the top of Safari, next to the address' : 'at the bottom of Safari'}.
           </li>
           <li>
             Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.

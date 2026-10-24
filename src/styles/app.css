@@ -208,7 +208,7 @@ button { cursor: pointer; }
 .signature { padding-top: 2px; }
 
 .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--paper); }
-@media (min-width: 821px) {
+@media (min-width: 700px) {
   .main { margin: 8px 8px 8px 0; border-radius: var(--r-lg); border: 1px solid var(--rule); overflow: hidden; box-shadow: 0 1px 2px rgb(15 20 28 / 0.04); }
 }
 
@@ -519,7 +519,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
   .people-toggle { display: inline-flex; }
   .people-close { display: grid; }
 }
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .split { grid-template-columns: 1fr; }
   .split-list { border-right: 0; }
   .split-list.has-open { display: none; }
@@ -603,7 +603,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .share-title b { font-weight: 600; }
 .share-artist { color: var(--ink-2); margin-left: 10px; }
 .share-row .dim { text-align: right; }
-@media (max-width: 820px) { .share-row { grid-template-columns: minmax(0, 1fr) auto; } .share-row > .dim { display: none; } .share-title { white-space: normal; } }
+@media (max-width: 699px) { .share-row { grid-template-columns: minmax(0, 1fr) auto; } .share-row > .dim { display: none; } .share-title { white-space: normal; } }
 
 /* ---------- upload activity ---------- */
 .empty.compact { padding: 24px 0 8px; }
@@ -626,7 +626,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .tabbar, .sheet-backdrop { display: none; }
 
 /* ---------- small screens ---------- */
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .side { flex-direction: row; align-items: center; gap: 4px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; }
   .wordmark { padding: 0 8px 0 0; font-size: 17px; white-space: nowrap; }
@@ -649,7 +649,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
   .sources .hide-sm { display: none; }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .shell { grid-template-rows: 1fr auto; }
   .side { display: none; }
   .main { min-height: 0; }
@@ -681,7 +681,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
   .buddy-main { grid-template-columns: minmax(0, 1fr) auto; }
   .buddy-main .note { grid-column: 1 / -1; padding-left: 0; }
 }
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .feed-item { grid-template-columns: auto minmax(0, 1fr); }
   .feed-item .feed-kind { grid-column: 1; }
   .feed-item .feed-detail { grid-column: 2; }
@@ -689,7 +689,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 }
 
 /* phone: the canvas is the paper */
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   body { background: var(--paper); }
   .query { font-size: 34px; }
   .page-title { font-size: 30px; }
@@ -702,7 +702,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .searchbar .btn:disabled, .searchbar .btn:disabled:hover { background: transparent; color: var(--ink-3); border-color: var(--rule-strong); opacity: 1; }
 .empty { padding-top: 44px; }
 .expand > div { min-width: 0; overflow-x: auto; }
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .expand { margin-left: -6px; }
   .sources td, .sources th { padding-left: 4px; padding-right: 4px; }
   .sources td:last-child .btn { padding: 0 9px; }
@@ -782,7 +782,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .topbar-search .search-field .input:focus { box-shadow: inset 0 0 0 1px var(--focus), 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent); }
 
 .main { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--paper); border-radius: var(--r-xl); overflow: hidden; margin: 0; border: 0; box-shadow: none; }
-@media (min-width: 821px) { .main { margin: 0; border: 0; } }
+@media (min-width: 700px) { .main { margin: 0; border: 0; } }
 
 .shell-foot { flex: none; display: flex; align-items: center; gap: 14px; padding: 0 8px; min-height: 26px; font-size: 12px; color: var(--ink-3); }
 .foot-gap { flex: 1; }
@@ -821,7 +821,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .cover-art { opacity: 0; transition: opacity 0.35s ease; }
 .cover-art.in { opacity: 1; }
 
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .shell { padding: 0; gap: 0; }
   .topbar { border-radius: 0; height: 56px; padding: 0 12px; }
   .topnav, .brand-name, .shell-foot { display: none; }
@@ -895,7 +895,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
   .hero { grid-template-columns: 1fr 1fr; }
   .hero-list { grid-column: 1 / -1; }
 }
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .home-inner { padding: 12px 12px 40px; }
   .hero { grid-template-columns: 1fr; min-height: 0; }
   .hero-copy, .hero-list { padding: 24px 20px; }
@@ -1106,7 +1106,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 
 /* Narrow windows (small screens with big scaling): the tabs show their icons, and the open one its name too. */
 .topnav-icon { display: none; }
-@media (max-width: 1040px) and (min-width: 821px) {
+@media (max-width: 1040px) and (min-width: 700px) and (pointer: fine) {
   .topnav-icon { display: inline-flex; }
   .topnav-item:not([aria-current='page']) .topnav-label { display: none; }
   .topnav-item { padding: 0 9px; }
@@ -1233,7 +1233,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .player-queue li[aria-current='true'] button { color: var(--ink); font-weight: 600; }
 .player-queue .n, .player-queue .d { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .player-queue .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 820px) {
+@media (max-width: 699px) {
   .player { margin: 0 8px 6px; }
   .hide-narrow { display: none; }
   .player-bar { gap: 8px; }
@@ -1279,3 +1279,23 @@ html.in-app, html.in-app body { overflow: hidden; }
 .loading-name { margin: 14px 0 0; font-size: 40px; font-weight: 650; font-stretch: 80%; letter-spacing: -0.02em; line-height: 1; color: var(--ink); animation: rise 0.6s ease-out both; }
 .loading-text { margin-top: 18px; min-height: 1.4em; }
 .loading-sig { position: absolute; left: 0; right: 0; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 12px; opacity: 0.7; }
+
+/* ---------- tablets (iPad): the full layout, with the tabs on their own row so every name fits ---------- */
+@media (min-width: 700px) and (max-width: 1100px) and (pointer: coarse) {
+  .topbar { flex-wrap: wrap; height: auto; padding: 8px 10px; row-gap: 6px; }
+  .topbar-search, .topbar-search:focus-within { flex: 1 1 auto; }
+  .topnav { order: 3; flex: 1 0 100%; justify-content: safe center; }
+  .topnav-icon { display: inline-flex; }
+  .topnav-item { height: 38px; padding: 0 12px; font-size: 14px; }
+}
+/* Touch screens get roomier buttons in the top bar and footer. */
+@media (min-width: 700px) and (pointer: coarse) {
+  .shell { padding-top: max(10px, env(safe-area-inset-top, 0px)); padding-bottom: max(6px, env(safe-area-inset-bottom, 0px)); }
+  .foot-item { padding: 6px 6px; }
+}
+@media (min-width: 700px) and (max-width: 900px) and (pointer: coarse) {
+  .topnav { justify-content: space-between; }
+  .topnav-icon { display: none; }
+  .topnav-item { padding: 0 9px; font-size: 13.5px; }
+}
+@media (pointer: coarse) { .kbd { display: none; } }

@@ -685,7 +685,7 @@ function PhoneSteps({ st, onPaired }: { st: RemoteStatus; onPaired: () => void }
         <div>
           <strong>Get Tailscale on your phone</strong>
           <p className="hint-text small">
-            Scan with the iPhone camera to open the App Store, install Tailscale, sign in with the same account
+            Scan with the iPhone or iPad camera to open the App Store, install Tailscale, sign in with the same account
             {st.tailscale.account ? ` (${st.tailscale.account})` : ''} and turn it on. On Android, get Tailscale from Google Play.
           </p>
         </div>
@@ -696,7 +696,7 @@ function PhoneSteps({ st, onPaired }: { st: RemoteStatus; onPaired: () => void }
         <div>
           <strong>Open Nightjar on your phone</strong>
           <p className="hint-text small">
-            Scan this, or type <code>{address}</code> in Safari. On an iPhone, add it to the Home Screen when Nightjar asks, then open
+            Scan this, or type <code>{address}</code> in Safari. On an iPhone or iPad, add it to the Home Screen when Nightjar asks, then open
             it from the new icon.
           </p>
         </div>
