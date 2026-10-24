@@ -84,12 +84,30 @@ export function Player() {
     };
   }, [track?.dir, backend]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lock screen and headphone buttons: set up once; each one acts on the element through the same actions as the page.
+  // What the lock screen shows, and its buttons. The info changes only when the track or its cover really
+  // changes, so it doesn't blink; the buttons are handed over again with it, as iOS expects (without them it
+  // falls back to ±10 s). Each button acts on the element through the same actions as the page.
+  const shown = useRef('');
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const ms = navigator.mediaSession;
+    if (!track) {
+      ms.metadata = null;
+      shown.current = '';
+      return;
+    }
+    const art = cover ? new URL(cover, location.href).href : '';
+    const key = `${track.path}|${art}`;
+    if (shown.current === key) return;
+    shown.current = key;
+    ms.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.artist ?? '',
+      album: track.album ?? '',
+      artwork: art ? [{ src: art, sizes: '512x512' }] : [],
+    });
     const p = usePlayer.getState;
-    const set = (action: MediaSessionAction, fn: MediaSessionActionHandler | null) => {
+    const set = (action: MediaSessionAction, fn: MediaSessionActionHandler) => {
       try {
         ms.setActionHandler(action, fn);
       } catch {
@@ -102,33 +120,6 @@ export function Player() {
     set('previoustrack', () => p().prev());
     set('seekto', (d) => {
       if (audio.current && d.seekTime != null) audio.current.currentTime = d.seekTime;
-    });
-    // Without these, iOS shows ±10 s buttons instead of previous / next track.
-    set('seekbackward', null);
-    set('seekforward', null);
-    return () => {
-      for (const a of ['play', 'pause', 'nexttrack', 'previoustrack', 'seekto'] as MediaSessionAction[]) set(a, null);
-    };
-  }, []);
-
-  // What the lock screen shows: changed only when the track or its cover really changes, so it doesn't blink.
-  const shown = useRef('');
-  useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
-    if (!track) {
-      navigator.mediaSession.metadata = null;
-      shown.current = '';
-      return;
-    }
-    const art = cover ? new URL(cover, location.href).href : '';
-    const key = `${track.path}|${art}`;
-    if (shown.current === key) return;
-    shown.current = key;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title,
-      artist: track.artist ?? '',
-      album: track.album ?? '',
-      artwork: art ? [{ src: art, sizes: '512x512' }] : [],
     });
   }, [track, cover]);
 
