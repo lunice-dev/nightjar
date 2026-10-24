@@ -61,6 +61,59 @@ namespace Nightjar
         {
             Listen(Paths.HelperPort, false);
             Listen(Paths.RemoteHelperPort, true);
+            // With "Also open on my home Wi-Fi" on, phones on the Wi-Fi reach the door for other devices too,
+            // on this computer's home network address (they still need their device sign-in).
+            var t = new Thread(() =>
+            {
+                while (true)
+                {
+                    try { RefreshLan(); } catch (Exception e) { Log.Write("Home Wi-Fi door: " + e.Message); }
+                    Thread.Sleep(60000);
+                }
+            }) { IsBackground = true, Name = "helper-lan" };
+            t.Start();
+        }
+
+        readonly Dictionary<string, TcpListener> lan = new Dictionary<string, TcpListener>();
+        readonly object lanGate = new object();
+
+        /// <summary>Opens the door on each home network address while the home Wi-Fi option is on; closes it otherwise.</summary>
+        public void RefreshLan()
+        {
+            lock (lanGate)
+            {
+                var want = Config.WebAddress().StartsWith("0.0.0.0") ? LanAddresses() : new List<string>();
+                foreach (var ip in lan.Keys.Where(k => !want.Contains(k)).ToList())
+                {
+                    try { lan[ip].Stop(); } catch { }
+                    lan.Remove(ip);
+                    Log.Write("Helper stopped listening on " + ip + ":" + Paths.RemoteHelperPort);
+                }
+                foreach (var ip in want.Where(w => !lan.ContainsKey(w)))
+                {
+                    try
+                    {
+                        var l = new TcpListener(IPAddress.Parse(ip), Paths.RemoteHelperPort);
+                        l.Start();
+                        lan[ip] = l;
+                        Log.Write("Helper listening on " + ip + ":" + Paths.RemoteHelperPort + " (home Wi-Fi)");
+                        var t = new Thread(() =>
+                        {
+                            try
+                            {
+                                while (true)
+                                {
+                                    var client = l.AcceptTcpClient();
+                                    Task.Run(() => Serve(client, true, true));
+                                }
+                            }
+                            catch { /* stopped */ }
+                        }) { IsBackground = true, Name = "helper-lan-" + ip };
+                        t.Start();
+                    }
+                    catch (Exception e) { Log.Write("Couldn't listen on " + ip + ":" + Paths.RemoteHelperPort + ": " + e.Message); }
+                }
+            }
         }
 
         void Listen(int port, bool remote)
@@ -99,13 +152,15 @@ namespace Nightjar
             public string Method, Path, Origin;
             /// <summary>Came in through Tailscale (the remote port).</summary>
             public bool Remote;
+            /// <summary>Came in from the home Wi-Fi (not through Tailscale).</summary>
+            public bool Lan;
             public Dictionary<string, string> Query = new Dictionary<string, string>();
             public Dictionary<string, string> Headers = new Dictionary<string, string>();
             public byte[] Body = new byte[0];
             public string Q(string k) => Query.TryGetValue(k, out var v) ? v : null;
         }
 
-        async Task Serve(TcpClient client, bool remote)
+        async Task Serve(TcpClient client, bool remote, bool viaLan = false)
         {
             using (client)
             {
@@ -117,6 +172,7 @@ namespace Nightjar
                     var req = ReadRequest(stream);
                     if (req == null) return;
                     req.Remote = remote;
+                    req.Lan = viaLan;
                     await Handle(req, stream).ConfigureAwait(false);
                 }
                 catch (IOException)
@@ -386,7 +442,7 @@ namespace Nightjar
             // The page in Nightjar's window (and luniceOS) comes from 127.0.0.1:5030, so the browser always says so.
             // Anything else (a phone through Tailscale, which asks from the same address) must show a device token.
             var local = !req.Remote && Origins.Contains(req.Origin);
-            var origin = local ? req.Origin : RemoteOrigin(req.Origin);
+            var origin = local ? req.Origin : req.Lan ? LanOrigin(req.Origin) : RemoteOrigin(req.Origin);
             if (req.Method == "OPTIONS") { Reply(stream, 204, origin, ""); return; }
             Remote.Device device = null;
             if (!local)
@@ -466,7 +522,7 @@ namespace Nightjar
                         var on = body.TryGetValue("on", out var v) && v is bool b && b;
                         if (on && !Remote.RemotePasswordSet) { Reply(stream, 200, origin, new { ok = false, error = "Choose a remote password first: it's what you type on the home network." }); return; }
                         var ok = Config.SetWebAddress(on);
-                        if (ok) restart();
+                        if (ok) { restart(); try { RefreshLan(); } catch { } }
                         Reply(stream, 200, origin, new { ok, restarting = ok });
                         return;
                     }
@@ -795,6 +851,14 @@ namespace Nightjar
         }
 
         /// <summary>The page's own https address through Tailscale, which a browser may name as the Origin.</summary>
+        /// <summary>The page opened on this computer's home network address (http://192.168.x.x:5030).</summary>
+        static string LanOrigin(string origin)
+        {
+            if (origin == null) return null;
+            var m = Regex.Match(origin, @"^http://([0-9.]+):5030$");
+            return m.Success && LanAddresses().Contains(m.Groups[1].Value) ? origin : null;
+        }
+
         static string RemoteOrigin(string origin)
         {
             var address = Tailscale.Address;
@@ -815,7 +879,7 @@ namespace Nightjar
         }
 
         /// <summary>This computer's addresses on the home network, for "open http://192.168.x.x:5030 on your phone".</summary>
-        static List<string> LanAddresses()
+        internal static List<string> LanAddresses()
         {
             var list = new List<string>();
             try

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { DemoBackend } from '../api/demo';
 import { API_BASE, HELPER, SlskdBackend } from '../api/slskd';
-import { deviceName, isIos, pair, standalone, viaTailscale } from '../api/remote';
+import { useEffect } from 'react';
+import { asDevice, deviceToken, deviceName, helperAnswers, isIos, pair, standalone, viaHomeWifi, viaTailscale } from '../api/remote';
 import { useStore } from '../store';
 import { Mark } from '../components/Mark';
 import { sharePrefsThrough } from '../prefs';
@@ -20,6 +21,12 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [loginError, setLoginError] = useState<string>();
+  // On the home Wi-Fi, devices sign in like through Tailscale when the computer's door for them answers;
+  // an older Nightjar (or the option off) only has the engine's own login.
+  const [pairing, setPairing] = useState<boolean | null>(viaHomeWifi ? null : false);
+  useEffect(() => {
+    if (viaHomeWifi) helperAnswers(HELPER).then(setPairing);
+  }, []);
 
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +57,12 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
         <h1>
           <Mark size={34} /> Nightjar
         </h1>
-        {phase === 'login' && viaTailscale ? (
+        {phase === 'login' && (viaTailscale || (viaHomeWifi && pairing)) ? (
           <PairDevice onDone={onRetry} />
+        ) : phase === 'login' && viaHomeWifi && pairing === null ? (
+          <p className="hint-text">
+            <span className="spinner" aria-hidden /> Looking for Nightjar on your computer…
+          </p>
         ) : phase === 'login' ? (
           <>
             <p>Sign in to Nightjar on your computer with its phone login. This isn’t your Soulseek account.</p>
@@ -86,7 +97,7 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
             </button>
           </>
         )}
-        {!viaTailscale && (
+        {!viaTailscale && !viaHomeWifi && (
           <>
             <div className="or">or</div>
             <button className="btn quiet" style={{ width: '100%' }} onClick={demo}>
@@ -101,6 +112,11 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
 
 export async function probeSlskd(): Promise<{ backend: SlskdBackend; phase: 'login' | 'ready'; me?: string }> {
   const backend = new SlskdBackend(API_BASE);
+  // A phone that only has the engine's own login (from before devices signed in) signs in as a device
+  // once the computer's door for devices is there: that's what opens the library and playing music.
+  if (asDevice && !deviceToken() && (await helperAnswers(HELPER))) {
+    return { backend, phase: 'login' };
+  }
   let needsLogin = await backend.needsLogin();
   if (needsLogin && (await backend.helperLogin())) needsLogin = await backend.needsLogin();
   if (needsLogin) return { backend, phase: 'login' };

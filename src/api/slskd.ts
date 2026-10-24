@@ -1,6 +1,6 @@
 import { uuid } from '../lib/uuid';
 import { helperLibrary } from './library';
-import { helperBase, signHelperRequests, viaTailscale } from './remote';
+import { asDevice, helperBase, signHelperRequests } from './remote';
 import { pickFolderHere } from '../components/FolderBrowser';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { isScalar, isSeq, parseDocument, type Document } from 'yaml';
@@ -712,7 +712,7 @@ export class SlskdBackend implements Backend {
       }
     },
     pickImage: async () => {
-      if (viaTailscale) throw new ApiError('Choose a new picture on the computer Nightjar runs on.', 403);
+      if (asDevice) throw new ApiError('Choose a new picture on the computer Nightjar runs on.', 403);
       const res = await fetch(`${HELPER}/pick-image`);
       if (!res.ok) throw new ApiError('The file dialog is not available', res.status);
       const r = (await res.json()) as { path: string | null; error?: string };
@@ -836,7 +836,7 @@ export class SlskdBackend implements Backend {
     },
     pick: async (start) => {
       // Away from the computer there is no Windows dialog to show: the folders are browsed in the page instead.
-      if (viaTailscale) return pickFolderHere(start);
+      if (asDevice) return pickFolderHere(start);
       const res = await fetch(`${HELPER}/pick-folder${start ? `?start=${enc(start)}` : ''}`);
       if (!res.ok) throw new ApiError('The folder dialog is not available', res.status);
       return ((await res.json()) as { path: string | null }).path;

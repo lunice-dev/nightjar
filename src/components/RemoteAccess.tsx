@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import qrcode from 'qrcode-generator';
 import { HELPER } from '../api/slskd';
-import { forgetDevice, onThisComputer, remoteApi, viaTailscale, type Device, type RemoteStatus } from '../api/remote';
+import { forgetDevice, onThisComputer, remoteApi, asDevice, type Device, type RemoteStatus } from '../api/remote';
 import { useStore } from '../store';
 import { Icon } from './Icon';
 
@@ -165,7 +165,7 @@ export function RemoteAccessSection() {
             onClick={async () => {
               if (!confirm('Sign out every phone and computer? Each one needs a new code to use Nightjar again.')) return;
               await api.signOutAll().catch(() => undefined);
-              if (viaTailscale) {
+              if (asDevice) {
                 forgetDevice();
                 location.reload();
               } else reload(true);

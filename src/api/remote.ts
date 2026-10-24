@@ -16,8 +16,15 @@ export const onThisComputer = inApp || host === '127.0.0.1' || host === 'localho
 /** Opened through Tailscale: everything works, after this device signs in. */
 export const viaTailscale = /\.ts\.net$/i.test(host);
 
+/** Opened on the computer's home network address (http://192.168.x.x:5030), from a phone on the same Wi-Fi. */
+export const viaHomeWifi = !onThisComputer && !viaTailscale && /^(10|172\.(1[6-9]|2\d|3[01])|192\.168)\.\d+\.\d+$/.test(host);
+
+/** Signed in as a device (code or remote password) rather than being the computer itself. */
+export const asDevice = viaTailscale || viaHomeWifi;
+
 /** Where the helper answers for this page. */
-export const helperBase = (fallback: string) => (viaTailscale ? `${location.origin}/nj` : fallback);
+export const helperBase = (fallback: string) =>
+  viaTailscale ? `${location.origin}/nj` : viaHomeWifi ? `http://${host}:5032` : fallback;
 
 const DEVICE_KEY = 'nightjar.device';
 
@@ -42,7 +49,7 @@ export const forgetDevice = () => {
  * many places that ask the helper for something don't each have to remember it.
  */
 export function signHelperRequests(base: string) {
-  if (!viaTailscale) return;
+  if (!asDevice) return;
   const original = window.fetch.bind(window);
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
@@ -160,3 +167,13 @@ export const remoteApi = (base: string) => ({
   serve: (on: boolean) => call<{ ok: boolean; address?: string; consent?: string; error?: string }>(base, '/tailscale/serve', 'POST', { on }, 60_000),
   test: () => call<{ ok: boolean; error?: string }>(base, '/tailscale/test', 'GET', undefined, 40_000),
 });
+
+/** Whether the computer's door for devices answers (on the home Wi-Fi it's only open while that option is on). */
+export async function helperAnswers(base: string) {
+  try {
+    const res = await fetch(`${base}/ping`, { signal: AbortSignal.timeout(2500) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
