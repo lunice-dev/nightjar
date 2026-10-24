@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
+import { audioCtl, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { generatedCover, onlineCover } from '../lib/covers';
@@ -31,6 +31,14 @@ export function Player() {
   const [waiting, setWaiting] = useState(false);
   const track = queue[index];
 
+  // The element is always there (also with nothing playing), so every control can reach it.
+  useEffect(() => {
+    audioCtl.el = audio.current;
+    return () => {
+      audioCtl.el = null;
+    };
+  }, []);
+
   // Load the current track: the original file, or the computer's AAC copy when asked for (or needed).
   useEffect(() => {
     const el = audio.current;
@@ -45,23 +53,17 @@ export function Player() {
         usePlayer.getState().stop();
         return;
       }
-      el.src = url;
-      setTime(0);
-      setDuration(track.seconds || 0);
-      if (usePlayer.getState().playing) el.play().catch(() => usePlayer.setState({ playing: false }));
+      if (el.src !== url) {
+        el.src = url;
+        setTime(0);
+        setDuration(track.seconds || 0);
+      }
+      if (audioCtl.wantPlay) el.play().catch(() => setWaiting(false));
     });
     return () => {
       alive = false;
     };
   }, [track?.path, dataSaver, converted, backend, toast]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Play / pause follows the store.
-  useEffect(() => {
-    const el = audio.current;
-    if (!el || !el.src) return;
-    if (playing && el.paused) el.play().catch(() => usePlayer.setState({ playing: false }));
-    if (!playing && !el.paused) el.pause();
-  }, [playing]);
 
   // The album's cover, for the bar and the lock screen: the picture on the computer (a file in the
   // folder, or the art inside the music files), else the Cover Art Archive. Nothing found: a generated one in the bar only.
@@ -80,33 +82,53 @@ export function Player() {
     };
   }, [track?.dir, backend]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lock screen and headphone controls.
+  // Lock screen and headphone buttons: set up once; each one acts on the element through the same actions as the page.
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !track) return;
+    if (!('mediaSession' in navigator)) return;
     const ms = navigator.mediaSession;
-    ms.metadata = new MediaMetadata({
+    const p = usePlayer.getState;
+    const set = (action: MediaSessionAction, fn: MediaSessionActionHandler | null) => {
+      try {
+        ms.setActionHandler(action, fn);
+      } catch {
+        /* not supported here */
+      }
+    };
+    set('play', () => p().play());
+    set('pause', () => p().pause());
+    set('nexttrack', () => p().next());
+    set('previoustrack', () => p().prev());
+    set('seekto', (d) => {
+      if (audio.current && d.seekTime != null) audio.current.currentTime = d.seekTime;
+    });
+    // Without these, iOS shows ±10 s buttons instead of previous / next track.
+    set('seekbackward', null);
+    set('seekforward', null);
+    return () => {
+      for (const a of ['play', 'pause', 'nexttrack', 'previoustrack', 'seekto'] as MediaSessionAction[]) set(a, null);
+    };
+  }, []);
+
+  // What the lock screen shows: changed only when the track or its cover really changes, so it doesn't blink.
+  const shown = useRef('');
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    if (!track) {
+      navigator.mediaSession.metadata = null;
+      shown.current = '';
+      return;
+    }
+    const art = cover ? new URL(cover, location.href).href : '';
+    const key = `${track.path}|${art}`;
+    if (shown.current === key) return;
+    shown.current = key;
+    navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist ?? '',
       album: track.album ?? '',
-      artwork: cover ? [{ src: new URL(cover, location.href).href, sizes: '512x512' }] : [],
+      artwork: art ? [{ src: art, sizes: '512x512' }] : [],
     });
-    const p = usePlayer.getState;
-    ms.setActionHandler('play', () => usePlayer.setState({ playing: true }));
-    ms.setActionHandler('pause', () => usePlayer.setState({ playing: false }));
-    ms.setActionHandler('nexttrack', () => p().next());
-    ms.setActionHandler('previoustrack', () => p().prev());
-    try {
-      ms.setActionHandler('seekto', (d) => {
-        if (audio.current && d.seekTime != null) audio.current.currentTime = d.seekTime;
-      });
-    } catch {
-      /* not supported here */
-    }
   }, [track, cover]);
-
-  useEffect(() => {
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = track ? (playing ? 'playing' : 'paused') : 'none';
-  }, [playing, track]);
 
   // Halfway through, ask the computer to get the next track ready (an AAC copy takes a few seconds to make).
   const warmed = useRef('');
@@ -121,11 +143,11 @@ export function Player() {
     });
   }, [time, duration, queue, index, backend, dataSaver]);
 
-  if (!track) return <audio ref={audio} hidden />;
-
   const onError = () => {
+    if (!track || !audio.current?.getAttribute('src')) return;
     // An original this device can't play (some hi-res files on iPhones): ask for an AAC copy instead.
     if (!converted && !dataSaver && ['flac', 'wav', 'aif', 'aiff'].includes(track.format)) {
+      audioCtl.wantPlay = true;
       usePlayer.setState({ converted: true });
       return;
     }
@@ -133,24 +155,34 @@ export function Player() {
     usePlayer.getState().next();
   };
 
+  const element = (
+    <audio
+      ref={audio}
+      preload="auto"
+      onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+      onDurationChange={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration)}
+      onEnded={() => {
+        const { index: i, queue: q } = usePlayer.getState();
+        if (i + 1 < q.length) usePlayer.getState().next();
+        else audioCtl.wantPlay = false;
+      }}
+      onError={onError}
+      onWaiting={() => setWaiting(true)}
+      onPlaying={() => setWaiting(false)}
+      onCanPlay={() => setWaiting(false)}
+      onPlay={() => usePlayer.setState({ playing: true })}
+      onPause={() => usePlayer.setState({ playing: false })}
+    />
+  );
+
+  if (!track) return <div hidden>{element}</div>;
+
   const p = usePlayer.getState();
   const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
 
   return (
     <div className={`player ${open ? 'open' : ''}`} role="region" aria-label="Now playing">
-      <audio
-        ref={audio}
-        preload="auto"
-        onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-        onDurationChange={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration)}
-        onEnded={() => p.next()}
-        onError={onError}
-        onWaiting={() => setWaiting(true)}
-        onPlaying={() => setWaiting(false)}
-        onCanPlay={() => setWaiting(false)}
-        onPause={() => usePlayer.getState().playing && !audio.current?.ended && usePlayer.setState({ playing: false })}
-        onPlay={() => !usePlayer.getState().playing && usePlayer.setState({ playing: true })}
-      />
+      {element}
       <div className="player-bar">
         <button className="player-art" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Hide the queue' : 'Show the queue'}>
           <img src={cover ?? generatedCover(track.dir)} alt="" />
@@ -160,11 +192,11 @@ export function Player() {
           <span>
             <QualityChip />
             {[track.artist, track.album].filter(Boolean).join(' · ')}
-            {waiting && playing ? ' · loading…' : ''}
+            {waiting && audioCtl.wantPlay ? ' · loading…' : ''}
           </span>
         </button>
         <div className="player-controls">
-          <button className="player-btn hide-narrow" onClick={() => p.prev()} disabled={index === 0} aria-label="Previous track">
+          <button className="player-btn hide-narrow" onClick={() => p.prev()} aria-label="Previous track">
             <Icon name="prev" size={20} />
           </button>
           <button className="player-btn main" onClick={() => p.toggle()} aria-label={playing ? 'Pause' : 'Play'}>

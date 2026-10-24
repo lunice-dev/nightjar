@@ -16,6 +16,10 @@ export interface QueueItem extends Track {
 interface PlayerState {
   queue: QueueItem[];
   index: number;
+  /**
+   * Whether music is coming out right now. Only the <audio> element sets this (its play and pause
+   * events): the page, the lock screen and headphones all act on that one element, so they can't disagree.
+   */
   playing: boolean;
   /** Use less mobile data: lossless files come as 128 kbit/s AAC copies made by the computer. */
   dataSaver: boolean;
@@ -24,6 +28,8 @@ interface PlayerState {
   loading: boolean;
   playAlbum(dir: string, start?: number): Promise<void>;
   playQueue(items: QueueItem[], start?: number): void;
+  play(): void;
+  pause(): void;
   toggle(): void;
   next(): void;
   prev(): void;
@@ -33,6 +39,18 @@ interface PlayerState {
 }
 
 const SAVER_KEY = 'nightjar.dataSaver';
+
+/** The one <audio> element (the Player bar hands it over) and whether a new track should start playing. */
+export const audioCtl = {
+  el: null as HTMLAudioElement | null,
+  /** Play the next track that loads: set by every "play this" action, cleared by pause and stop. */
+  wantPlay: false,
+};
+
+const startEl = () => {
+  const el = audioCtl.el;
+  if (el?.src) el.play().catch(() => undefined);
+};
 
 export const usePlayer = create<PlayerState>((set, get) => ({
   queue: [],
@@ -63,29 +81,66 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   playQueue(items, start = 0) {
     if (items.length === 0) return;
-    set({ queue: items, index: Math.max(0, Math.min(start, items.length - 1)), playing: true, converted: false });
+    audioCtl.wantPlay = true;
+    set({ queue: items, index: Math.max(0, Math.min(start, items.length - 1)), converted: false });
+  },
+
+  play() {
+    audioCtl.wantPlay = true;
+    startEl();
+  },
+
+  pause() {
+    audioCtl.wantPlay = false;
+    audioCtl.el?.pause();
   },
 
   toggle() {
-    if (get().queue.length) set({ playing: !get().playing });
+    const el = audioCtl.el;
+    if (!get().queue.length || !el) return;
+    if (el.paused) get().play();
+    else get().pause();
   },
 
   next() {
     const { index, queue } = get();
-    if (index + 1 < queue.length) set({ index: index + 1, playing: true, converted: false });
-    else set({ playing: false });
+    if (index + 1 >= queue.length) return;
+    audioCtl.wantPlay = true;
+    set({ index: index + 1, converted: false });
   },
 
   prev() {
     const { index } = get();
-    set({ index: Math.max(0, index - 1), playing: true, converted: false });
+    const el = audioCtl.el;
+    // A few seconds in, "previous" goes back to the start of the track, like every music player.
+    if (el && (el.currentTime > 3 || index === 0)) {
+      el.currentTime = 0;
+      get().play();
+      return;
+    }
+    audioCtl.wantPlay = true;
+    set({ index: index - 1, converted: false });
   },
 
   jump(i) {
-    set({ index: i, playing: true, converted: false });
+    const el = audioCtl.el;
+    if (i === get().index && el) {
+      el.currentTime = 0;
+      get().play();
+      return;
+    }
+    audioCtl.wantPlay = true;
+    set({ index: i, converted: false });
   },
 
   stop() {
+    audioCtl.wantPlay = false;
+    const el = audioCtl.el;
+    if (el) {
+      el.pause();
+      el.removeAttribute('src');
+      el.load();
+    }
     set({ queue: [], index: 0, playing: false, converted: false });
   },
 
@@ -95,6 +150,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     } catch {
       /* storage unavailable */
     }
+    // The track reloads as the other kind of copy: keep playing if it was.
+    if (audioCtl.el && !audioCtl.el.paused) audioCtl.wantPlay = true;
     set({ dataSaver: on });
   },
 }));
