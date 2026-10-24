@@ -47,6 +47,21 @@ export const audioCtl = {
   wantPlay: false,
 };
 
+/**
+ * Puts a track in the element and starts it, in the same moment as the button press that asked for it
+ * (iPhones only let a lock-screen button start sound from inside its own handler). When the address
+ * isn't ready yet, the Player loads it a moment later instead.
+ */
+function loadNow(t: QueueItem | undefined, converted = false) {
+  const el = audioCtl.el;
+  const backend = useStore.getState().backend;
+  if (!el || !t || !backend) return;
+  const url = backend.files.streamUrlNow(t.path, streamChoice(t, usePlayer.getState().dataSaver, converted));
+  if (!url) return;
+  if (el.src !== url) el.src = url;
+  if (audioCtl.wantPlay) el.play().catch(() => undefined);
+}
+
 const startEl = () => {
   const el = audioCtl.el;
   if (el?.src) el.play().catch(() => undefined);
@@ -82,7 +97,9 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   playQueue(items, start = 0) {
     if (items.length === 0) return;
     audioCtl.wantPlay = true;
-    set({ queue: items, index: Math.max(0, Math.min(start, items.length - 1)), converted: false });
+    const i = Math.max(0, Math.min(start, items.length - 1));
+    loadNow(items[i]);
+    set({ queue: items, index: i, converted: false });
   },
 
   play() {
@@ -106,6 +123,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     const { index, queue } = get();
     if (index + 1 >= queue.length) return;
     audioCtl.wantPlay = true;
+    loadNow(queue[index + 1]);
     set({ index: index + 1, converted: false });
   },
 
@@ -119,6 +137,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       return;
     }
     audioCtl.wantPlay = true;
+    loadNow(get().queue[index - 1]);
     set({ index: index - 1, converted: false });
   },
 
@@ -130,6 +149,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       return;
     }
     audioCtl.wantPlay = true;
+    loadNow(get().queue[i]);
     set({ index: i, converted: false });
   },
 

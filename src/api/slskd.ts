@@ -735,6 +735,8 @@ export class SlskdBackend implements Backend {
       const key = await this.imageKey();
       return key ? `${HELPER}/stream?k=${key}&path=${enc(path)}${aacKbps ? `&aac=${aacKbps}` : ''}` : null;
     },
+    streamUrlNow: (path, aacKbps) =>
+      this.knownKey ? `${HELPER}/stream?k=${this.knownKey}&path=${enc(path)}${aacKbps ? `&aac=${aacKbps}` : ''}` : null,
     lease: async (id) => {
       try {
         const res = await fetch(`${HELPER}/lease?id=${enc(id)}`, { method: 'POST', signal: AbortSignal.timeout(3000) });
@@ -752,6 +754,8 @@ export class SlskdBackend implements Backend {
   /** The helper hands out a secret so only this page can show your local pictures. */
   private keyPromise?: Promise<string | null>;
   private keyAt = 0;
+  /** The last key the helper gave, for addresses that must be ready at once. */
+  private knownKey: string | null = null;
   private imageKey() {
     // Asked again now and then: a restart of the Nightjar app hands out new keys.
     if (Date.now() - this.keyAt > 10 * 60_000) {
@@ -760,7 +764,11 @@ export class SlskdBackend implements Backend {
     }
     this.keyPromise ??= fetch(`${HELPER}/img-key`, { signal: AbortSignal.timeout(2500) })
       .then((r) => (r.ok ? (r.json() as Promise<{ key?: string }>) : {}))
-      .then((j) => (j as { key?: string }).key ?? null)
+      .then((j) => {
+        const key = (j as { key?: string }).key ?? null;
+        if (key) this.knownKey = key;
+        return key;
+      })
       .catch(() => null);
     return this.keyPromise;
   }

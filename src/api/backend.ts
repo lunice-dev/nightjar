@@ -146,6 +146,11 @@ export interface FileAccess {
    * given bitrate (128 or 256 kbit/s) made by the computer. Null without the Nightjar app.
    */
   streamUrl(path: string, aacKbps?: number): Promise<string | null>;
+  /**
+   * The same address, right away, when it can be built without asking the computer (null otherwise).
+   * Lock-screen buttons must start the next track inside the button press, or iPhones keep it silent.
+   */
+  streamUrlNow(path: string, aacKbps?: number): string | null;
   /** Where each shared folder lives on this computer, by the name others see. */
   shareRoots(): Promise<{ remote: string; local: string }[]>;
   /**

@@ -39,6 +39,12 @@ export function Player() {
     };
   }, []);
 
+  // A new track starts at 0 (its file may already be in the element: buttons load it at once).
+  useEffect(() => {
+    setTime(audio.current?.currentTime ?? 0);
+    setDuration(track?.seconds || 0);
+  }, [track?.path]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load the current track: the original file, or the computer's AAC copy when asked for (or needed).
   useEffect(() => {
     const el = audio.current;
@@ -53,11 +59,7 @@ export function Player() {
         usePlayer.getState().stop();
         return;
       }
-      if (el.src !== url) {
-        el.src = url;
-        setTime(0);
-        setDuration(track.seconds || 0);
-      }
+      if (el.src !== url) el.src = url;
       if (audioCtl.wantPlay) el.play().catch(() => setWaiting(false));
     });
     return () => {
