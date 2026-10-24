@@ -50,9 +50,11 @@ export function App() {
   const setBackend = useStore((s) => s.setBackend);
   const ready = useStore((s) => s.ready);
   const [error, setError] = useState<string>();
+  const [connecting, setConnecting] = useState(true);
 
   const connect = useCallback(async () => {
     setError(undefined);
+    setConnecting(true);
     if (__DEMO__) {
       await usePrefs.persist.rehydrate();
       setBackend(new DemoBackend(), 'ready');
@@ -60,7 +62,17 @@ export function App() {
       return;
     }
     try {
-      const r = await probeSlskd();
+      // A phone waking up its Tailscale connection can miss the first try or two: keep trying a few seconds.
+      let r: Awaited<ReturnType<typeof probeSlskd>> | undefined;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          r = await probeSlskd();
+          break;
+        } catch (e) {
+          if (attempt >= 4) throw e;
+          await new Promise((res) => setTimeout(res, 1200));
+        }
+      }
       sharePrefsThrough(HELPER);
       await usePrefs.persist.rehydrate();
       // A new install has no Soulseek account yet: the setup steps come first.
@@ -76,6 +88,8 @@ export function App() {
     } catch {
       await usePrefs.persist.rehydrate();
       setError('slskd isn’t answering on this address.');
+    } finally {
+      setConnecting(false);
     }
   }, [setBackend, ready]);
 
@@ -96,6 +110,7 @@ export function App() {
         />
       </WithStrip>
     );
+  if (phase === 'connect' && connecting) return <WithStrip><LoadingScreen /></WithStrip>;
   if (phase !== 'ready') return <WithStrip><ConnectScreen error={error} onRetry={connect} /></WithStrip>;
   return <Shell />;
 }
@@ -625,5 +640,24 @@ function RemoteFoot({ onOpen }: { onOpen: () => void }) {
     <button className={`foot-item remote-foot ${state}`} onClick={onOpen} title={state === 'on' ? 'Your devices can reach Nightjar through Tailscale' : 'Tailscale isn’t connected: your devices can’t reach Nightjar'}>
       <Icon name="phone" size={14} /> {state === 'on' ? 'Remote on' : 'Remote off'}
     </button>
+  );
+}
+
+/** While Nightjar reaches the engine: the bird, breathing. Words only if it takes a while. */
+function LoadingScreen() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <main className="connect loading-screen" aria-busy="true">
+      <div className="loading-mark">
+        <Mark size={56} />
+      </div>
+      <p className={`loading-text ${slow ? 'in' : ''}`} role="status">
+        {onThisComputer ? 'Starting Nightjar…' : 'Connecting to your computer…'}
+      </p>
+    </main>
   );
 }
