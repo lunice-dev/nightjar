@@ -84,6 +84,8 @@ export interface FolderResult {
   earlier?: boolean;
   /** How many fake copies this person has sent you before (Check quality found them). */
   fakes?: number;
+  /** This copy has far fewer tracks than the album (judged from the other copies found). */
+  partial?: { have: number; of: number };
 }
 
 export interface Release {
@@ -95,8 +97,8 @@ export interface Release {
 }
 
 const SEP = /[\\/]/;
-// Sub-folders for one disc or side of an album: "CD1", "Disc 2", "Side A", '12" Vinyl 01'
-const DISC = /^((cd|disc|disk|side|vinyl|lp)\s*[\da-d]{1,2}|\d{1,2}("|''|”|in|inch)?\s*vinyl\s*\d{1,2})$/i;
+// Sub-folders for one disc or side of an album: "CD1", "Disc 2", "Disc 2 - Twilight to Starlight", "Side A", '12" Vinyl 01'
+const DISC = /^((cd|disc|disk)\s*\d{1,2}(\s*[-–—:._]\s*.+|\s*[([].+[)\]])?|(side|vinyl|lp)\s*[\da-d]{1,2}|\d{1,2}("|''|”|in|inch)?\s*vinyl\s*\d{1,2})$/i;
 
 export function splitFolder(path: string) {
   const parts = path.split(SEP).filter(Boolean);
@@ -105,6 +107,8 @@ export function splitFolder(path: string) {
   if (titleIdx > 0 && DISC.test(parts[titleIdx])) titleIdx--;
   return {
     folder: parts.join('\\'),
+    /** The album's own folder: the same as `folder`, or its parent when the file sits in a disc folder. */
+    root: parts.slice(0, titleIdx + 1).join('\\'),
     title: parts[titleIdx] ?? '(root)',
     parent: parts[titleIdx - 1] ?? '',
   };
@@ -208,11 +212,12 @@ export function toFolders(responses: SearchResponse[], speeds?: Map<string, numb
     const add = (f: SearchFile, locked: boolean) => {
       // macOS leaves "__MACOSX" folders and "._name" shadow files in zips; they aren't music.
       if (/(^|[\\/])(__MACOSX|\._[^\\/]*$)/.test(f.filename)) return;
-      const { folder, title, parent } = splitFolder(f.filename);
-      const entry = byFolder.get(folder) ?? { title, parent, files: [], locked: 0 };
+      // Disc folders (CD1, CD2…) are one album: they're grouped under the album's own folder.
+      const { root, title, parent } = splitFolder(f.filename);
+      const entry = byFolder.get(root) ?? { title, parent, files: [], locked: 0 };
       if (locked) entry.locked++;
       else entry.files.push(f);
-      byFolder.set(folder, entry);
+      byFolder.set(root, entry);
     };
     resp.files.forEach((f) => add(f, false));
     resp.lockedFiles?.forEach((f) => add(f, true));
@@ -285,6 +290,33 @@ export function releaseScore(best: FolderResult, sources: FolderResult[], query 
   return relevance(best, words) * 120 + best.score + Math.min(45, Math.log2(1 + people) * 15);
 }
 
+/**
+ * How many tracks the album has, judged from its copies: the biggest track count that at least two people
+ * agree on, or (when nobody agrees) the biggest count found.
+ */
+export function expectedTracks(sources: Pick<FolderResult, 'audio'>[]) {
+  const counts = new Map<number, number>();
+  for (const s of sources) counts.set(s.audio.length, (counts.get(s.audio.length) ?? 0) + 1);
+  const shared = Math.max(0, ...[...counts].filter(([, n]) => n >= 2).map(([c]) => c));
+  return { of: shared || Math.max(0, ...counts.keys()), agreed: shared > 0 };
+}
+
+/**
+ * Copies with far fewer tracks than the album (someone sharing two songs of it) are marked and sink below
+ * every complete copy, whatever their quality or speed. A deluxe edition with more tracks isn't penalised.
+ */
+function markPartial(sources: FolderResult[]) {
+  const { of, agreed } = expectedTracks(sources);
+  for (const s of sources) {
+    const have = s.audio.length;
+    // When two people agree on the count, a quarter missing is enough; otherwise only half or more missing counts.
+    if (of > 1 && (agreed ? have < of * 0.75 : have <= of * 0.5)) {
+      s.partial = { have, of };
+      s.score -= 250;
+    }
+  }
+}
+
 export function toReleases(folders: FolderResult[], query = ''): Release[] {
   const byAlbum = new Map<string, FolderResult[]>();
   for (const f of folders) {
@@ -319,6 +351,7 @@ export function toReleases(folders: FolderResult[], query = ''): Release[] {
       }
     }
     byArtist.forEach((sources, artistKey) => {
+      markPartial(sources);
       sources.sort((a, b) => b.score - a.score);
       const year = sources.find((x) => x.year)?.year;
       if (year) sources.forEach((x) => (x.year ??= year));

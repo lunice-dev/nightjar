@@ -523,14 +523,43 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
     failed.forEach((f) => byUser.set(f.username, [...(byUser.get(f.username) ?? []), f]));
     for (const [user, files] of byUser) {
       const list = files.map((f) => ({ filename: f.filename, size: f.size }));
-      if (g.plan && backend) {
-        // Back into the same album folder, still looked after by the download manager.
-        const batchId = uuid();
-        await backend.enqueue(user, list, { batchId, destination: g.plan.destination }).catch(() => toast(`${user} is offline. Try another source.`, 'error'));
-        addBatch(g.plan.id, { batches: [...g.plan.batches, batchId], finishedAt: undefined });
-        refresh(direction);
-      } else enqueue(user, list, g.title);
+      if (g.plan && backend) await requeue(user, list);
+      else enqueue(user, list, g.title);
     }
+  };
+  /** Back into the album's folder (or its disc folder), still looked after by the download manager. */
+  const requeue = async (user: string, list: { filename: string; size: number }[]) => {
+    const plan = g.plan!;
+    const destOf = (filename: string) => plan.tracks.find((k) => k.username === user && k.filename === filename)?.dest ?? plan.destination;
+    const batches = [...plan.batches];
+    for (const dest of new Set(list.map((f) => destOf(f.filename)))) {
+      const batchId = uuid();
+      const ok = await backend!
+        .enqueue(user, list.filter((f) => destOf(f.filename) === dest), { batchId, destination: dest })
+        .then(() => true)
+        .catch(() => false);
+      if (!ok) {
+        toast(`${user} is offline. Try another source.`, 'error');
+        break;
+      }
+      batches.push(batchId);
+    }
+    addBatch(plan.id, { batches, finishedAt: undefined });
+    refresh(direction);
+  };
+  // Tracks of the album that never arrived and aren't in the list any more (removed, or lost when the engine stopped).
+  const planTracks = g.plan ? g.plan.tracks.filter((k) => !k.dropped) : [];
+  const missing =
+    direction === 'download' && g.plan
+      ? planTracks.filter((k) => !g.files.some((f) => f.username === k.username && f.filename === k.filename))
+      : [];
+  const audioDone = g.files.filter((f) => AUDIO_EXT.has(extOf(f.filename)) && phaseOf(f.state) === 'done').length;
+  // The copy itself is short: the person shares only part of the album.
+  const shortCopy = direction === 'download' && !!g.plan?.expected && planTracks.length < g.plan.expected * 0.75;
+  const getMissing = async () => {
+    const byUser = new Map<string, { filename: string; size: number }[]>();
+    missing.forEach((k) => byUser.set(k.username, [...(byUser.get(k.username) ?? []), { filename: k.filename, size: k.size }]));
+    for (const [user, list] of byUser) await requeue(user, list);
   };
   const removeFromList = async (files: Transfer[]) => {
     await Promise.all(files.map((f) => backend?.cancel(direction, f.username, f.id, true)));
@@ -733,6 +762,22 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
             </li>
           ))}
         </ul>
+      )}
+      {missing.length > 0 && unfinished.length === 0 && (
+        <p className="incomplete-line">
+          <b>Incomplete:</b> {audioDone} of {planTracks.length} tracks arrived.{' '}
+          <button className="link" onClick={getMissing}>
+            Get the {missing.length} missing {missing.length === 1 ? 'track' : 'tracks'}
+          </button>
+        </p>
+      )}
+      {shortCopy && (
+        <p className="incomplete-line">
+          <b>Not the whole album:</b> {g.usernames.join(', ')} shares only {planTracks.length} of its {g.plan!.expected} tracks.{' '}
+          <button className="link" onClick={() => searchFor(`${g.parent} ${g.title}`)}>
+            Find a complete copy
+          </button>
+        </p>
       )}
       {direction === 'download' && gone && <p className="hint-text moved-line">No longer in your downloads folder (moved or deleted outside Nightjar).</p>}
       {direction === 'download' && <CheckResult check={quality} onFindAnother={() => searchFor(`${g.parent} ${g.title}`)} />}

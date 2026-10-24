@@ -448,6 +448,10 @@ export class DemoBackend implements Backend {
     this.transfersList = this.transfersList.filter((t) => t.direction !== want || !t.state.startsWith('Completed'));
   }
 
+  async folderContents() {
+    return null;
+  }
+
   async browse(username: string): Promise<BrowseResult> {
     await wait(700);
     if (username === 'demo') return this.myShareTree();

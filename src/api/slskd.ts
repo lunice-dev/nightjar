@@ -381,6 +381,25 @@ export class SlskdBackend implements Backend {
     await this.request('DELETE', `/transfers/${direction}s/all/completed`);
   }
 
+  async folderContents(username: string, folder: string) {
+    try {
+      const dirs = await this.request<{ name: string; files?: { filename: string; size: number }[] }[]>(
+        'POST',
+        `/users/${enc(username)}/directory`,
+        { directory: folder },
+        12_000,
+      );
+      if (!Array.isArray(dirs)) return null;
+      const inside = (d: string) => d.toLowerCase() === folder.toLowerCase() || d.toLowerCase().startsWith(`${folder.toLowerCase()}\\`);
+      const files = dirs
+        .filter((d) => inside(d.name))
+        .flatMap((d) => (d.files ?? []).map((f) => ({ filename: /[\\/]/.test(f.filename) ? f.filename : `${d.name}\\${f.filename}`, size: f.size })));
+      return files.length ? files : null;
+    } catch {
+      return null;
+    }
+  }
+
   browse(username: string) {
     // Browsing yourself over the network means connecting to your own public
     // address, which most home routers refuse. slskd has the list locally.

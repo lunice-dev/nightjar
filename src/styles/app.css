@@ -1157,3 +1157,5 @@ html.in-app, html.in-app body { overflow: hidden; }
 .pc-fakes h3 { color: var(--t-mid); }
 .pc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .friends-note { margin: 4px 0 12px; }
+.incomplete-line { margin: 8px 0 0; font-size: 13.5px; color: var(--t-mid); }
+.incomplete-line b { font-weight: 650; }

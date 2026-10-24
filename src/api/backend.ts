@@ -62,6 +62,11 @@ export interface Backend {
   clearCompleted(direction: Direction): Promise<void>;
 
   browse(username: string): Promise<BrowseResult>;
+  /**
+   * Every file in one of someone's folders and its sub-folders (full remote paths), asked of them directly.
+   * Null when they don't answer in time; search results list only some of a folder's files.
+   */
+  folderContents(username: string, folder: string): Promise<{ filename: string; size: number }[] | null>;
   userInfo(username: string): Promise<UserInfo>;
   userStatus(username: string): Promise<UserStatus>;
 

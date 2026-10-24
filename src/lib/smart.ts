@@ -1,7 +1,7 @@
 import type { EnqueueFile, Transfer, TransferUser } from '../api/types';
 import { usePrefs, type DownloadPlan, type PlanTrack, type SourceOption } from '../prefs';
 import { useStore } from '../store';
-import { AUDIO_EXT, basename, extOf, type FolderResult, type Release } from './quality';
+import { AUDIO_EXT, basename, expectedTracks, extOf, type FolderResult, type Release } from './quality';
 import { phaseOf } from './transfers';
 import { uuid } from './uuid';
 
@@ -221,8 +221,29 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
   if (!backend) return;
   const { smart } = usePrefs.getState();
 
-  const audio = [...chosen.audio].sort((a, b) => a.filename.localeCompare(b.filename));
-  const wanted = audio.map((f) => ({ name: f.filename, size: f.size }));
+  // A search result lists only the files that matched your words, and some clients cap how many they send.
+  // Ask for the whole folder (and its disc folders) so the album arrives complete.
+  const listed = await backend.folderContents(chosen.username, chosen.folder).catch(() => null);
+  const byName = new Map(chosen.files.map((f) => [f.filename.toLowerCase(), { filename: f.filename, size: f.size }]));
+  let found = 0;
+  for (const f of listed ?? []) {
+    if (byName.has(f.filename.toLowerCase()) || /(^|[\\/])(__MACOSX|\._[^\\/]*$)/.test(f.filename)) continue;
+    byName.set(f.filename.toLowerCase(), f);
+    if (isAudioName(f.filename)) found++;
+  }
+  const allFiles = [...byName.values()];
+  const wanted = allFiles
+    .filter((f) => isAudioName(f.filename))
+    .sort((a, b) => a.filename.localeCompare(b.filename))
+    .map((f) => ({ name: f.filename, size: f.size }));
+  const expected = expectedTracks(release.sources).of;
+  // Disc folders keep their own sub-folder ("Album\CD2"), so tracks with the same number don't collide.
+  const destination = safeFolder(basename(chosen.folder));
+  const destOf = (path: string) => {
+    const dir = path.slice(0, Math.max(0, path.lastIndexOf('\\')));
+    const sub = dir.length > chosen.folder.length ? dir.slice(chosen.folder.length + 1) : '';
+    return sub ? `${destination}\\${sub.split('\\').map(safeFolder).join('\\')}` : undefined;
+  };
   // Every other copy with exactly the same files (same tracks, same sizes): only those may send part of this album,
   // so the folder ends up as one copy. All of them count, not just the fastest few: a popular album can have
   // two hundred copies and only a handful identical.
@@ -247,7 +268,7 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
     for (let k = 0; k < runs[i]; k++, at++) {
       const t = wanted[at];
       const file = i === 0 ? { filename: t.name, size: t.size } : matchTrack(t.name, s)!;
-      tracks.push({ name: t.name, size: t.size, username: s.username, filename: file.filename, failedBy: [] });
+      tracks.push({ name: t.name, size: t.size, username: s.username, filename: file.filename, failedBy: [], dest: destOf(t.name) });
     }
   });
 
@@ -256,26 +277,37 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
     key: chosen.key,
     title: chosen.title,
     artist: chosen.parent || undefined,
-    destination: safeFolder(basename(chosen.folder)),
+    destination,
     tracks,
     sources,
     identical,
     batches: [],
     notes: [],
     createdAt: Date.now(),
+    expected: Math.max(expected, wanted.length),
   };
+  if (found > 0)
+    plan.notes.push({ at: Date.now(), text: `${chosen.username}'s folder has ${found} more ${found === 1 ? 'track' : 'tracks'} than the search showed: downloading all ${wanted.length}.` });
+  const short = expected > 1 && wanted.length < expected * 0.75;
+  if (short)
+    plan.notes.push({ at: Date.now(), text: `${chosen.username} shares only ${wanted.length} of this album's ${expected} tracks.` });
 
   // Covers, logs and cues come from the chosen copy along with its tracks.
-  const extras: EnqueueFile[] = chosen.files.filter((f) => !isAudioName(f.filename)).map((f) => ({ filename: f.filename, size: f.size }));
+  const extras = allFiles.filter((f) => !isAudioName(f.filename)).map((f) => ({ ...f, dest: destOf(f.filename) }));
   const failures: string[] = [];
   for (const s of team) {
-    const files: EnqueueFile[] = tracks.filter((t) => t.username === s.username).map((t) => ({ filename: t.filename, size: t.size }));
+    const files: (EnqueueFile & { dest?: string })[] = tracks.filter((t) => t.username === s.username).map((t) => ({ filename: t.filename, size: t.size, dest: t.dest }));
     // The cover first, so the album shows its art while the tracks are still coming.
     if (s.username === chosen.username) files.unshift(...[...extras].sort((a, b) => Number(isImage(b.filename)) - Number(isImage(a.filename))));
-    const batchId = uuid();
+    // One batch per folder: the album's own, and each disc folder.
+    const byDest = new Map<string, EnqueueFile[]>();
+    for (const f of files) byDest.set(f.dest ?? '', [...(byDest.get(f.dest ?? '') ?? []), { filename: f.filename, size: f.size }]);
     try {
-      await backend.enqueue(s.username, files, { batchId, destination: plan.destination });
-      plan.batches.push(batchId);
+      for (const [dest, list] of byDest) {
+        const batchId = uuid();
+        await backend.enqueue(s.username, list, { batchId, destination: dest || plan.destination });
+        plan.batches.push(batchId);
+      }
     } catch {
       failures.push(s.username);
     }
@@ -288,9 +320,12 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
       t.username = chosen.username;
       t.filename = t.name;
     });
-    const batchId = uuid();
-    await backend.enqueue(chosen.username, back.map((t) => ({ filename: t.filename, size: t.size })), { batchId, destination: plan.destination }).catch(() => undefined);
-    plan.batches.push(batchId);
+    for (const dest of new Set(back.map((t) => t.dest))) {
+      const batchId = uuid();
+      const list = back.filter((t) => t.dest === dest).map((t) => ({ filename: t.filename, size: t.size }));
+      await backend.enqueue(chosen.username, list, { batchId, destination: dest ?? plan.destination }).catch(() => undefined);
+      plan.batches.push(batchId);
+    }
   } else if (failures.includes(chosen.username)) {
     toast(`${chosen.username} is offline. Try another source.`, 'error');
     if (plan.batches.length === 0) return;
@@ -303,7 +338,8 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
   }
   usePrefs.getState().addPlan(plan);
   useStore.setState((st) => ({ queuedKeys: new Set([...st.queuedKeys, ...chosen.files.map((f) => `${chosen.username}\u0000${f.filename}`)]) }));
-  toast(used.length > 1 ? `Queued ${chosen.title} from ${used.length} people at once` : `Queued ${chosen.title} from ${chosen.username}`);
+  if (short) toast(`${chosen.username} shares only ${wanted.length} of the ${expected} tracks of ${chosen.title}. Downloading those; a complete copy is usually further down the list.`, 'error');
+  else toast(used.length > 1 ? `Queued ${chosen.title} from ${used.length} people at once` : `Queued ${chosen.title} from ${chosen.username}`);
   refreshTransfers('download');
 }
 
@@ -382,6 +418,31 @@ export async function manageDownloads() {
     if (live.every(({ t }) => t && phaseOf(t.state) === 'done')) {
       updatePlan(plan.id, { finishedAt: now, tracks: plan.tracks });
       continue;
+    }
+
+    // 0. Tracks that failed because of this computer (the engine restarted while they were coming in): not the
+    //    other person's fault, so ask the same person again, up to three times.
+    const ours = live.filter(({ k, t }) => t && phaseOf(t.state) === 'failed' && ourFault(t) && (k.retries ?? 0) < 3);
+    if (ours.length) {
+      const user = ours[0].k.username;
+      const dest = ours[0].k.dest;
+      const again = ours.filter(({ k }) => k.username === user && k.dest === dest);
+      for (const { k, t } of again) {
+        await backend.cancel('download', t!.username, t!.id, true).catch(() => undefined);
+        k.retries = (k.retries ?? 0) + 1;
+      }
+      const batchId = uuid();
+      await backend
+        .enqueue(user, again.map(({ k }) => ({ filename: k.filename, size: k.size })), { batchId, destination: dest ?? plan.destination })
+        .catch(() => undefined);
+      const n = again.length;
+      updatePlan(plan.id, {
+        tracks: [...plan.tracks],
+        batches: [...plan.batches, batchId],
+        notes: [...plan.notes, { at: now, text: `Asked ${user} again for ${n} ${n === 1 ? 'track' : 'tracks'}: Nightjar's engine restarted while ${n === 1 ? 'it was' : 'they were'} coming in.` }],
+      });
+      useStore.getState().refreshTransfers('download');
+      return;
     }
 
     // 1. Tracks that need a new home: refused or failed, or stuck in a remote queue.
@@ -518,7 +579,10 @@ export async function manageDownloads() {
       const u = m.to === 'first' ? firstSource(plan) : m.to.username;
       bySource.set(u, [...(bySource.get(u) ?? []), m]);
     });
-    const [toUser, group] = [...bySource][0];
+    const [toUser, all] = [...bySource][0];
+    // One folder per batch (disc folders are separate); the rest follow on the next pass.
+    const group = all.filter((m) => plan.tracks[m.i].dest === plan.tracks[all[0].i].dest);
+    const groupDest = plan.tracks[group[0].i].dest;
     const files: EnqueueFile[] = [];
     const fromUsers = new Set<string>();
     for (const m of group) {
@@ -540,7 +604,7 @@ export async function manageDownloads() {
     }
     const batchId = uuid();
     try {
-      await backend.enqueue(toUser, files, { batchId, destination: plan.destination });
+      await backend.enqueue(toUser, files, { batchId, destination: groupDest ?? plan.destination });
     } catch {
       // That source isn't reachable: count it as failed for these tracks and try again next round.
       group.forEach((m) => plan.tracks[m.i].failedBy.push(toUser));
@@ -594,6 +658,10 @@ function addNote(notes: DownloadPlan['notes'], at: number, n: number, from: stri
   const text = `Moved ${n} ${n === 1 ? 'track' : 'tracks'} from ${listOf(from)} to ${to}: ${reason}.`;
   return m && m[2] === listOf(from) && m[3] === to && m[4] === reason ? [...notes.slice(0, -1), { at, text }] : [...notes, { at, text }];
 }
+
+/** A failure caused on this computer, not by the other person: the engine stopped, or the disk refused the file. */
+export const ourFault = (t: Pick<Transfer, 'exception'>) =>
+  /application shut ?down|no space left|disk (is )?full|being used by another process|access to the path/i.test(t.exception ?? '');
 
 /** Transfers this manager cancelled on purpose, so they don't read as "you cancelled it". */
 const movedRecently = new Set<string>();

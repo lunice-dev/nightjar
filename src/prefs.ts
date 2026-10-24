@@ -140,6 +140,10 @@ export interface PlanTrack {
   dropped?: boolean;
   /** How often it was moved because it came in too slowly (it moves at most twice). */
   slowMoves?: number;
+  /** Folder under the downloads folder it goes into, when not the album's own (a disc folder: "Album\CD2"). */
+  dest?: string;
+  /** How often it was asked for again after failing on this computer's side (the engine restarted). */
+  retries?: number;
 }
 
 /**
@@ -168,6 +172,8 @@ export interface DownloadPlan {
   createdAt: number;
   /** Set once every track is done, so the plan stops being checked. */
   finishedAt?: number;
+  /** How many tracks the album has, judged from every copy search found (for "only 2 of 17 tracks"). */
+  expected?: number;
 }
 
 /** Something another person did with your share. */

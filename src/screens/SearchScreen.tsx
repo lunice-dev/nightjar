@@ -627,10 +627,12 @@ function DownloadButton({ r, release, quiet, auto }: { r: FolderResult; release:
   // The album's own button may start from another copy (the fastest identical group), so any copy queued counts.
   const any = useStore((s) => auto && release.sources.some((x) => x.files.every((f) => s.queuedKeys.has(`${x.username}\u0000${f.filename}`))));
   const queued = mine || any;
+  // Asking the person for their whole folder takes a few seconds.
+  const [asking, setAsking] = useState(false);
   return (
     <button
       className={`btn small ${quiet ? 'quiet' : ''} ${queued ? 'done' : ''}`}
-      disabled={queued}
+      disabled={queued || asking}
       title={
         queued
           ? undefined
@@ -638,10 +640,17 @@ function DownloadButton({ r, release, quiet, auto }: { r: FolderResult; release:
             ? 'Download the fastest way: from up to three people with exactly the same files at once'
             : 'Download this copy, with help from people who have exactly the same files'
       }
-      onClick={() => smartDownload(release, auto ? bestStart(release) : r)}
+      onClick={async () => {
+        setAsking(true);
+        try {
+          await smartDownload(release, auto ? bestStart(release) : r);
+        } finally {
+          setAsking(false);
+        }
+      }}
     >
-      <Icon name={queued ? 'check' : 'download'} size={16} />
-      {queued ? 'Queued' : 'Download'}
+      {asking ? <span className="spinner" aria-hidden /> : <Icon name={queued ? 'check' : 'download'} size={16} />}
+      {queued ? 'Queued' : asking ? 'Starting…' : 'Download'}
     </button>
   );
 }
@@ -697,7 +706,13 @@ export const ReleaseRow = memo(function ReleaseRow({
             {r.username}
           </button>
           {r.fakes ? <FakeNote n={r.fakes} /> : null}
-          <span>{r.audio.length} tracks</span>
+          {r.partial ? (
+            <span className="fake-note" title="Other people share more of this album. This copy sits below every complete one.">
+              ⚠ only {r.partial.have} of {r.partial.of} tracks
+            </span>
+          ) : (
+            <span>{r.audio.length} tracks</span>
+          )}
           <span>{bytes(r.size)}</span>
           {r.length > 0 && <span>{duration(r.length)}</span>}
           <TeamChip release={release} />
@@ -744,6 +759,7 @@ export const ReleaseRow = memo(function ReleaseRow({
                       <td>
                         <button className="user-link" onClick={() => openProfile(s.username)}>{s.username}</button>
                         {s.fakes ? <FakeNote n={s.fakes} /> : null}
+                        {s.partial ? <span className="fake-note"> only {s.partial.have} of {s.partial.of} tracks</span> : null}
                       </td>
                       <td><span className="tier-cell">{s.format}</span></td>
                       <td className="hide-sm">{bytes(s.size)}</td>
