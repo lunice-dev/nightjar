@@ -99,13 +99,8 @@ export function FullPlayer({
         <button className="fp-icon" onClick={close} aria-label="Close the player">
           <Icon name="chevron" size={22} />
         </button>
-        <span className="fp-brand">
-          <span className="fp-brand-name">
-            <Mark size={16} /> Nightjar
-          </span>
-          <span className="fp-from">
-            Playing from <strong>{track.album ?? 'your music'}</strong>
-          </span>
+        <span className="fp-brand-name">
+          <Mark size={18} /> Nightjar
         </span>
         {inApp ? <WindowControls /> : <span className="fp-icon" aria-hidden />}
       </div>
@@ -117,11 +112,12 @@ export function FullPlayer({
 
         <div className="fp-side">
           <div className="fp-now">
-            <div className="fp-titles">
-              <h2>{track.title}</h2>
-              <p>{[track.artist, track.album].filter(Boolean).join(' · ')}</p>
-            </div>
-            <span className="fp-chip">{chip}</span>
+            <h2>{track.title}</h2>
+            <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
+            <p className="fp-album">
+              {track.album && <span>{track.album}</span>}
+              <span className="fp-chip">{chip}</span>
+            </p>
           </div>
 
           <div className="fp-time">
@@ -201,7 +197,7 @@ export function FullPlayer({
               </div>
               <ol className={editing ? 'editing' : undefined}>
                 {played.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="played" editing={editing} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                  <QueueRow key={q.qid} q={q} state="played" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
                 ))}
                 <li ref={current} className="fp-row now" aria-current="true">
                   <span className="fp-row-n">
@@ -219,7 +215,7 @@ export function FullPlayer({
                   {editing && <span className="fp-row-x-space" aria-hidden />}
                 </li>
                 {upNext.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="next" editing={editing} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                  <QueueRow key={q.qid} q={q} state="next" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
                 ))}
                 {upNext.length === 0 && <li className="fp-row empty">Nothing after this{repeat === 'all' ? ': the queue starts again' : ''}.</li>}
               </ol>
@@ -232,14 +228,14 @@ export function FullPlayer({
   );
 }
 
-function QueueRow({ q, state, editing, onPlay, onRemove }: { q: QueueItem; state: 'played' | 'next'; editing: boolean; onPlay: () => void; onRemove: () => void }) {
+function QueueRow({ q, state, editing, album, onPlay, onRemove }: { q: QueueItem; state: 'played' | 'next'; editing: boolean; album?: string | null; onPlay: () => void; onRemove: () => void }) {
   return (
     <li className={`fp-row ${state}`}>
       <button className="fp-row-main" onClick={editing ? undefined : onPlay} tabIndex={editing ? -1 : 0}>
         <span className="fp-row-n">{q.no || ''}</span>
         <span className="fp-row-t">
           <strong>{q.title}</strong>
-          <span>{[q.artist, q.album].filter(Boolean).join(' · ')}</span>
+          <span>{[q.artist, q.album !== album ? q.album : null].filter(Boolean).join(' · ')}</span>
         </span>
         <span className="fp-row-d">{fmtTime(q.seconds)}</span>
       </button>
@@ -306,8 +302,8 @@ function useArtColour(src: string | null) {
         r /= w;
         gr /= w;
         b /= w;
-        // Keep it deep: scale so the brightest channel is at most ~110.
-        const k = Math.min(1, 110 / Math.max(r, gr, b, 1));
+        // Keep it deep: scale so the brightest channel is at most ~92, so white text always reads well.
+        const k = Math.min(1, 92 / Math.max(r, gr, b, 1));
         if (alive) setColour(`rgb(${Math.round(r * k)} ${Math.round(gr * k)} ${Math.round(b * k)})`);
       } catch {
         if (alive) setColour(null); // a picture from a server that doesn't allow reading it
