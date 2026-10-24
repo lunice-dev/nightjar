@@ -153,6 +153,156 @@ namespace Nightjar
             }
         }
 
+        // --- FLAC as a WAV stream (for Apple devices) ---------------------------------------
+
+        /// <summary>Sample rate, channels, bits and length of a FLAC file, from its STREAMINFO block; null when unreadable.</summary>
+        static (int rate, int channels, int bits, long samples)? FlacInfo(string file)
+        {
+            try
+            {
+                using (var f = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    var head = new byte[4];
+                    if (f.Read(head, 0, 4) != 4) return null;
+                    // An ID3 tag in front of the FLAC data: skip it.
+                    if (head[0] == 'I' && head[1] == 'D' && head[2] == '3')
+                    {
+                        var id3 = new byte[6];
+                        f.Read(id3, 0, 6);
+                        var size = (id3[2] & 0x7f) << 21 | (id3[3] & 0x7f) << 14 | (id3[4] & 0x7f) << 7 | (id3[5] & 0x7f);
+                        f.Position = 10 + size;
+                        if (f.Read(head, 0, 4) != 4) return null;
+                    }
+                    if (head[0] != 'f' || head[1] != 'L' || head[2] != 'a' || head[3] != 'C') return null;
+                    var block = new byte[4 + 34];
+                    if (f.Read(block, 0, block.Length) != block.Length || (block[0] & 0x7f) != 0) return null;
+                    var si = new byte[34];
+                    Array.Copy(block, 4, si, 0, 34);
+                    int rate = (si[10] << 12) | (si[11] << 4) | (si[12] >> 4);
+                    int channels = ((si[12] >> 1) & 7) + 1;
+                    int bits = (((si[12] & 1) << 4) | (si[13] >> 4)) + 1;
+                    long samples = ((long)(si[13] & 0x0f) << 32) | ((long)si[14] << 24) | ((long)si[15] << 16) | ((long)si[16] << 8) | si[17];
+                    if (rate <= 0 || samples <= 0 || (bits != 16 && bits != 24) || channels > 2) return null;
+                    return (rate, channels, bits, samples);
+                }
+            }
+            catch { return null; }
+        }
+
+        public static bool CanSendPcm(string file) =>
+            Path.GetExtension(file).Equals(".flac", StringComparison.OrdinalIgnoreCase) && File.Exists(FlacExe) && FlacInfo(file) != null;
+
+        /// <summary>
+        /// The FLAC file unpacked to WAV, bit for bit, decoded only from the point the player asks for: the
+        /// header is worked out from the file's length, and flac.exe starts at the right sample. Starts at once
+        /// and jumps exactly, where Safari's own FLAC playback drifts when you skip around.
+        /// </summary>
+        public static void SendPcm(Stream stream, string file, string range)
+        {
+            var info = FlacInfo(file).Value;
+            int bytesPerSample = info.bits / 8;
+            int frame = bytesPerSample * info.channels;
+            long dataLength = info.samples * frame;
+            long length = 44 + dataLength;
+
+            long start = 0, end = length - 1;
+            bool partial = false;
+            var m = Regex.Match(range ?? "", @"^bytes=(\d*)-(\d*)$");
+            if (m.Success)
+            {
+                if (m.Groups[1].Value.Length > 0)
+                {
+                    start = long.Parse(m.Groups[1].Value);
+                    if (m.Groups[2].Value.Length > 0) end = Math.Min(length - 1, long.Parse(m.Groups[2].Value));
+                }
+                else if (m.Groups[2].Value.Length > 0) start = Math.Max(0, length - long.Parse(m.Groups[2].Value));
+                if (start > end || start >= length)
+                {
+                    Head(stream, "416 Range Not Satisfiable", "audio/wav", 0, "Content-Range: bytes */" + length + "\r\n");
+                    return;
+                }
+                partial = true;
+            }
+            long count = end - start + 1;
+            Head(stream, partial ? "206 Partial Content" : "200 OK", "audio/wav", count,
+                "Accept-Ranges: bytes\r\n" + (partial ? "Content-Range: bytes " + start + "-" + end + "/" + length + "\r\n" : ""));
+
+            // The 44-byte header, or the part of it that was asked for.
+            if (start < 44)
+            {
+                var header = WavHeader(info.rate, info.channels, info.bits, dataLength);
+                var n = (int)Math.Min(44 - start, count);
+                stream.Write(header, (int)start, n);
+                start += n;
+                count -= n;
+            }
+            if (count <= 0) return;
+
+            long offset = start - 44;
+            long firstSample = offset / frame;
+            int drop = (int)(offset % frame);
+            var psi = new ProcessStartInfo(FlacExe,
+                "-d -c -s --force-raw-format --endian=little --sign=signed" + (firstSample > 0 ? " --skip=" + firstSample : "") + " \"" + file + "\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            using (var p = Process.Start(psi))
+            {
+                p.ErrorDataReceived += (s, e) => { };
+                p.BeginErrorReadLine();
+                try
+                {
+                    var src = p.StandardOutput.BaseStream;
+                    var buf = new byte[1 << 16];
+                    while (drop > 0)
+                    {
+                        var n = src.Read(buf, 0, drop);
+                        if (n <= 0) break;
+                        drop -= n;
+                    }
+                    while (count > 0)
+                    {
+                        var n = src.Read(buf, 0, (int)Math.Min(buf.Length, count));
+                        if (n <= 0) break;
+                        stream.Write(buf, 0, n);
+                        count -= n;
+                    }
+                    // A damaged file can come out short: pad with silence, so the player isn't left waiting.
+                    if (count > 0)
+                    {
+                        Array.Clear(buf, 0, buf.Length);
+                        while (count > 0)
+                        {
+                            var n = (int)Math.Min(buf.Length, count);
+                            stream.Write(buf, 0, n);
+                            count -= n;
+                        }
+                    }
+                }
+                finally
+                {
+                    try { if (!p.HasExited) p.Kill(); } catch { }
+                }
+            }
+        }
+
+        static byte[] WavHeader(int rate, int channels, int bits, long dataLength)
+        {
+            var h = new byte[44];
+            void Text(int at, string t) { for (int i = 0; i < 4; i++) h[at + i] = (byte)t[i]; }
+            void U32(int at, long v) { h[at] = (byte)v; h[at + 1] = (byte)(v >> 8); h[at + 2] = (byte)(v >> 16); h[at + 3] = (byte)(v >> 24); }
+            void U16(int at, int v) { h[at] = (byte)v; h[at + 1] = (byte)(v >> 8); }
+            var data = (uint)Math.Min(dataLength, uint.MaxValue - 36);
+            Text(0, "RIFF"); U32(4, 36 + data); Text(8, "WAVE");
+            Text(12, "fmt "); U32(16, 16); U16(20, 1); U16(22, channels); U32(24, rate);
+            U32(28, (long)rate * channels * bits / 8); U16(32, channels * bits / 8); U16(34, bits);
+            Text(36, "data"); U32(40, data);
+            return h;
+        }
+
         static void Head(Stream stream, string status, string type, long length, string extra)
         {
             var h = Encoding.ASCII.GetBytes(

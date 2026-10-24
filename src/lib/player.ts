@@ -179,12 +179,22 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 /** Lossless formats the computer can turn into AAC copies. */
 export const convertible = (t: Track) => ['flac', 'wav', 'aif', 'aiff'].includes(t.format);
 
-/** What to ask the computer for: the original, or an AAC copy (and at what bitrate). */
-export function streamChoice(t: Track, dataSaver: boolean, failedOriginal: boolean): number | undefined {
-  if (!convertible(t)) return undefined;
-  if (dataSaver) return 128;
-  if (failedOriginal) return 256;
-  return undefined;
+/** How a track comes from the computer: as it is, unpacked to WAV, or as an AAC copy at some bitrate. */
+export interface StreamAs {
+  aac?: number;
+  pcm?: boolean;
+}
+
+/** Apple's Safari drifts when you skip around in FLAC files, so Apple devices get them unpacked to WAV (same sound, bit for bit). */
+const apple = typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent)));
+
+/** What to ask the computer for. */
+export function streamChoice(t: Track, dataSaver: boolean, failedOriginal: boolean): StreamAs {
+  if (!convertible(t)) return {};
+  if (dataSaver) return { aac: 128 };
+  if (failedOriginal) return { aac: 256 };
+  if (apple && t.format === 'flac') return { pcm: true };
+  return {};
 }
 
 export const fmtTime = (s: number) => {

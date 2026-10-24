@@ -1,3 +1,4 @@
+import type { StreamAs } from '../lib/player';
 import { uuid } from '../lib/uuid';
 import { helperLibrary } from './library';
 import { asDevice, helperBase, signHelperRequests } from './remote';
@@ -36,6 +37,9 @@ const enc = encodeURIComponent;
  */
 const host = (globalThis as { __SSK_LITE__?: { base?: string; helper?: string } }).__SSK_LITE__ ?? {};
 export const API_BASE = host.base ?? '';
+const streamAddress = (key: string, path: string, as?: StreamAs) =>
+  `${HELPER}/stream?k=${key}&path=${encodeURIComponent(path)}${as?.aac ? `&aac=${as.aac}` : ''}${as?.pcm ? '&pcm=1' : ''}`;
+
 export const HELPER = helperBase(host.helper ?? 'http://127.0.0.1:5031');
 signHelperRequests(HELPER);
 
@@ -731,12 +735,11 @@ export class SlskdBackend implements Backend {
       const key = await this.imageKey();
       return key ? `${HELPER}/cover?k=${key}&dir=${enc(dir)}` : null;
     },
-    streamUrl: async (path, aacKbps) => {
+    streamUrl: async (path, as) => {
       const key = await this.imageKey();
-      return key ? `${HELPER}/stream?k=${key}&path=${enc(path)}${aacKbps ? `&aac=${aacKbps}` : ''}` : null;
+      return key ? streamAddress(key, path, as) : null;
     },
-    streamUrlNow: (path, aacKbps) =>
-      this.knownKey ? `${HELPER}/stream?k=${this.knownKey}&path=${enc(path)}${aacKbps ? `&aac=${aacKbps}` : ''}` : null,
+    streamUrlNow: (path, as) => (this.knownKey ? streamAddress(this.knownKey, path, as) : null),
     lease: async (id) => {
       try {
         const res = await fetch(`${HELPER}/lease?id=${enc(id)}`, { method: 'POST', signal: AbortSignal.timeout(3000) });

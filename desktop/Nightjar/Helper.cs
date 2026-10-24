@@ -918,6 +918,11 @@ namespace Nightjar
                 Media.Send(stream, copy, range, "audio/mp4");
                 return;
             }
+            if (req.Q("pcm") == "1" && Media.CanSendPcm(file))
+            {
+                Media.SendPcm(stream, file, range);
+                return;
+            }
             Media.Send(stream, file, range, Media.TypeOf(file));
         }
     }

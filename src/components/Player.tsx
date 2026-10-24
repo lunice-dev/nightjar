@@ -65,9 +65,9 @@ export function Player() {
     const el = audio.current;
     if (!el || !track || !backend) return;
     let alive = true;
-    const kbps = streamChoice(track, dataSaver, converted);
+    const as = streamChoice(track, dataSaver, converted);
     setWaiting(true);
-    backend.files.streamUrl(track.path, kbps).then((url) => {
+    backend.files.streamUrl(track.path, as).then((url) => {
       if (!alive) return;
       if (!url) {
         toast('Playing needs the Nightjar app on your computer.', 'error');
@@ -142,18 +142,19 @@ export function Player() {
     });
   }, [track, cover]);
 
-  // Halfway through, ask the computer to get the next track ready (an AAC copy takes a few seconds to make).
+  // A few seconds in, ask the computer to get the next AAC copy ready (it takes a few seconds to make), so
+  // skipping ahead or reaching the end never waits on it.
   const warmed = useRef('');
   useEffect(() => {
     const nextTrack = queue[index + 1];
-    if (!nextTrack || !backend || duration <= 0 || time < duration / 2 || warmed.current === nextTrack.path) return;
+    if (!nextTrack || !backend || time < 3 || warmed.current === nextTrack.path) return;
     warmed.current = nextTrack.path;
-    const kbps = streamChoice(nextTrack, dataSaver, false);
-    if (!kbps) return;
-    backend.files.streamUrl(nextTrack.path, kbps).then((url) => {
+    const as = streamChoice(nextTrack, dataSaver, false);
+    if (!as.aac) return;
+    backend.files.streamUrl(nextTrack.path, as).then((url) => {
       if (url) fetch(url, { headers: { Range: 'bytes=0-1' } }).catch(() => undefined);
     });
-  }, [time, duration, queue, index, backend, dataSaver]);
+  }, [time, queue, index, backend, dataSaver]);
 
   const onError = () => {
     if (!track || !audio.current?.getAttribute('src')) return;
@@ -279,9 +280,10 @@ export function Player() {
 
 /** What is being sent right now: the original file, or an AAC copy made by the computer (and why). */
 function sending(t: QueueItem, dataSaver: boolean, converted: boolean) {
-  const kbps = streamChoice(t, dataSaver, converted);
-  if (!kbps) return { label: t.format === 'mp3' ? 'the original MP3' : `the original ${t.format.toUpperCase()} file`, aac: 0 };
-  return { label: `an AAC copy at ${kbps} kbit/s`, aac: kbps };
+  const as = streamChoice(t, dataSaver, converted);
+  if (as.pcm) return { label: 'the FLAC unpacked to WAV as it plays (Apple devices skip around in it reliably)', aac: 0 };
+  if (!as.aac) return { label: t.format === 'mp3' ? 'the original MP3' : `the original ${t.format.toUpperCase()} file`, aac: 0 };
+  return { label: `an AAC copy at ${as.aac} kbit/s`, aac: as.aac };
 }
 
 /** A short tag next to the track: what's coming from the computer. */
