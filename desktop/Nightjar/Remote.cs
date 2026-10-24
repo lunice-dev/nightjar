@@ -28,6 +28,8 @@ namespace Nightjar
             public string hash { get; set; }
             public string created { get; set; }
             public string lastSeen { get; set; }
+            /// <summary>The key in this device's picture and music addresses (they can't carry headers).</summary>
+            public string mediaKey { get; set; }
         }
 
         static List<Device> Load()
@@ -236,32 +238,29 @@ namespace Nightjar
 
         // --- keys for pictures and music -----------------------------------------
 
-        // <img> and <audio> send no headers, so their addresses carry a key instead. One per device,
-        // kept in memory: a restart of Nightjar hands out new ones, and removing a device ends its key.
-        static readonly Dictionary<string, string> mediaKeys = new Dictionary<string, string>();
-
+        // <img> and <audio> send no headers, so their addresses carry a key instead: one per device,
+        // saved with it, so it keeps working after Nightjar restarts and ends when the device is removed.
         public static string MediaKeyFor(string deviceId)
         {
             lock (Gate)
             {
-                var found = mediaKeys.FirstOrDefault(kv => kv.Value == deviceId).Key;
-                if (found != null) return found;
-                var key = RandomText(24);
-                mediaKeys[key] = deviceId;
-                return key;
+                var list = Load();
+                var d = list.FirstOrDefault(x => x.id == deviceId);
+                if (d == null) return null;
+                if (string.IsNullOrEmpty(d.mediaKey))
+                {
+                    d.mediaKey = RandomText(24);
+                    Save(list);
+                }
+                return d.mediaKey;
             }
         }
 
         /// <summary>True when the key belongs to a device that is still allowed.</summary>
         public static bool MediaKeyOk(string key)
         {
-            if (string.IsNullOrEmpty(key)) return false;
-            string id;
-            lock (Gate) if (!mediaKeys.TryGetValue(key, out id)) return false;
-            lock (Gate)
-                if (Load().Any(d => d.id == id)) return true;
-            lock (Gate) mediaKeys.Remove(key);
-            return false;
+            if (string.IsNullOrEmpty(key) || key.Length > 100) return false;
+            lock (Gate) return Load().Any(d => d.mediaKey != null && FixedEquals(d.mediaKey, key));
         }
     }
 }
