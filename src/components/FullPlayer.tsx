@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { audioCtl, fmtTime, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
+import { Mark } from './Mark';
+import { WindowControls } from './WindowControls';
+import { inApp } from '../lib/host';
 
 /**
  * The large player, over the whole app: big album art, the time bar, the buttons and what plays
@@ -34,13 +37,26 @@ export function FullPlayer({
   const [details, setDetails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [drag, setDrag] = useState(0);
+  const [closing, setClosing] = useState(false);
   const startY = useRef<number | null>(null);
+  const sheet = useRef<HTMLDivElement>(null);
+
+  // Closing slides the drawer back down first, then takes it away.
+  const close = () => {
+    if (closing) return;
+    setClosing(true);
+    const done = () => p.setExpanded(false);
+    const el = sheet.current;
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+    el.addEventListener('transitionend', done, { once: true });
+    setTimeout(done, 450); // in case the transition doesn't report back
+  };
   const current = useRef<HTMLLIElement>(null);
   const queueRef = useRef<HTMLDivElement>(null);
 
   // Escape closes; the current track scrolls into view when the player opens.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && p.setExpanded(false);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     window.addEventListener('keydown', onKey);
     // On wide screens the list scrolls by itself: show the current track. Upright, the art stays on top.
     const list = queueRef.current, row = current.current;
@@ -63,27 +79,35 @@ export function FullPlayer({
     setDrag(Math.max(0, e.touches[0].clientY - startY.current));
   };
   const onTouchEnd = () => {
-    if (drag > 110) p.setExpanded(false);
-    setDrag(0);
+    if (drag > 110) close();
+    else setDrag(0);
     startY.current = null;
   };
 
   const style = {
     '--fp-tint': tint ?? 'var(--canvas)',
-    transform: drag ? `translateY(${drag}px)` : undefined,
-    transition: drag ? 'none' : undefined,
+    transform: closing ? undefined : drag ? `translateY(${drag}px)` : undefined,
+    transition: drag && !closing ? 'none' : undefined,
   } as CSSProperties;
 
   return (
-    <div className={`full-player ${tint ? 'tinted' : ''}`} role="dialog" aria-label="Now playing" style={style}>
+    <>
+      <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
+      <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''}`} role="dialog" aria-label="Now playing" style={style}>
       <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-        <button className="fp-icon" onClick={() => p.setExpanded(false)} aria-label="Close the player">
+        <span className="fp-grab" aria-hidden />
+        <button className="fp-icon" onClick={close} aria-label="Close the player">
           <Icon name="chevron" size={22} />
         </button>
-        <span className="fp-from">
-          Playing from <strong>{track.album ?? 'your music'}</strong>
+        <span className="fp-brand">
+          <span className="fp-brand-name">
+            <Mark size={16} /> Nightjar
+          </span>
+          <span className="fp-from">
+            Playing from <strong>{track.album ?? 'your music'}</strong>
+          </span>
         </span>
-        <span className="fp-icon" aria-hidden />
+        {inApp ? <WindowControls /> : <span className="fp-icon" aria-hidden />}
       </div>
 
       <div className="fp-body">
@@ -204,6 +228,7 @@ export function FullPlayer({
         </div>
       </div>
     </div>
+    </>
   );
 }
 

@@ -1318,18 +1318,38 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* ---------- the large player ---------- */
 .full-player {
   --fp-ink: #f4f1ea; --fp-ink-2: rgb(244 241 234 / 0.68); --fp-ink-3: rgb(244 241 234 / 0.45); --fp-line: rgb(244 241 234 / 0.16);
-  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; color: var(--fp-ink);
+  --fp-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  /* A drawer over the app: the same inset and rounded corners as the app's own panels. */
+  position: fixed; z-index: 60; inset: max(10px, env(safe-area-inset-top, 0px)) 10px 10px 10px;
+  border-radius: var(--r-xl); overflow: hidden; display: flex; flex-direction: column; color: var(--fp-ink);
+  box-shadow: 0 -10px 40px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.06) inset;
   background:
     radial-gradient(120% 70% at 25% 0%, color-mix(in srgb, var(--fp-tint) 100%, #fff 10%), transparent 70%),
     linear-gradient(180deg, var(--fp-tint) 0%, color-mix(in srgb, var(--fp-tint) 30%, #070707) 100%);
-  padding: max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-  animation: fp-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); transition: transform 0.25s ease, background 0.6s ease;
+  padding: 4px max(16px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  animation: fp-up 0.46s var(--fp-ease); transition: transform 0.36s var(--fp-ease), background 0.6s ease;
+  will-change: transform;
 }
+.full-player.closing { transform: translateY(calc(100% + 24px)); }
 .full-player:not(.tinted) { --fp-tint: #2a2724; }
-@keyframes fp-up { from { transform: translateY(100%); } }
-@media (prefers-reduced-motion: reduce) { .full-player { animation: none; } }
+@keyframes fp-up { from { transform: translateY(calc(100% + 24px)); } }
+.fp-backdrop { position: fixed; inset: 0; z-index: 59; background: rgb(8 7 6 / 0.45); animation: fp-fade 0.3s ease; transition: opacity 0.3s ease; }
+.fp-backdrop.out { opacity: 0; }
+@keyframes fp-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .full-player, .fp-backdrop { animation: none; transition: none; } }
+/* Phones: a sheet from the bottom edge, rounded at the top only. */
+@media (max-width: 699px) {
+  .full-player { inset: max(8px, env(safe-area-inset-top, 0px)) 0 0 0; border-radius: 16px 16px 0 0; }
+}
+.fp-grab { position: absolute; top: 6px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 999px; background: rgb(255 255 255 / 0.32); }
+.fp-top { position: relative; padding-top: 10px; }
+.fp-brand { flex: 1; min-width: 0; display: grid; justify-items: center; gap: 1px; }
+.fp-brand-name { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; letter-spacing: 0.01em; color: var(--fp-ink); }
+.fp-brand-name svg { opacity: 0.9; }
+.fp-top .win-controls { flex: none; }
+.fp-top .win-btn { color: var(--fp-ink-2); }
 .fp-top { display: flex; align-items: center; gap: 10px; flex: none; min-height: 44px; }
-.fp-from { flex: 1; min-width: 0; text-align: center; font-size: 12.5px; color: var(--fp-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-from { max-width: 100%; text-align: center; font-size: 12.5px; color: var(--fp-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fp-from strong { color: var(--fp-ink); font-weight: 600; }
 .fp-icon { width: 40px; height: 40px; display: grid; place-items: center; flex: none; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fp-ink); cursor: pointer; }
 @media (hover: hover) { .fp-icon:hover { background: rgb(255 255 255 / 0.1); } }
@@ -1337,7 +1357,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-icon:disabled { opacity: 0.3; cursor: default; background: none; }
 .fp-icon.small { color: var(--fp-ink-3); }
 .fp-icon.small.on, .fp-icon.on { color: var(--fp-ink); background: rgb(255 255 255 / 0.14); }
-.fp-top .fp-icon:first-child svg { rotate: 90deg; }
+.fp-top > button.fp-icon:first-of-type svg { rotate: 90deg; }
 .fp-i { width: 22px; height: 22px; display: grid; place-items: center; border: 1.8px solid currentColor; border-radius: 50%; font: 700 12px/1 Georgia, serif; font-style: italic; }
 .fp-icon.big { width: 56px; height: 56px; }
 
