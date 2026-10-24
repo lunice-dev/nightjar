@@ -7,16 +7,25 @@ import { usePlayer, type DrawerView } from './player';
  * back to what's playing), forward opens it again. Each step is an entry in the page's own history, so
  * "back" never leaves the app (and the Nightjar window refuses to go back to its opening screen).
  */
-interface Entry {
+export interface Entry {
   route: Route;
   /** What the drawer showed, or null when it was closed. */
   drawer: DrawerView | null;
   /** How many drawer steps in a row lead here (closing it from the page goes back over all of them). */
   depth: number;
+  /** Its place in the history, to know what back and forward lead to. */
+  idx: number;
 }
 
 let moving = false;
 let depth = 0;
+/** A copy of the page's history entries (the browser doesn't let a page read them). */
+let entries: Entry[] = [];
+let idx = 0;
+
+/** Where back and forward lead, for the swipe's hint; null when there's nothing that way. */
+export const neighbour = (dir: -1 | 1): Entry | null => entries[idx + dir] ?? null;
+export const currentEntry = (): Entry | null => entries[idx] ?? null;
 
 const drawerOf = () => {
   const p = usePlayer.getState();
@@ -24,9 +33,12 @@ const drawerOf = () => {
 };
 const same = (a: DrawerView | null, b: DrawerView | null) => JSON.stringify(a) === JSON.stringify(b);
 
-function push(e: Entry) {
+function push(e: Omit<Entry, 'idx'>) {
+  const entry = { ...e, idx: idx + 1 };
+  entries = [...entries.slice(0, idx + 1), entry];
+  idx = entry.idx;
   try {
-    history.pushState(e, '');
+    history.pushState(entry, '');
   } catch {
     /* some embedded views don't allow it; screens still work */
   }
@@ -34,7 +46,10 @@ function push(e: Entry) {
 
 export function startNavHistory() {
   try {
-    history.replaceState({ route: useStore.getState().route, drawer: null, depth: 0 } satisfies Entry, '');
+    const first: Entry = { route: useStore.getState().route, drawer: null, depth: 0, idx: 0 };
+    entries = [first];
+    idx = 0;
+    history.replaceState(first, '');
   } catch {
     return;
   }
@@ -71,6 +86,7 @@ export function startNavHistory() {
     }
     moving = true;
     depth = st.depth ?? 0;
+    idx = st.idx ?? 0;
     if (useStore.getState().route !== st.route) useStore.setState({ route: st.route });
     const want = st.drawer ?? null;
     const p = usePlayer.getState();

@@ -229,6 +229,8 @@ namespace Nightjar
             core.Settings.IsStatusBarEnabled = false;
             core.Settings.IsZoomControlEnabled = false;
             core.Settings.AreBrowserAcceleratorKeysEnabled = true;
+            // The page does its own swipe back / forward (with the page following the finger); the browser's would fight it.
+            core.Settings.IsSwipeNavigationEnabled = false;
             core.WebMessageReceived += OnMessage;
             // Links that open a new window go to the default browser.
             core.NewWindowRequested += (s, e) =>

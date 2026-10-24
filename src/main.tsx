@@ -4,8 +4,10 @@ import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/app.css';
 import { startNavHistory } from './lib/navHistory';
+import { startSwipeNav } from './lib/swipeNav';
 
 startNavHistory();
+startSwipeNav();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
