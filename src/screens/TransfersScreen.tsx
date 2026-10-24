@@ -802,13 +802,18 @@ const humanRefusal = (d: string) =>
     .replace(/Weekly limits exceeded|Daily limits exceeded/, 'they reached your download limit for now')
     .replace(/(Weekly|Daily) failure limit met or exceeded/, 'too many of their downloads failed recently');
 
-const when = (t: number) => {
-  const d = new Date(t);
-  const today = new Date().toDateString() === d.toDateString();
-  return today
-    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-};
+/** Just the time: the day is in the heading above it. */
+const when = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+/** Activity under Today / Yesterday / "Wed 22 Oct" headings, newest first. */
+function feedByDay(list: ActivityEvent[]) {
+  const days = new Map<string, ActivityEvent[]>();
+  for (const e of list) {
+    const d = dayLabel(e.at);
+    days.set(d, [...(days.get(d) ?? []), e]);
+  }
+  return [...days];
+}
 
 /**
  * Everything other people do with your share, not just the uploads that are
@@ -821,7 +826,7 @@ function UploadActivity() {
   const me = useStore((s) => s.me);
   const browse = useStore((s) => s.browse);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
-  const [limit, setLimit] = useState(60);
+  const [limit, setLimit] = useState(30);
 
   const events = all.filter((e) => e.user !== me);
   const dayAgo = Date.now() - 86_400_000;
@@ -839,6 +844,10 @@ function UploadActivity() {
           ? e.kind === 'browse' || e.kind === 'folder'
           : e.kind === 'refused',
   );
+
+  // How much happened each day in total, even when only part of the day is showing yet.
+  const dayCounts = new Map<string, number>();
+  for (const e of shown) dayCounts.set(dayLabel(e.at), (dayCounts.get(dayLabel(e.at)) ?? 0) + 1);
 
   return (
     <section className="activity" aria-labelledby="activity-h">
@@ -869,10 +878,17 @@ function UploadActivity() {
           Nothing here yet. Nightjar records this while it’s open.
         </p>
       ) : (
+        feedByDay(shown.slice(0, limit)).map(([day, items]) => (
+        <div key={day} className="feed-day-group">
+        <h3 className="dl-day">
+          {day} <span className="n">{dayCounts.get(day)}</span>
+        </h3>
         <ol className="feed">
-          {shown.slice(0, limit).map((e) => (
+          {items.map((e) => (
             <li key={e.id} className={`feed-item k-${e.kind}`}>
-              <time dateTime={new Date(e.at).toISOString()}>{when(e.at)}</time>
+              <time dateTime={new Date(e.at).toISOString()} title={new Date(e.at).toLocaleString()}>
+                {when(e.at)}
+              </time>
               <button className="user-link" onClick={() => browse(e.user)}>
                 {e.user}
               </button>
@@ -883,10 +899,12 @@ function UploadActivity() {
             </li>
           ))}
         </ol>
+        </div>
+        ))
       )}
       {shown.length > limit && (
-        <button className="btn quiet small" onClick={() => setLimit((l) => l + 100)}>
-          Show more
+        <button className="btn quiet small" onClick={() => setLimit((l) => l + 50)}>
+          Show more ({shown.length - limit} older)
         </button>
       )}
     </section>
