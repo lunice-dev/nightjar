@@ -38,7 +38,7 @@ export function FullPlayer({
   const [viewArt, setViewArt] = useState<string | null>(null);
   const onArt = useCallback((u: string | null) => setViewArt(u), []);
   useEffect(() => setViewArt(null), [view]);
-  const tint = useArtColour(view.kind === 'now' ? cover : viewArt);
+  const tint = useArtColour(view.kind === 'now' ? art || null : viewArt);
   const [details, setDetails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [drag, setDrag] = useState(0);
@@ -56,6 +56,11 @@ export function FullPlayer({
     el.addEventListener('transitionend', done, { once: true });
     setTimeout(done, 450); // in case the transition doesn't report back
   };
+  // The back button or a swipe asks for the drawer to close: same slide down as the arrow.
+  const closeRequested = usePlayer((s) => s.closeRequested);
+  useEffect(() => {
+    if (closeRequested) close();
+  }, [closeRequested]); // eslint-disable-line react-hooks/exhaustive-deps
   const current = useRef<HTMLLIElement>(null);
   const queueRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +94,7 @@ export function FullPlayer({
   };
 
   const style = {
-    '--fp-tint': tint ?? 'var(--canvas)',
+    ...(tint ? { '--fp-tint': tint } : {}),
     transform: closing ? undefined : drag ? `translateY(${drag}px)` : undefined,
     transition: drag && !closing ? 'none' : undefined,
   } as CSSProperties;

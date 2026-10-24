@@ -4,62 +4,50 @@
 <meta charset="utf-8">
 <title>Nightjar</title>
 <style>
-  /* Nightjar's opening: a night sky while the engine starts. Always the night look; the app itself follows the theme. */
+  /* Nightjar's opening, while the engine starts: the bird breathing over a slow amber glow, the name, and
+     what's happening. The same look as on a phone or iPad. Always dark; the app itself follows the theme. */
   :root {
     color-scheme: dark;
-    --sky-top: #1a1830; --sky-mid: #100f1a; --sky-low: #0b0a0e;
-    --ink: #efe9dd; --ink2: #b3ac9f; --ink3: #7d776d; --rule: rgb(255 255 255 / 0.10);
-    --amber: #e8ad5f; --amber-soft: rgb(232 173 95 / 0.22); --bad: #f08a72; --ok: #8fd3b0;
+    --bg: #141312; --ink: #efe9dd; --ink2: #b3ac9f; --ink3: #7d776d; --rule: rgb(255 255 255 / 0.10);
+    --amber: #e0a458; --bad: #f08a72;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; overflow: hidden; }
   body {
-    color: var(--ink); font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; user-select: none;
-    background: radial-gradient(120% 90% at 50% -10%, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
+    color: var(--ink); background: var(--bg); user-select: none;
+    font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
     display: flex; flex-direction: column;
   }
-  #sky { position: fixed; inset: 0; width: 100%; height: 100%; }
-  .moon {
-    position: fixed; top: 9%; right: 13%; width: 92px; height: 92px; border-radius: 50%;
-    background: radial-gradient(circle at 38% 36%, #fbf3e2 0%, #e9dcc3 55%, #cdbd9f 100%);
-    box-shadow: 0 0 60px 18px rgb(246 228 196 / 0.10), 0 0 160px 60px rgb(246 228 196 / 0.05);
-    opacity: 0.85; animation: moon 2.4s ease-out both;
-  }
-  .moon::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 70% 64%, rgb(0 0 0 / 0.05) 0 9%, transparent 10%), radial-gradient(circle at 34% 70%, rgb(0 0 0 / 0.04) 0 6%, transparent 7%), radial-gradient(circle at 58% 30%, rgb(0 0 0 / 0.035) 0 5%, transparent 6%); }
-  @keyframes moon { from { opacity: 0; translate: 0 14px; } }
-  .hills { position: fixed; left: 0; bottom: 0; width: 100%; height: 26vh; pointer-events: none; display: block; }
+  /* Two soft lights that drift very slowly: alive, never busy. */
+  .glow { position: fixed; inset: -20%; pointer-events: none; filter: blur(40px); opacity: 0.9; }
+  .glow::before, .glow::after { content: ''; position: absolute; border-radius: 50%; }
+  .glow::before { width: 46vmax; height: 46vmax; left: 50%; top: 46%; margin: -23vmax 0 0 -23vmax; background: radial-gradient(circle, rgb(224 164 88 / 0.16), transparent 62%); animation: drift1 14s ease-in-out infinite alternate; }
+  .glow::after { width: 60vmax; height: 60vmax; left: 30%; top: 70%; margin: -30vmax 0 0 -30vmax; background: radial-gradient(circle, rgb(120 96 160 / 0.10), transparent 60%); animation: drift2 18s ease-in-out infinite alternate; }
+  @keyframes drift1 { to { transform: translate(6vmax, -4vmax) scale(1.08); } }
+  @keyframes drift2 { to { transform: translate(14vmax, -8vmax) scale(0.92); } }
 
   .strip { position: relative; z-index: 2; height: 40px; display: flex; justify-content: flex-end; align-items: center; padding: 0 6px; flex: none; }
   .strip button { width: 38px; height: 34px; border: 0; border-radius: 10px; background: none; color: var(--ink2); display: grid; place-items: center; }
   .strip button:hover { background: rgb(255 255 255 / 0.10); color: var(--ink); }
   .strip button.close:hover { background: #c42b1c; color: #fff; }
 
-  main { position: relative; z-index: 1; flex: 1; display: grid; place-items: center; padding: 24px 24px 12vh; }
+  main { position: relative; z-index: 1; flex: 1; display: grid; place-items: center; padding: 0 24px 40px; }
   .stage { width: min(520px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .mark { position: relative; width: 108px; height: 108px; display: grid; place-items: center; margin-bottom: 18px; animation: rise 0.9s cubic-bezier(.2,.7,.2,1) both; }
-  .mark::before { content: ''; position: absolute; inset: -10px; border-radius: 50%; background: radial-gradient(circle, var(--amber-soft) 0%, transparent 68%); animation: breathe 3.6s ease-in-out infinite; }
-  .mark svg { position: relative; width: 84px; height: 84px; animation: glide 6s ease-in-out infinite; filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.45)); }
+  .mark svg { width: 64px; height: 64px; display: block; animation: breathe 1.6s ease-in-out infinite; }
   .bird { fill: var(--ink); } .bars { fill: var(--amber); }
-  @keyframes glide { 0%, 100% { translate: 0 0; rotate: -1.5deg; } 50% { translate: 0 -7px; rotate: 1.5deg; } }
-  @keyframes breathe { 0%, 100% { opacity: 0.55; scale: 0.94; } 50% { opacity: 1; scale: 1.04; } }
-  @keyframes rise { from { opacity: 0; translate: 0 16px; } }
-  h1 { margin: 0; font: 600 44px/1.05 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -0.035em; animation: rise 0.9s 0.08s cubic-bezier(.2,.7,.2,1) both; }
-  .tagline { margin: 10px 0 34px; color: var(--ink2); font-size: 15px; animation: rise 0.9s 0.16s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes breathe { 0%, 100% { opacity: 0.35; scale: 0.94; } 50% { opacity: 1; scale: 1; } }
+  @keyframes rise { from { opacity: 0; translate: 0 10px; } }
+  h1 { margin: 14px 0 0; font: 600 40px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -0.03em; animation: rise 0.6s ease-out both; }
 
-  #loading { width: 100%; animation: rise 0.9s 0.24s cubic-bezier(.2,.7,.2,1) both; }
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-  .step { height: 3px; border-radius: 3px; background: var(--rule); overflow: hidden; position: relative; }
-  .step::after { content: ''; position: absolute; inset: 0; width: 0; background: var(--amber); border-radius: inherit; transition: width 0.6s ease; }
-  .step.done::after { width: 100%; }
-  .step.now::after { width: 100%; background: linear-gradient(90deg, transparent, var(--amber) 50%, transparent); animation: sweep 1.3s linear infinite; }
+  #loading { margin-top: 18px; min-height: 40px; animation: rise 0.6s 0.15s ease-out both; }
+  #status { margin: 0; color: var(--ink3); font-size: 14px; min-height: 21px; transition: opacity 0.3s; }
+  .steps { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .step { width: 22px; height: 3px; border-radius: 3px; background: var(--rule); overflow: hidden; position: relative; }
+  .step.done { background: rgb(224 164 88 / 0.7); }
+  .step.now::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--amber), transparent); animation: sweep 1.2s linear infinite; }
   @keyframes sweep { from { translate: -100% 0; } to { translate: 100% 0; } }
-  #status { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 0; color: var(--ink); font-size: 14.5px; min-height: 22px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 0 var(--amber-soft); animation: ping 1.6s ease-out infinite; flex: none; }
-  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgb(232 173 95 / 0.45); } 100% { box-shadow: 0 0 0 10px rgb(232 173 95 / 0); } }
-  .tip { margin: 40px auto 0; max-width: 420px; color: var(--ink3); font-size: 13px; min-height: 40px; transition: opacity 0.5s ease; }
-  .tip b { color: var(--ink2); font-weight: 600; }
 
-  #problem { display: none; width: min(560px, 100%); text-align: left; background: rgb(22 20 30 / 0.82); border: 1px solid var(--rule); border-radius: 22px; padding: 28px 30px; backdrop-filter: blur(14px); box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.6); animation: rise 0.5s cubic-bezier(.2,.7,.2,1) both; }
+  #problem { display: none; width: min(560px, 100%); margin-top: 26px; text-align: left; background: rgb(28 26 24 / 0.9); border: 1px solid var(--rule); border-radius: 20px; padding: 26px 28px; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.6); animation: rise 0.4s ease-out both; }
   #problem h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: var(--bad); }
   #problem p { margin: 0 0 16px; color: var(--ink2); }
   pre { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: rgb(0 0 0 / 0.35); color: var(--ink2); font: 11.5px/1.45 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; max-height: 160px; overflow: auto; user-select: text; }
@@ -69,18 +57,14 @@
   .actions button:first-child { background: var(--ink); color: #15131c; border-color: var(--ink); }
   .actions button:first-child:hover { background: #fff; }
 
-  .sig { position: fixed; z-index: 2; left: 18px; bottom: 10px; font: 10.5px "Cascadia Mono", Consolas, monospace; color: var(--ink3); }
-  @media (max-height: 560px) { .moon { display: none; } .tip { display: none; } .mark { width: 80px; height: 80px; } .mark svg { width: 64px; height: 64px; } h1 { font-size: 36px; } }
+  .sig { position: fixed; z-index: 2; left: 0; right: 0; bottom: 26px; text-align: center; font: 12px "Cascadia Mono", Consolas, monospace; color: var(--ink3); opacity: 0.8; }
+  .sig::after { content: '_'; animation: caret 1.1s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-  <canvas id="sky" aria-hidden="true"></canvas>
-  <div class="moon" aria-hidden="true"></div>
-  <svg class="hills" viewBox="0 0 1200 260" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 150 C 160 95 300 120 430 150 S 700 200 860 140 S 1100 90 1200 120 L1200 260 L0 260 Z" fill="#0f0e15"/>
-    <path d="M0 200 C 200 160 360 190 540 205 S 860 230 1010 190 S 1160 175 1200 185 L1200 260 L0 260 Z" fill="#09080c"/>
-  </svg>
+  <div class="glow" aria-hidden="true"></div>
 
   <div class="strip" id="strip">
     <button onclick="send('minimize')" aria-label="Minimise"><svg width="10" height="10"><path d="M0 5h10" stroke="currentColor"/></svg></button>
@@ -93,12 +77,10 @@
         <svg viewBox="0 0 64 64"><path class="bird" d="M32 14.6 C34.6 14.6 36.2 16 36 18.2 C35.9 19.6 35.2 20.6 34.8 21.6 C41 18.6 52 20.4 61.5 28.8 C53 27.6 44 29.4 37.2 34.4 C37 37 36.4 39.4 35.6 41.2 L36.8 53.6 C35.6 55.4 33.8 55.8 32 55.8 C30.2 55.8 28.4 55.4 27.2 53.6 L28.4 41.2 C27.6 39.4 27 37 26.8 34.4 C20 29.4 11 27.6 2.5 28.8 C12 20.4 23 18.6 29.2 21.6 C28.8 20.6 28.1 19.6 28 18.2 C27.8 16 29.4 14.6 32 14.6Z"/><path class="bars" d="M49.6 22.2l3 .8-.5 4.9-3 .7z M14.4 22.2l-3 .8.5 4.9 3 .7z"/></svg>
       </div>
       <h1>Nightjar</h1>
-      <p class="tagline">Dig at night. Keep the best copy.</p>
 
       <div id="loading">
+        <p id="status" role="status">Starting Nightjar…</p>
         <div class="steps" aria-hidden="true"><i class="step now" id="s0"></i><i class="step" id="s1"></i><i class="step" id="s2"></i></div>
-        <p id="status" role="status"><span class="dot"></span><span id="status-text">Getting ready…</span></p>
-        <p class="tip" id="tip"></p>
       </div>
 
       <div id="problem" role="alert">
@@ -109,13 +91,13 @@
       </div>
     </div>
   </main>
-  <span class="sig">&gt; coded by lunice_</span>
+  <span class="sig">&gt; coded by lunice</span>
 
 <script>
   function send(action) { try { chrome.webview.postMessage({ type: 'window', action: action }); } catch (e) {} }
   document.getElementById('strip').addEventListener('mousedown', function (e) { if (e.target.closest('button') == null && e.button === 0) send('drag'); });
 
-  // ---- the steps: what the app says it's doing, as a three-part line.
+  // ---- what the app says it's doing, and how far along: three short steps under it.
   function stepOf(text) {
     var t = (text || '').toLowerCase();
     if (t.indexOf('opening') >= 0) return 2;
@@ -125,7 +107,7 @@
   function setStatus(text) {
     document.getElementById('problem').style.display = 'none';
     document.getElementById('loading').style.display = 'block';
-    document.getElementById('status-text').textContent = text === 'Checking…' ? 'Getting ready…' : text;
+    document.getElementById('status').textContent = text === 'Checking…' ? 'Starting Nightjar…' : text;
     var n = stepOf(text);
     for (var i = 0; i < 3; i++) document.getElementById('s' + i).className = 'step' + (i < n ? ' done' : i === n ? ' now' : '');
   }
@@ -143,59 +125,6 @@
       a.appendChild(b);
     });
   }
-
-  // ---- tips, one at a time.
-  var tips = [
-    '<b>Several people, one album.</b> When others have exactly the same files, Nightjar downloads from them at once.',
-    '<b>Check quality</b> tells a real lossless file from an MP3 in disguise, and a real hi-res file from an upsampled one.',
-    '<b>Put in library</b> files an album as Format\\Artist\\Year - Album, and it can always be undone.',
-    '<b>Wishlist</b> keeps looking for albums nobody shares yet, and tells you when they turn up.',
-    '<b>Slow source?</b> Nightjar moves the slow tracks to someone faster on its own.',
-    'Closing the window keeps Nightjar sharing and downloading next to the clock.'
-  ];
-  var tipEl = document.getElementById('tip'), ti = Math.floor(Math.random() * tips.length);
-  function nextTip() {
-    tipEl.style.opacity = 0;
-    setTimeout(function () { tipEl.innerHTML = tips[ti % tips.length]; ti++; tipEl.style.opacity = 1; }, 500);
-  }
-  tipEl.innerHTML = tips[ti % tips.length]; ti++;
-  setInterval(nextTip, 5200);
-
-  // ---- the sky: stars that twinkle, now and then one that falls.
-  (function () {
-    var c = document.getElementById('sky'), g = c.getContext('2d'), stars = [], shoot = null, dpr = window.devicePixelRatio || 1;
-    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function size() {
-      c.width = innerWidth * dpr; c.height = innerHeight * dpr;
-      var n = Math.round(innerWidth * innerHeight / 5200); stars = [];
-      for (var i = 0; i < n; i++) stars.push({ x: Math.random(), y: Math.pow(Math.random(), 1.6) * 0.8, r: Math.random() * 1.1 + 0.25, p: Math.random() * 6.3, s: 0.6 + Math.random() * 1.6 });
-    }
-    function frame(t) {
-      g.clearRect(0, 0, c.width, c.height);
-      for (var i = 0; i < stars.length; i++) {
-        var s = stars[i], a = still ? 0.7 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t / 1000 * s.s + s.p));
-        g.globalAlpha = a * (1 - s.y * 0.6);
-        g.fillStyle = '#f6efe1';
-        g.beginPath(); g.arc(s.x * c.width, s.y * c.height, s.r * dpr, 0, 6.283); g.fill();
-      }
-      if (!still) {
-        if (!shoot && Math.random() < 0.004) shoot = { x: 0.2 + Math.random() * 0.6, y: Math.random() * 0.3, t: 0 };
-        if (shoot) {
-          shoot.t += 0.018;
-          var x = (shoot.x + shoot.t * 0.35) * c.width, y = (shoot.y + shoot.t * 0.18) * c.height, len = 90 * dpr;
-          var grad = g.createLinearGradient(x, y, x - len, y - len * 0.5);
-          grad.addColorStop(0, 'rgba(255,244,222,' + (1 - shoot.t) + ')'); grad.addColorStop(1, 'rgba(255,244,222,0)');
-          g.globalAlpha = 1; g.strokeStyle = grad; g.lineWidth = 1.4 * dpr;
-          g.beginPath(); g.moveTo(x, y); g.lineTo(x - len, y - len * 0.5); g.stroke();
-          if (shoot.t >= 1) shoot = null;
-        }
-      }
-      g.globalAlpha = 1;
-      if (!still) requestAnimationFrame(frame);
-    }
-    addEventListener('resize', size);
-    size(); requestAnimationFrame(frame);
-  })();
 </script>
 </body>
 </html>

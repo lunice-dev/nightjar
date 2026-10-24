@@ -1533,3 +1533,25 @@ html.in-app, html.in-app body { overflow: hidden; }
 .dv-cover-grid button.on { border-color: var(--ink); }
 .dv-cover-grid button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .full-player .modal-backdrop { z-index: 80; color: var(--ink); }
+
+/* The opening screen matches the Windows one: always dark, the Windows type (the system font on Apple
+   devices), the breathing bird over a slow amber glow. */
+.loading-screen { --ls-ink: #efe9dd; --ls-ink3: #7d776d; background: #141312 !important; color: var(--ls-ink); overflow: hidden; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; }
+.loading-screen::before, .loading-screen::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(40px); }
+.loading-screen::before { width: 46vmax; height: 46vmax; left: 50%; top: 46%; margin: -23vmax 0 0 -23vmax; background: radial-gradient(circle, rgb(224 164 88 / 0.16), transparent 62%); animation: ls-drift1 14s ease-in-out infinite alternate; }
+.loading-screen::after { width: 60vmax; height: 60vmax; left: 30%; top: 70%; margin: -30vmax 0 0 -30vmax; background: radial-gradient(circle, rgb(120 96 160 / 0.10), transparent 60%); animation: ls-drift2 18s ease-in-out infinite alternate; }
+@keyframes ls-drift1 { to { transform: translate(6vmax, -4vmax) scale(1.08); } }
+@keyframes ls-drift2 { to { transform: translate(14vmax, -8vmax) scale(0.92); } }
+.loading-screen > * { position: relative; z-index: 1; }
+.loading-screen .loading-mark { color: var(--ls-ink); }
+.loading-screen .loading-name { font: 600 40px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif; letter-spacing: -0.03em; color: var(--ls-ink); }
+.loading-screen .loading-text { color: var(--ls-ink3); font-size: 14px; }
+.loading-screen .loading-sig { position: absolute; color: var(--ls-ink3); opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) { .loading-screen::before, .loading-screen::after { animation: none; } }
+
+/* The arrow that follows a swipe in from the screen's edge (back / forward). */
+.edge-arrow { position: fixed; z-index: 100; left: 6px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: rgb(20 19 18 / 0.85); color: #f4f1ea; box-shadow: 0 4px 18px rgb(0 0 0 / 0.35); opacity: 0; pointer-events: none; transition: opacity 0.15s, background 0.15s; backdrop-filter: blur(8px); }
+.edge-arrow.fwd { left: auto; right: 6px; }
+.edge-arrow.fwd svg { rotate: 180deg; }
+.edge-arrow.ready { background: #f4f1ea; color: #141312; }
+.loading-screen .mark-bird, .full-player .mark-bird { fill: #efe9dd; }

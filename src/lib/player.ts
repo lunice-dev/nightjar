@@ -49,6 +49,9 @@ interface PlayerState {
   expanded: boolean;
   /** What the drawer shows: what's playing, an album, or a playlist. */
   view: DrawerView;
+  /** Asks the open drawer to slide down and close (back button, swipe). */
+  closeRequested: boolean;
+  requestClose(): void;
   shuffle: boolean;
   repeat: Repeat;
   /** The queue in its own order, kept while shuffle is on so turning it off puts it back. */
@@ -126,6 +129,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   loading: false,
   expanded: false,
   view: { kind: 'now' },
+  closeRequested: false,
   shuffle: false,
   repeat: 'off',
   unshuffled: null,
@@ -220,15 +224,19 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   setExpanded(open) {
-    set(open ? { expanded: true } : { expanded: false, view: { kind: 'now' } });
+    set(open ? { expanded: true, closeRequested: false } : { expanded: false, view: { kind: 'now' }, closeRequested: false });
+  },
+
+  requestClose() {
+    if (get().expanded) set({ closeRequested: true });
   },
 
   openAlbum(dir) {
-    set({ expanded: true, view: { kind: 'album', dir } });
+    set({ expanded: true, closeRequested: false, view: { kind: 'album', dir } });
   },
 
   openPlaylist(id) {
-    set({ expanded: true, view: { kind: 'playlist', id } });
+    set({ expanded: true, closeRequested: false, view: { kind: 'playlist', id } });
   },
 
   showNow() {

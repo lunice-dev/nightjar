@@ -18,6 +18,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Play your music: Play on any album in Library, Downloads and From your share, with lock-screen controls. “Use less data” sends smaller AAC copies made by your computer',
       'A large player: big album art over colours taken from it, shuffle, repeat, Play next and Add to queue; on the computer and an iPad held sideways, the art sits beside the controls and the queue',
       'Tap any album cover to open it: its tracks, Play, Shuffle, and Play next / Add to queue / Add to playlist for a track or the whole album',
+      'Back and forward (mouse buttons, Alt+←/→) close and reopen the large player too; a calmer opening screen, the same on the computer, phone and iPad',
       'Playlists, kept on your computer for all your devices: on the search page, with rename, drag to reorder, remove, and a cover (a mosaic, one of its albums, or your own picture). Tracks Tidy moved are found again',
       'Your home Wi-Fi can stay open to phones without Tailscale (search, downloads, chat), with the remote password',
       'Uploads and Activity show when things happened, grouped by day; block someone straight from Uploads',

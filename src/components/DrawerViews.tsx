@@ -140,7 +140,7 @@ export function AlbumView({ dir, onArt }: { dir: string; onArt: (url: string | n
   const name = first?.album ?? dir.split(/[\\/]/).pop() ?? 'Album';
   const artist = albumArtist(album?.tracks ?? []);
   const art = useAlbumArt(dir, artist, first?.album);
-  useEffect(() => onArt(art), [art, onArt]);
+  useEffect(() => onArt(art ?? generatedCover(dir)), [art, onArt, dir]);
 
   if (album === undefined)
     return (
@@ -278,7 +278,7 @@ export function PlaylistView({ id, onArt }: { id: string; onArt: (url: string | 
     if (pl?.cover?.startsWith('image:') && backend) backend.files.pictureUrl(pl.cover.slice(6)).then(setPicture);
     else setPicture(null);
   }, [pl?.cover, backend]);
-  useEffect(() => onArt(picture ?? albumArt), [picture, albumArt, onArt]);
+  useEffect(() => onArt(picture ?? albumArt ?? (coverDir ? generatedCover(coverDir) : null)), [picture, albumArt, onArt, coverDir]);
 
   if (pl === undefined)
     return (

@@ -64,16 +64,18 @@ export function PlaylistCover({ p, className = '' }: { p: Pick<PlaylistSummary, 
         <PlaylistGlyph />
       </span>
     );
-  if (dirs.length < 4)
+  if (dirs.length === 1)
     return (
       <span className={`pl-cover ${className}`}>
         <Cover dir={dirs[0]} seed={dirs[0]} online={false} />
       </span>
     );
+  // Two albums make a checkerboard, three fill three corners and repeat the first: always four squares.
+  const four = dirs.length >= 4 ? dirs.slice(0, 4) : dirs.length === 3 ? [dirs[0], dirs[1], dirs[2], dirs[0]] : [dirs[0], dirs[1], dirs[1], dirs[0]];
   return (
     <span className={`pl-cover mosaic ${className}`}>
-      {dirs.slice(0, 4).map((d) => (
-        <Cover key={d} dir={d} seed={d} online={false} />
+      {four.map((d, i) => (
+        <Cover key={`${d}-${i}`} dir={d} seed={d} online={false} />
       ))}
     </span>
   );
