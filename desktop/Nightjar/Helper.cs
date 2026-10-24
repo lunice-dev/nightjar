@@ -119,6 +119,10 @@ namespace Nightjar
                     req.Remote = remote;
                     await Handle(req, stream).ConfigureAwait(false);
                 }
+                catch (IOException)
+                {
+                    // The other side hung up mid-answer: players do this all the time while seeking or skipping.
+                }
                 catch (Exception e)
                 {
                     Log.Write("Helper error: " + e.Message);
