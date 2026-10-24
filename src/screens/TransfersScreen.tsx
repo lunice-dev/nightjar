@@ -1,3 +1,5 @@
+import { usePlayer } from '../lib/player';
+import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Direction } from '../api/backend';
 import { Icon } from '../components/Icon';
@@ -619,12 +621,17 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           {format && <div className="dl-format">{format}</div>}
         </div>
         <div className="dl-actions">
-          {direction === 'upload' && coverDir && canFiles && (
+          {direction === 'download' && finished && albumDir && canFiles && !gone && (
+            <button className="btn quiet small" onClick={() => usePlayer.getState().playAlbum(albumDir)}>
+              <Icon name="play" size={16} /> Play
+            </button>
+          )}
+          {direction === 'upload' && coverDir && canFiles && onThisComputer && (
             <button className="btn quiet small" onClick={() => reveal(coverDir)} title={coverDir}>
               <Icon name="reveal" size={16} /> Show in folder
             </button>
           )}
-          {direction === 'download' && saved.length > 0 && canFiles && !gone && (
+          {direction === 'download' && saved.length > 0 && canFiles && !gone && onThisComputer && (
             <button className="btn quiet small" onClick={() => reveal(inLibrary && albumDir ? albumDir : saved[0])}>
               <Icon name="reveal" size={16} /> Show in folder
             </button>
@@ -830,9 +837,11 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
                   ) : null}
                   {path && canFiles && (
                     <>
-                      <button className="icon-btn" aria-label={`Show ${fileName(f)} in Explorer`} title="Show in Explorer" onClick={() => reveal(path)}>
-                        <Icon name="reveal" size={16} />
-                      </button>
+                      {onThisComputer && (
+                        <button className="icon-btn" aria-label={`Show ${fileName(f)} in Explorer`} title="Show in Explorer" onClick={() => reveal(path)}>
+                          <Icon name="reveal" size={16} />
+                        </button>
+                      )}
                       <button
                         className="icon-btn"
                         aria-label={`Move ${fileName(f)} to the Recycle Bin`}

@@ -63,7 +63,56 @@ namespace Nightjar
             return (Value(auth, "username"), Value(auth, "password"));
         }
 
+        /// <summary>Replaces "key: value" inside a block (e.g. password under authentication). False when the line isn't there.</summary>
+        static bool SetInBlock(string blockKey, string key, string yamlValue)
+        {
+            var text = Read();
+            var m = Regex.Match(text, @"(?ms)^[ \t]*" + Regex.Escape(blockKey) + @":[ \t]*\r?\n(.*?)(?=^\S|\z)");
+            if (!m.Success) return false;
+            var block = m.Groups[1].Value;
+            var line = new Regex(@"(?m)^(\s*" + Regex.Escape(key) + @":)[^\r\n]*");
+            if (!line.IsMatch(block)) return false;
+            var changed = line.Replace(block, "$1 " + yamlValue.Replace("$", "$$"), 1);
+            Save(text.Substring(0, m.Groups[1].Index) + changed + text.Substring(m.Groups[1].Index + block.Length));
+            return true;
+        }
+
+        /// <summary>The web login's password: the remote password, also used on the home network.</summary>
+        public static bool SetWebPassword(string password) => SetInBlock("authentication", "password", Yaml(password));
+
+        /// <summary>A new signing key: every page signed in with the old one has to sign in again.</summary>
+        public static bool NewJwtKey() => SetInBlock("jwt", "key", Yaml(Random(48)));
+
+        /// <summary>Where slskd's web page listens: 0.0.0.0 for phones on the home network too, 127.0.0.1 for this computer only.</summary>
+        public static string WebAddress() => Value(Block(Read(), "web"), "ip_address") ?? "0.0.0.0";
+
+        public static bool SetWebAddress(bool homeNetwork)
+        {
+            var value = homeNetwork ? "0.0.0.0 # phones on the home network too (login required)" : "127.0.0.1 # only this computer (and remote access through Tailscale)";
+            if (SetInBlock("web", "ip_address", value)) return true;
+            var text = Read();
+            var web = Regex.Match(text, @"(?m)^web:[ \t]*\r?\n");
+            if (!web.Success) return false;
+            Save(text.Insert(web.Index + web.Length, "  ip_address: " + value + "\n"));
+            return true;
+        }
+
         public static string DownloadDir() => Value(Read(), "downloads");
+
+        /// <summary>The shared folders as written in the config ("[alias]C:\path" and "!" exclusions handled).</summary>
+        public static List<string> ShareDirs()
+        {
+            var list = new List<string>();
+            var shares = Block(Read(), "shares");
+            foreach (Match m in Regex.Matches(Block(shares, "directories"), @"(?m)^\s*-\s*(?:'((?:[^']|'')*)'|""([^""]*)""|([^#\r\n]*?))\s*(#.*)?\r?$"))
+            {
+                var v = m.Groups[1].Success ? m.Groups[1].Value.Replace("''", "'") : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value.Trim();
+                if (v.StartsWith("!") || v.Length == 0) continue;
+                v = Regex.Replace(v, @"^\[[^\]]*\]", "");
+                list.Add(v);
+            }
+            return list;
+        }
         public static string IncompleteDir() => Value(Read(), "incomplete");
 
         static string Random(int bytes)

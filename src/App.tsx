@@ -25,6 +25,9 @@ import { useFriendsSync } from './lib/friends';
 import { backfillFakes } from './lib/fakes';
 import { sharePrefsThrough, usePrefs } from './prefs';
 import { HELPER } from './api/slskd';
+import { onThisComputer, remoteApi } from './api/remote';
+import { Player } from './components/Player';
+import { FolderBrowserHost } from './components/FolderBrowser';
 import { useStore, type Route } from './store';
 import type { IconName } from './components/Icon';
 
@@ -337,6 +340,7 @@ function Shell() {
         {route === 'settings' && <SettingsScreen />}
         {route === 'about' && <AboutScreen />}
       </div>
+      <Player />
 
       <footer className="shell-foot">
         <span className="signature" aria-hidden>coded by lunice</span>
@@ -354,11 +358,12 @@ function Shell() {
           {!limits?.down && !limits?.up ? 'No speed limits' : `↓ ${fmtLimit(limits?.down)} · ↑ ${fmtLimit(limits?.up)}`}
         </button>
         <LinkStatus demo={kind === 'demo'} me={me} />
+        {kind !== 'demo' && <RemoteFoot onOpen={() => open('settings')} />}
         <ThemeSwitch theme={theme} onChange={setTheme} />
         <button className="foot-item" aria-current={route === 'about' ? 'page' : undefined} onClick={() => open('about')}>
           About
         </button>
-        <QuitButton busy={active.length} />
+        {onThisComputer && <QuitButton busy={active.length} />}
       </footer>
 
       {/* On a phone the sidebar becomes this bar; the less used screens sit behind More. */}
@@ -395,12 +400,13 @@ function Shell() {
               <button className="theme-toggle" onClick={() => open('about')}>
                 About
               </button>
-              <QuitButton busy={active.length} />
+              {onThisComputer && <QuitButton busy={active.length} />}
             </div>
           </div>
         </div>
       )}
       <ProfileCard />
+      <FolderBrowserHost helper={HELPER} />
       <Toasts />
     </div>
   );
@@ -596,5 +602,28 @@ function ClosedScreen() {
         <p className="hint-text small">You can close this window.</p>
       </div>
     </main>
+  );
+}
+
+/** "Remote on" in the footer while your devices can reach Nightjar; a warning when they can't any more. */
+function RemoteFoot({ onOpen }: { onOpen: () => void }) {
+  const [state, setState] = useState<'on' | 'broken' | null>(null);
+  useEffect(() => {
+    if (!onThisComputer) return;
+    const api = remoteApi(HELPER);
+    const look = () =>
+      api
+        .status()
+        .then((st) => setState(st.address ? 'on' : st.devices.length > 0 ? 'broken' : null))
+        .catch(() => setState(null));
+    look();
+    const t = setInterval(look, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!state) return null;
+  return (
+    <button className={`foot-item remote-foot ${state}`} onClick={onOpen} title={state === 'on' ? 'Your devices can reach Nightjar through Tailscale' : 'Tailscale isn’t connected: your devices can’t reach Nightjar'}>
+      <Icon name="phone" size={14} /> {state === 'on' ? 'Remote on' : 'Remote off'}
+    </button>
   );
 }

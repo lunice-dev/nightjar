@@ -33,6 +33,15 @@ namespace Nightjar
             }
         }
 
+        public static object Get(string key) => Read().TryGetValue(key, out var v) ? v : null;
+
+        public static void Set(string key, object value)
+        {
+            var d = Read();
+            if (value == null) d.Remove(key); else d[key] = value;
+            System.IO.File.WriteAllText(File, Json.Serialize(d), new UTF8Encoding(false));
+        }
+
         /// <summary>Where updates come from ("owner/repo" on GitHub), when not the built-in one.</summary>
         public static string UpdateRepo => Read().TryGetValue("updateRepo", out var v) ? v as string : null;
 

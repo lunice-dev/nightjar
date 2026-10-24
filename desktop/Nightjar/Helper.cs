@@ -87,6 +87,7 @@ namespace Nightjar
         {
             public string Method, Path, Origin;
             public Dictionary<string, string> Query = new Dictionary<string, string>();
+            public Dictionary<string, string> Headers = new Dictionary<string, string>();
             public byte[] Body = new byte[0];
             public string Q(string k) => Query.TryGetValue(k, out var v) ? v : null;
         }
@@ -98,6 +99,7 @@ namespace Nightjar
                 try
                 {
                     client.ReceiveTimeout = 10000;
+                    client.SendTimeout = 120000; // a paused phone player can stop reading for a while
                     var stream = client.GetStream();
                     var req = ReadRequest(stream);
                     if (req == null) return;
@@ -141,6 +143,7 @@ namespace Nightjar
                 var name = l.Substring(0, c).Trim().ToLowerInvariant();
                 var value = l.Substring(c + 1).Trim();
                 if (name == "origin") req.Origin = value;
+                req.Headers[name] = value;
                 if (name == "content-length") int.TryParse(value, out length);
             }
             if (length > 0)
@@ -167,7 +170,7 @@ namespace Nightjar
             head.Append("Content-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\n");
             head.Append("Content-Length: ").Append(bytes.Length).Append("\r\n");
             if (origin != null)
-                head.Append("Access-Control-Allow-Origin: ").Append(origin).Append("\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\nAccess-Control-Allow-Private-Network: true\r\nVary: Origin\r\n");
+                head.Append("Access-Control-Allow-Origin: ").Append(origin).Append("\r\nAccess-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-Nightjar-Device\r\nAccess-Control-Allow-Private-Network: true\r\nVary: Origin\r\n");
             head.Append("\r\n");
             var h = Encoding.ASCII.GetBytes(head.ToString());
             stream.Write(h, 0, h.Length);
@@ -277,25 +280,151 @@ namespace Nightjar
             return removed;
         }
 
+        /// <summary>
+        /// Things only someone sitting at this computer may do: Windows dialogs and Explorer, changes that need
+        /// Windows' permission, quitting, and the remote access setup itself. A phone can't use them, even when signed in.
+        /// </summary>
+        static readonly HashSet<string> ThisComputerOnly = new HashSet<string>
+        {
+            "/pick-folder", "/pick-image", "/reveal", "/upnp", "/firewall", "/quit", "/show",
+            "/remote/code", "/remote/lan", "/tailscale/install", "/tailscale/login", "/tailscale/serve", "/tailscale/test",
+        };
+
         async Task Handle(Request req, NetworkStream stream)
         {
-            if (req.Path == "/img" || req.Path == "/cover")
+            // Through Tailscale the helper is at https://<this computer>/nj; Tailscale may or may not pass the /nj on.
+            if (req.Path == Tailscale.HelperPath || req.Path.StartsWith(Tailscale.HelperPath + "/"))
+                req.Path = req.Path.Length == Tailscale.HelperPath.Length ? "/" : req.Path.Substring(Tailscale.HelperPath.Length);
+
+            if (req.Path == "/img" || req.Path == "/cover" || req.Path == "/stream")
             {
-                if (req.Q("k") != imgKey) { Reply(stream, 403, null, new { }); return; }
-                SendImage(stream, req.Path == "/cover" ? FindCover(req.Q("dir")) : req.Q("path"));
+                var k = req.Q("k");
+                if (k != imgKey && !Remote.MediaKeyOk(k)) { Reply(stream, 403, null, new { }); return; }
+                if (req.Path == "/stream") await SendTrack(req, stream).ConfigureAwait(false);
+                else SendImage(stream, req.Path == "/cover" ? FindCover(req.Q("dir")) : req.Q("path"));
                 return;
             }
-            var origin = Origins.Contains(req.Origin) ? req.Origin : null;
-            if (origin == null) { Reply(stream, 403, null, new { error = "origin" }); return; }
+
+            // The page in Nightjar's window (and luniceOS) comes from 127.0.0.1:5030, so the browser always says so.
+            // Anything else (a phone through Tailscale, which asks from the same address) must show a device token.
+            var local = Origins.Contains(req.Origin);
+            var origin = local ? req.Origin : RemoteOrigin(req.Origin);
             if (req.Method == "OPTIONS") { Reply(stream, 204, origin, ""); return; }
+            Remote.Device device = null;
+            if (!local)
+            {
+                if (req.Path == "/ping") { Reply(stream, 200, origin, new { ok = true, host = "Nightjar" }); return; }
+                if (req.Path == "/pair" && req.Method == "POST")
+                {
+                    var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                    string V(string key) => body.TryGetValue(key, out var v) ? v as string : null;
+                    var (token, id, error, wait) = Remote.Pair(V("secret"), V("name"));
+                    Reply(stream, token != null ? 200 : wait > 0 ? 429 : 401, origin, new { token, id, error, wait });
+                    return;
+                }
+                device = Remote.Check(req.Headers.TryGetValue("x-nightjar-device", out var t) ? t : null);
+                if (device == null) { Reply(stream, 401, origin, new { error = "signin" }); return; }
+                if (ThisComputerOnly.Contains(req.Path)) { Reply(stream, 403, origin, new { error = "Only possible on the computer Nightjar runs on." }); return; }
+            }
 
             switch (req.Path)
             {
+                case "/remote/status":
+                    {
+                        var ts = Tailscale.Status(req.Q("fresh") == "1");
+                        var (user, _) = Config.WebLogin();
+                        Reply(stream, 200, origin, new
+                        {
+                            tailscale = ts,
+                            address = ts.serving ? Tailscale.Address : null,
+                            install = Tailscale.InstallState,
+                            devices = Remote.List(),
+                            you = device?.id,
+                            passwordSet = Remote.RemotePasswordSet,
+                            username = user,
+                            lan = Config.WebAddress().StartsWith("0.0.0.0"),
+                            lanAddresses = LanAddresses(),
+                        });
+                        return;
+                    }
+                case "/remote/code":
+                    Reply(stream, 200, origin, req.Method == "DELETE" ? (object)new { ok = true, gone = Forget() } : Remote.NewCode());
+                    return;
+                case "/remote/device":
+                    {
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        string V(string key) => body.TryGetValue(key, out var v) ? v as string : null;
+                        if (req.Method == "DELETE" || V("action") == "remove")
+                        {
+                            var ok = Remote.Remove(V("id"));
+                            // A new signing key ends the engine sessions that device still had.
+                            if (ok) await EndSessions().ConfigureAwait(false);
+                            Reply(stream, 200, origin, new { ok });
+                        }
+                        else Reply(stream, 200, origin, new { ok = Remote.Rename(V("id"), V("name")) });
+                        return;
+                    }
+                case "/remote/signout-all":
+                    if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                    Remote.RemoveAll();
+                    Remote.ForgetCode();
+                    await EndSessions().ConfigureAwait(false);
+                    Reply(stream, 200, origin, new { ok = true });
+                    return;
+                case "/remote/password":
+                    {
+                        if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        var error = Remote.SetPassword(body.TryGetValue("password", out var v) ? v as string : null);
+                        // The engine reads its login when it starts; the helper signs this page in again by itself.
+                        if (error == null) restart();
+                        Reply(stream, 200, origin, new { ok = error == null, error, restarting = error == null });
+                        return;
+                    }
+                case "/remote/lan":
+                    {
+                        if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        var on = body.TryGetValue("on", out var v) && v is bool b && b;
+                        if (on && !Remote.RemotePasswordSet) { Reply(stream, 200, origin, new { ok = false, error = "Choose a remote password first: it's what you type on the home network." }); return; }
+                        var ok = Config.SetWebAddress(on);
+                        if (ok) restart();
+                        Reply(stream, 200, origin, new { ok, restarting = ok });
+                        return;
+                    }
+                case "/tailscale/install":
+                    if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                    Reply(stream, 200, origin, Tailscale.Install());
+                    return;
+                case "/tailscale/login":
+                    if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                    Reply(stream, 200, origin, Tailscale.Login());
+                    return;
+                case "/tailscale/serve":
+                    {
+                        if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        Reply(stream, 200, origin, Tailscale.Serve(body.TryGetValue("on", out var v) && v is bool b && b));
+                        return;
+                    }
+                case "/tailscale/test":
+                    Reply(stream, 200, origin, await Tailscale.Test().ConfigureAwait(false));
+                    return;
+                case "/tracks":
+                    {
+                        var r = Media.Tracks(req.Q("dir"));
+                        if (r == null) { Reply(stream, 404, origin, new { error = "That folder isn't in your library, downloads or shared folders." }); return; }
+                        Reply(stream, 200, origin, r);
+                        return;
+                    }
+                case "/fs/list":
+                    Reply(stream, 200, origin, Media.Folders(req.Q("path")));
+                    return;
                 case "/ping":
                     Reply(stream, 200, origin, new { ok = true, host = "Nightjar" });
                     return;
                 case "/img-key":
-                    Reply(stream, 200, origin, new { key = imgKey });
+                    Reply(stream, 200, origin, new { key = device == null ? imgKey : Remote.MediaKeyFor(device.id) });
                     return;
                 case "/token":
                     Reply(stream, 200, origin, new { token = await Engine.Token().ConfigureAwait(false) });
@@ -563,6 +692,8 @@ namespace Nightjar
                         // Only one window runs the download manager; a window that stops asking loses it after 15 s.
                         var id = req.Q("id");
                         bool mine;
+                        // The download manager runs on this computer; a phone only watches.
+                        if (device != null) { Reply(stream, 200, origin, new { mine = false }); return; }
                         lock (leaseGate)
                         {
                             if (leaseId == null || leaseId == id || DateTime.UtcNow > leaseUntil) { leaseId = id; leaseUntil = DateTime.UtcNow.AddSeconds(15); }
@@ -583,6 +714,69 @@ namespace Nightjar
                     Reply(stream, 404, origin, new { });
                     return;
             }
+        }
+
+        /// <summary>The page's own https address through Tailscale, which a browser may name as the Origin.</summary>
+        static string RemoteOrigin(string origin)
+        {
+            var address = Tailscale.Address;
+            return origin != null && address != null && string.Equals(origin, address, StringComparison.OrdinalIgnoreCase) ? origin : null;
+        }
+
+        static bool Forget()
+        {
+            Remote.ForgetCode();
+            return true;
+        }
+
+        /// <summary>Signs every page out of the engine (a new signing key, then a restart). This window signs in again by itself.</summary>
+        async Task EndSessions()
+        {
+            if (Config.NewJwtKey()) restart();
+            await Task.Delay(10).ConfigureAwait(false);
+        }
+
+        /// <summary>This computer's addresses on the home network, for "open http://192.168.x.x:5030 on your phone".</summary>
+        static List<string> LanAddresses()
+        {
+            var list = new List<string>();
+            try
+            {
+                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback || ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Tunnel) continue;
+                    if (ni.Description.IndexOf("Tailscale", StringComparison.OrdinalIgnoreCase) >= 0 || ni.Description.IndexOf("Virtual", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    foreach (var a in ni.GetIPProperties().UnicastAddresses)
+                    {
+                        var ip = a.Address;
+                        if (ip.AddressFamily != AddressFamily.InterNetwork) continue;
+                        var b = ip.GetAddressBytes();
+                        // Private ranges only: 192.168/16, 10/8, 172.16/12.
+                        if (b[0] == 192 && b[1] == 168 || b[0] == 10 || b[0] == 172 && b[1] >= 16 && b[1] <= 31) list.Add(ip.ToString());
+                    }
+                }
+            }
+            catch { }
+            return list.Distinct().ToList();
+        }
+
+        /// <summary>A track, as it is or as an AAC copy (aac=128 or 256), in the pieces the player asks for.</summary>
+        static async Task SendTrack(Request req, NetworkStream stream)
+        {
+            var file = Media.Allowed(req.Q("path"));
+            if (file == null || !File.Exists(file) || !Media.IsAudio(file)) { Reply(stream, 404, null, new { error = "not found" }); return; }
+            req.Headers.TryGetValue("range", out var range);
+            int.TryParse(req.Q("aac") ?? "", out var kbps);
+            if (kbps > 0 && Media.CanConvert(file))
+            {
+                string copy;
+                try { copy = await Media.Aac(file, kbps).ConfigureAwait(false); }
+                catch (Exception e) { Reply(stream, 500, null, new { error = e.Message }); return; }
+                Media.Send(stream, copy, range, "audio/mp4");
+                return;
+            }
+            Media.Send(stream, file, range, Media.TypeOf(file));
         }
     }
 

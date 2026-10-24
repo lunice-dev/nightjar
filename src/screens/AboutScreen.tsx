@@ -7,6 +7,22 @@ export const VERSION = '0.7';
 /** What changed in each version, newest first. Keep entries short and in the user's words. */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8',
+    date: '24 Oct 2026',
+    title: 'Nightjar on your phone, anywhere',
+    items: [
+      'Remote access: use Nightjar on your phone or another computer away from home, through Tailscale (free, private, nothing open to the internet). Settings → Remote access walks you through it and installs Tailscale for you',
+      'Everything works from your phone: search, downloads, your library, Tidy, Check quality and Put in library; folders are chosen in the page',
+      'Sign a phone in by scanning a QR code and typing a short code, or with a remote password; see and remove signed-in devices',
+      'On an iPhone, Nightjar goes on the Home Screen and opens like an app',
+      'Play your music: Play on any album in Library or Downloads, with a queue and lock-screen controls. “Use less data” sends smaller AAC copies made by your computer',
+      'Your home Wi-Fi can stay open to phones without Tailscale (search, downloads, chat), with the remote password',
+      'Uploads and Activity show when things happened, grouped by day; block someone straight from Uploads',
+      'Click any name for a profile card; people who sent you fake copies are remembered and ranked down',
+      'Leech rules and friends first decide who gets your uploads; smart downloads fetch the whole album and warn when a copy is incomplete',
+    ],
+  },
+  {
     version: '0.7',
     date: '22 Oct 2026',
     title: 'Your library, checked and tidied',

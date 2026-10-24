@@ -141,6 +141,11 @@ export interface FileAccess {
    * folder.png…), or null when the helper isn't reachable (a phone).
    */
   coverUrl(dir: string): Promise<string | null>;
+  /**
+   * An <audio> address for a track on the computer: the file itself, or an AAC copy at the
+   * given bitrate (128 or 256 kbit/s) made by the computer. Null without the Nightjar app.
+   */
+  streamUrl(path: string, aacKbps?: number): Promise<string | null>;
   /** Where each shared folder lives on this computer, by the name others see. */
   shareRoots(): Promise<{ remote: string; local: string }[]>;
   /**

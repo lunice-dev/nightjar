@@ -1,3 +1,5 @@
+import { RemoteAccessSection } from '../components/RemoteAccess';
+import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useState } from 'react';
 import type { LeechMode, Settings, ShareStatus } from '../api/types';
 import { Icon } from '../components/Icon';
@@ -279,6 +281,8 @@ export function SettingsScreen() {
           </p>
         )}
 
+        <RemoteAccessSection />
+
         <SpeedSection settings={settings} readOnly={ro} onSaved={afterSave} />
 
         <WhoGetsUploads settings={settings} readOnly={ro} onSaved={afterSave} />
@@ -519,7 +523,8 @@ function Reachability() {
   };
 
   const r = state.result;
-  const canFix = !state.checking && r?.open !== true && r !== null;
+  // Router and firewall changes happen on the computer itself (Windows asks for permission there).
+  const canFix = !state.checking && r?.open !== true && r !== null && onThisComputer;
   return (
     <section className="settings-block" aria-labelledby="reach-h">
       <h2 id="reach-h">Can others download from you?</h2>

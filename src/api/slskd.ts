@@ -1,5 +1,7 @@
 import { uuid } from '../lib/uuid';
 import { helperLibrary } from './library';
+import { helperBase, signHelperRequests, viaTailscale } from './remote';
+import { pickFolderHere } from '../components/FolderBrowser';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { isScalar, isSeq, parseDocument, type Document } from 'yaml';
 import { ApiError, type Backend, type Direction, type FileAccess, type FolderAccess, type LinkProblem, type PortCheck, type SignInResult, type SearchWatch, type Unsubscribe } from './backend';
@@ -34,7 +36,8 @@ const enc = encodeURIComponent;
  */
 const host = (globalThis as { __SSK_LITE__?: { base?: string; helper?: string } }).__SSK_LITE__ ?? {};
 export const API_BASE = host.base ?? '';
-export const HELPER = host.helper ?? 'http://127.0.0.1:5031';
+export const HELPER = helperBase(host.helper ?? 'http://127.0.0.1:5031');
+signHelperRequests(HELPER);
 
 /**
  * Replace a YAML list while keeping the existing entries' nodes, so comments
@@ -101,7 +104,7 @@ export class SlskdBackend implements Backend {
    * Every call gives up after a while (30 s, or what the caller says), so a busy or
    * restarting engine shows an error instead of a page that waits forever.
    */
-  private async request<T>(method: string, path: string, body?: unknown, timeout = 30_000): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown, timeout = 30_000, retried = false): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -115,7 +118,11 @@ export class SlskdBackend implements Backend {
       throw new ApiError(e.name === 'TimeoutError' ? 'The engine took too long to answer.' : 'The engine isn’t answering.', 0);
     });
 
-    if (res.status === 401 && path !== '/session') clearToken();
+    if (res.status === 401 && path !== '/session') {
+      clearToken();
+      // The engine's sessions were ended (a device removed, a new password): the helper signs this page in again.
+      if (!retried && (await this.helperLogin())) return this.request<T>(method, path, body, timeout, true);
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new ApiError(text || `${method} ${path} failed with ${res.status}`, res.status);
@@ -705,6 +712,7 @@ export class SlskdBackend implements Backend {
       }
     },
     pickImage: async () => {
+      if (viaTailscale) throw new ApiError('Choose a new picture on the computer Nightjar runs on.', 403);
       const res = await fetch(`${HELPER}/pick-image`);
       if (!res.ok) throw new ApiError('The file dialog is not available', res.status);
       const r = (await res.json()) as { path: string | null; error?: string };
@@ -723,6 +731,10 @@ export class SlskdBackend implements Backend {
       const key = await this.imageKey();
       return key ? `${HELPER}/cover?k=${key}&dir=${enc(dir)}` : null;
     },
+    streamUrl: async (path, aacKbps) => {
+      const key = await this.imageKey();
+      return key ? `${HELPER}/stream?k=${key}&path=${enc(path)}${aacKbps ? `&aac=${aacKbps}` : ''}` : null;
+    },
     lease: async (id) => {
       try {
         const res = await fetch(`${HELPER}/lease?id=${enc(id)}`, { method: 'POST', signal: AbortSignal.timeout(3000) });
@@ -739,7 +751,13 @@ export class SlskdBackend implements Backend {
 
   /** The helper hands out a secret so only this page can show your local pictures. */
   private keyPromise?: Promise<string | null>;
+  private keyAt = 0;
   private imageKey() {
+    // Asked again now and then: a restart of the Nightjar app hands out new keys.
+    if (Date.now() - this.keyAt > 10 * 60_000) {
+      this.keyPromise = undefined;
+      this.keyAt = Date.now();
+    }
     this.keyPromise ??= fetch(`${HELPER}/img-key`, { signal: AbortSignal.timeout(2500) })
       .then((r) => (r.ok ? (r.json() as Promise<{ key?: string }>) : {}))
       .then((j) => (j as { key?: string }).key ?? null)
@@ -817,6 +835,8 @@ export class SlskdBackend implements Backend {
       }
     },
     pick: async (start) => {
+      // Away from the computer there is no Windows dialog to show: the folders are browsed in the page instead.
+      if (viaTailscale) return pickFolderHere(start);
       const res = await fetch(`${HELPER}/pick-folder${start ? `?start=${enc(start)}` : ''}`);
       if (!res.ok) throw new ApiError('The folder dialog is not available', res.status);
       return ((await res.json()) as { path: string | null }).path;

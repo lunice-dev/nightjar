@@ -1,3 +1,4 @@
+import { onThisComputer } from '../api/remote';
 import { useState } from 'react';
 import { HELPER } from '../api/slskd';
 import { useFilesAvailable } from '../lib/files';
@@ -53,10 +54,12 @@ export function ReportProblem() {
         </button>
         {done?.path && (
           <span className="hint-text report-done">
-            Saved in Downloads: <b>{done.path.split(/[\\/]/).pop()}</b>{' '}
-            <button className="link" onClick={() => backend?.files.reveal(done.path!)}>
-              Show in folder
-            </button>
+            Saved in Downloads{onThisComputer ? '' : ' on your computer'}: <b>{done.path.split(/[\\/]/).pop()}</b>{' '}
+            {onThisComputer && (
+              <button className="link" onClick={() => backend?.files.reveal(done.path!)}>
+                Show in folder
+              </button>
+            )}
           </span>
         )}
         {done?.error && <span className="error">{done.error}</span>}

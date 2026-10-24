@@ -51,9 +51,16 @@ licence is in slskd\\LICENSE and its source code is at https://github.com/slskd/
 It also includes Microsoft's WebView2 SDK (Microsoft.Web.WebView2), under its
 own licence (BSD-style), to show its window with Microsoft Edge WebView2;
 TagLib# (LGPL 2.1, https://github.com/mono/taglib-sharp) to read tags;
-NLayer (MIT, https://github.com/naudio/NLayer) to decode MP3; and the FLAC
+NLayer (MIT, https://github.com/naudio/NLayer) to decode MP3; NAudio (MIT,
+https://github.com/naudio/NAudio) to make AAC copies for playing on a phone with
+the encoder built into Windows; qrcode-generator (MIT, Kazuhiko Arase) for QR
+codes; and the FLAC
 1.4.3 tools from xiph.org (flac.exe under the GPL, libFLAC under the Xiph BSD
 licence; tools\COPYING.*; source at https://github.com/xiph/flac).
+
+Remote access uses Tailscale (https://tailscale.com), which is not included:
+when you ask, Nightjar downloads Tailscale's official installer from
+pkgs.tailscale.com and runs it after checking it is signed by Tailscale.
 NOTICE
 sed -i 's/\r*$/\r/' "$STAGE/NOTICE.txt"
 

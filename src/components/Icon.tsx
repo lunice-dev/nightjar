@@ -22,6 +22,12 @@ const PATHS = {
   speed: 'M12 4a10 10 0 0 0-8.7 15h17.4A10 10 0 0 0 12 4Zm0 2a8 8 0 0 1 7.4 11H4.6A8 8 0 0 1 12 6Zm3.9 2.7-4.6 5a1.5 1.5 0 1 0 2.2 1.9l2.4-6.9Z',
   history: 'M13 3a9 9 0 0 0-9 9H1l3.9 3.9L9 12H6a7 7 0 1 1 2.1 5l-1.4 1.4A9 9 0 1 0 13 3Zm-1 5v5l4.3 2.5.7-1.2-3.5-2.1V8H12Z',
   share: 'M3 6a2 2 0 0 1 2-2h4.6l2 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Zm9 3-4 4h3v4h2v-4h3l-4-4Z',
+  back: 'M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20v-2Z',
+  play: 'M8 5v14l11-7L8 5Z',
+  pause: 'M6 5h4v14H6V5Zm8 0h4v14h-4V5Z',
+  next: 'M6 6v12l8.5-6L6 6Zm10 0h2v12h-2V6Z',
+  prev: 'M6 6h2v12H6V6Zm3.5 6 8.5 6V6l-8.5 6Z',
+  phone: 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 2v14h8V4H8Zm3 15v1h2v-1h-2Z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

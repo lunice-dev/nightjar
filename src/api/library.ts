@@ -166,6 +166,28 @@ export interface LibraryAccess {
   undoBatch(batch: string): Promise<{ ok: boolean; undone?: number; error?: string; failed?: { to: string; error: string }[]; moved?: { from: string; to: string }[] }>;
   batches(): Promise<LibBatch[] | null>;
   recycle(dir: string): Promise<{ ok: boolean; error?: string }>;
+  /** An album's tracks in play order (disc folders included), or null when it can't be read. */
+  tracks(dir: string): Promise<AlbumTracks | null>;
+}
+
+export interface Track {
+  path: string;
+  title: string;
+  artist: string | null;
+  album: string | null;
+  no: number;
+  disc: number;
+  seconds: number;
+  format: string;
+  bits: number;
+  rate: number;
+  kbps: number;
+  size: number;
+}
+
+export interface AlbumTracks {
+  dir: string;
+  tracks: Track[];
 }
 
 /** Talks to the Nightjar app's helper. */
@@ -208,6 +230,10 @@ export function helperLibrary(helper: string): LibraryAccess {
     undoBatch: (batch) => post('/library/undo', { batch }),
     batches: () => get<LibBatch[]>('/library/batches', 10_000),
     recycle: (dir) => post('/library/recycle', { dir }, 120_000),
+    tracks: async (dir) => {
+      const r = await get<AlbumTracks | { error: string }>(`/tracks?dir=${enc(dir)}`, 60_000);
+      return r && 'tracks' in r ? r : null;
+    },
   };
 }
 
@@ -348,6 +374,7 @@ export function demoLibrary(): LibraryAccess {
       for (const a of albums) if (a.dupKey && albums.filter((x) => x.dupKey === a.dupKey).length < 2) a.dupKey = null;
       return { ok: true };
     },
+    tracks: async () => null,
     check: async () => ({ id: 'demo' }),
     progress: async () => {
       await wait(900);

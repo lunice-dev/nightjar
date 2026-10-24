@@ -363,6 +363,7 @@ export class DemoBackend implements Backend {
     },
     imagePreview: async () => null,
     coverUrl: async () => null,
+    streamUrl: async () => null,
     shareRoots: async () => [],
     lease: async () => true,
     trashDownload: async (what) => what.folders.length + what.files.length + what.partials.length,
