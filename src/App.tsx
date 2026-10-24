@@ -28,6 +28,7 @@ import { HELPER } from './api/slskd';
 import { onThisComputer, remoteApi } from './api/remote';
 import { Player } from './components/Player';
 import { FolderBrowserHost } from './components/FolderBrowser';
+import { PlaylistPicker } from './components/Playlists';
 import { useStore, type Route } from './store';
 import type { IconName } from './components/Icon';
 
@@ -429,6 +430,7 @@ function Shell() {
       )}
       <ProfileCard />
       <FolderBrowserHost helper={HELPER} />
+      <PlaylistPicker />
       <Toasts />
     </div>
   );

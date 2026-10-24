@@ -551,6 +551,25 @@ namespace Nightjar
                         Reply(stream, 200, origin, r);
                         return;
                     }
+                case "/playlists":
+                    if (req.Method == "POST")
+                    {
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        Reply(stream, 200, origin, Playlists.Change(body));
+                    }
+                    else Reply(stream, 200, origin, Playlists.List());
+                    return;
+                case "/playlist":
+                    {
+                        var pl = Playlists.Get(req.Q("id"));
+                        if (pl == null) { Reply(stream, 404, origin, new { error = "That playlist doesn't exist any more." }); return; }
+                        Reply(stream, 200, origin, pl);
+                        return;
+                    }
+                case "/playlist/cover":
+                    if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                    Reply(stream, 200, origin, Playlists.SetImage(req.Q("id"), req.Body));
+                    return;
                 case "/fs/list":
                     Reply(stream, 200, origin, Media.Folders(req.Q("path")));
                     return;

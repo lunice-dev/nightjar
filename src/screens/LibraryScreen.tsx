@@ -1,3 +1,4 @@
+import { usePlayer } from '../lib/player';
 import { AlbumPlay } from '../components/AlbumPlay';
 import { onThisComputer } from '../api/remote';
 import { useEffect, useMemo, useState } from 'react';
@@ -256,7 +257,9 @@ function AlbumRow({ a }: { a: LibAlbum }) {
   const c = check.saved;
   return (
     <div className="lib-row">
-      <Cover className="lib-cover" dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} online={false} />
+      <button className="cover-open" onClick={() => usePlayer.getState().openAlbum(a.dir)} aria-label={`Open ${a.album}`}>
+        <Cover className="lib-cover" dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} online={false} />
+      </button>
       <div className="lib-main">
         <button className="lib-title" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           {a.album}

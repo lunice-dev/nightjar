@@ -17,6 +17,8 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'On an iPhone, Nightjar goes on the Home Screen and opens like an app',
       'Play your music: Play on any album in Library, Downloads and From your share, with lock-screen controls. “Use less data” sends smaller AAC copies made by your computer',
       'A large player: big album art over colours taken from it, shuffle, repeat, Play next and Add to queue; on the computer and an iPad held sideways, the art sits beside the controls and the queue',
+      'Tap any album cover to open it: its tracks, Play, Shuffle, and Play next / Add to queue / Add to playlist for a track or the whole album',
+      'Playlists, kept on your computer for all your devices: on the search page, with rename, drag to reorder, remove, and a cover (a mosaic, one of its albums, or your own picture). Tracks Tidy moved are found again',
       'Your home Wi-Fi can stay open to phones without Tailscale (search, downloads, chat), with the remote password',
       'Uploads and Activity show when things happened, grouped by day; block someone straight from Uploads',
       'Click any name for a profile card; people who sent you fake copies are remembered and ranked down',

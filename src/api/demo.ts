@@ -363,6 +363,7 @@ export class DemoBackend implements Backend {
     },
     imagePreview: async () => null,
     coverUrl: async () => null,
+    pictureUrl: async () => null,
     streamUrl: async () => silence(),
     streamUrlNow: () => silence(),
     shareRoots: async () => {

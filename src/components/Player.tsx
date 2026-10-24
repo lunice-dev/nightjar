@@ -39,7 +39,7 @@ export function Player() {
   const backend = useStore((s) => s.backend);
   const toast = useStore((s) => s.toast);
   const { queue, index, playing, dataSaver, converted, expanded } = usePlayer();
-  const audio = useRef<HTMLAudioElement>(null);
+  const audio = useRef<HTMLAudioElement | null>(null);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cover, setCover] = useState<string | null>(null);
@@ -177,7 +177,10 @@ export function Player() {
 
   const element = (
     <audio
-      ref={audio}
+      ref={(el) => {
+        audio.current = el;
+        if (el) audioCtl.el = el;
+      }}
       preload="auto"
       onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
       onDurationChange={(e) => {
@@ -203,12 +206,20 @@ export function Player() {
     />
   );
 
-  if (!track) return <div hidden>{element}</div>;
+  // The same tree with or without a track, so the <audio> element is never replaced.
+  if (!track)
+    return (
+      <>
+        <div hidden>{element}</div>
+        {expanded && <FullPlayer cover={null} time={0} duration={0} waiting={false} quality={null} chip={null} />}
+      </>
+    );
 
   const p = usePlayer.getState();
   const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
 
   return (
+    <>
     <div className="player" role="region" aria-label="Now playing">
       {element}
       <div className="player-bar">
@@ -254,8 +265,9 @@ export function Player() {
           }}
         />
       </div>
-      {expanded && <FullPlayer cover={cover} time={time} duration={duration} waiting={waiting} quality={<QualityInfo />} chip={<QualityChip />} />}
     </div>
+      {expanded && <FullPlayer cover={cover} time={time} duration={duration} waiting={waiting} quality={<QualityInfo />} chip={<QualityChip />} />}
+    </>
   );
 }
 

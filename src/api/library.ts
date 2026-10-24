@@ -168,7 +168,50 @@ export interface LibraryAccess {
   recycle(dir: string): Promise<{ ok: boolean; error?: string }>;
   /** An album's tracks in play order (disc folders included), or null when it can't be read. */
   tracks(dir: string): Promise<AlbumTracks | null>;
+  playlists(): Promise<PlaylistSummary[] | null>;
+  playlist(id: string): Promise<PlaylistFull | null>;
+  changePlaylist(change: PlaylistChange): Promise<{ ok: boolean; error?: string; playlist?: PlaylistSummary; added?: number }>;
+  /** A picture from this device becomes the playlist's cover. */
+  playlistImage(id: string, picture: Blob): Promise<{ ok: boolean; error?: string }>;
 }
+
+export interface PlaylistSummary {
+  id: string;
+  name: string;
+  created: string;
+  updated: string;
+  /** "album:<folder>", "image:<file>", or null for a mosaic of its albums. */
+  cover: string | null;
+  count: number;
+  seconds: number;
+  /** Up to four album folders, for the mosaic. */
+  mosaic: string[];
+}
+
+export interface PlaylistTrack extends Track {
+  dir: string;
+  /** The file isn't there any more and wasn't found elsewhere: shown greyed out and skipped. */
+  missing?: boolean;
+}
+
+export interface PlaylistFull {
+  id: string;
+  name: string;
+  created: string;
+  updated: string;
+  cover: string | null;
+  mosaic: string[];
+  tracks: PlaylistTrack[];
+}
+
+export type PlaylistChange =
+  | { action: 'create'; name: string; tracks?: (Track & { dir: string })[] }
+  | { action: 'rename'; id: string; name: string }
+  | { action: 'delete'; id: string }
+  | { action: 'add'; id: string; tracks: (Track & { dir: string })[] }
+  | { action: 'remove'; id: string; index: number }
+  | { action: 'move'; id: string; from: number; to: number }
+  | { action: 'cover'; id: string; dir: string | null };
 
 export interface Track {
   path: string;
@@ -233,6 +276,20 @@ export function helperLibrary(helper: string): LibraryAccess {
     tracks: async (dir) => {
       const r = await get<AlbumTracks | { error: string }>(`/tracks?dir=${enc(dir)}`, 60_000);
       return r && 'tracks' in r ? r : null;
+    },
+    playlists: () => get<PlaylistSummary[]>('/playlists', 15_000),
+    playlist: async (id) => {
+      const r = await get<PlaylistFull | { error: string }>(`/playlist?id=${enc(id)}`, 120_000);
+      return r && 'tracks' in r ? r : null;
+    },
+    changePlaylist: (change) => post('/playlists', change, 30_000),
+    playlistImage: async (id, picture) => {
+      try {
+        const res = await fetch(`${helper}/playlist/cover?id=${enc(id)}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: picture, signal: AbortSignal.timeout(60_000) });
+        return (await res.json()) as { ok: boolean; error?: string };
+      } catch (e) {
+        return { ok: false, error: (e as Error).message };
+      }
     },
   };
 }
@@ -374,6 +431,30 @@ export function demoLibrary(): LibraryAccess {
       for (const a of albums) if (a.dupKey && albums.filter((x) => x.dupKey === a.dupKey).length < 2) a.dupKey = null;
       return { ok: true };
     },
+    playlists: async () => demoPlaylists.map(summaryOf),
+    playlist: async (id) => {
+      const p = demoPlaylists.find((x) => x.id === id);
+      return p ? { ...p, mosaic: mosaicOf(p), tracks: [...p.tracks] } : null;
+    },
+    changePlaylist: async (c) => {
+      const now = new Date().toISOString();
+      if (c.action === 'create') {
+        const p = { id: `p${Date.now()}`, name: c.name, created: now, updated: now, cover: null as string | null, tracks: [...(c.tracks ?? [])] };
+        demoPlaylists.unshift(p);
+        return { ok: true, playlist: summaryOf(p) };
+      }
+      const p = demoPlaylists.find((x) => x.id === c.id);
+      if (!p) return { ok: false, error: 'That playlist doesn’t exist any more.' };
+      if (c.action === 'delete') demoPlaylists.splice(demoPlaylists.indexOf(p), 1);
+      if (c.action === 'rename') p.name = c.name;
+      if (c.action === 'add') p.tracks.push(...c.tracks);
+      if (c.action === 'remove') p.tracks.splice(c.index, 1);
+      if (c.action === 'move') p.tracks.splice(c.to, 0, ...p.tracks.splice(c.from, 1));
+      if (c.action === 'cover') p.cover = c.dir ? `album:${c.dir}` : null;
+      p.updated = now;
+      return { ok: true, playlist: summaryOf(p), added: c.action === 'add' ? c.tracks.length : undefined };
+    },
+    playlistImage: async () => ({ ok: false, error: 'Sample data can’t keep pictures.' }),
     tracks: async (dir) => {
       // Sample data: a made-up album, so the player can be tried (it plays silence).
       const name = dir.split(/[\\/]/).pop() ?? 'Sample album';
@@ -399,3 +480,12 @@ export function demoLibrary(): LibraryAccess {
     },
   };
 }
+
+// Sample playlists, kept in the page.
+type DemoPlaylist = Omit<PlaylistFull, 'mosaic'>;
+const demoPlaylists: DemoPlaylist[] = [];
+const mosaicOf = (p: DemoPlaylist) => [...new Set(p.tracks.map((t) => t.dir))].slice(0, 4);
+const summaryOf = (p: DemoPlaylist): PlaylistSummary => ({
+  id: p.id, name: p.name, created: p.created, updated: p.updated, cover: p.cover,
+  count: p.tracks.length, seconds: p.tracks.reduce((n, t) => n + t.seconds, 0), mosaic: mosaicOf(p),
+});

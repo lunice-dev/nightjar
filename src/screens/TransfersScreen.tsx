@@ -1,3 +1,4 @@
+import { usePlayer } from '../lib/player';
 import { AlbumPlay } from '../components/AlbumPlay';
 import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -612,7 +613,13 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
 
   return (
     <section className="dl with-cover" aria-label={g.title}>
-      <Cover className="dl-cover" dir={coverDir} artist={g.parent} album={g.title} seed={g.key} />
+      {direction === 'download' && finished && albumDir && canFiles && !gone ? (
+        <button className="cover-open" onClick={() => usePlayer.getState().openAlbum(albumDir)} aria-label={`Open ${g.title}`}>
+          <Cover className="dl-cover" dir={coverDir} artist={g.parent} album={g.title} seed={g.key} />
+        </button>
+      ) : (
+        <Cover className="dl-cover" dir={coverDir} artist={g.parent} album={g.title} seed={g.key} />
+      )}
       <div className="dl-body">
       <div className="dl-head">
         <div>

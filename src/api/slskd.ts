@@ -735,6 +735,10 @@ export class SlskdBackend implements Backend {
       const key = await this.imageKey();
       return key ? `${HELPER}/cover?k=${key}&dir=${enc(dir)}` : null;
     },
+    pictureUrl: async (path) => {
+      const key = await this.imageKey();
+      return key ? `${HELPER}/img?k=${key}&path=${enc(path)}` : null;
+    },
     streamUrl: async (path, as) => {
       const key = await this.imageKey();
       return key ? streamAddress(key, path, as) : null;

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { audioCtl, fmtTime, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
 import { Mark } from './Mark';
 import { WindowControls } from './WindowControls';
 import { inApp } from '../lib/host';
+import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 
 /**
  * The large player, over the whole app: big album art, the time bar, the buttons and what plays
@@ -29,11 +30,15 @@ export function FullPlayer({
   /** The short tag: "FLAC 16/44.1", "AAC 128". */
   chip: React.ReactNode;
 }) {
-  const { queue, index, playing, shuffle, repeat, dataSaver } = usePlayer();
+  const { queue, index, playing, shuffle, repeat, dataSaver, view } = usePlayer();
   const p = usePlayer.getState();
   const track = queue[index];
   const art = cover ?? (track ? generatedCover(track.dir) : '');
-  const tint = useArtColour(cover);
+  // An album or playlist in the drawer reports its own picture, for the background colour.
+  const [viewArt, setViewArt] = useState<string | null>(null);
+  const onArt = useCallback((u: string | null) => setViewArt(u), []);
+  useEffect(() => setViewArt(null), [view]);
+  const tint = useArtColour(view.kind === 'now' ? cover : viewArt);
   const [details, setDetails] = useState(false);
   const [editing, setEditing] = useState(false);
   const [drag, setDrag] = useState(0);
@@ -64,7 +69,6 @@ export function FullPlayer({
     return () => window.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!track) return null;
   const remaining = Math.max(0, duration - time);
   const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
   const upNext = queue.map((q, i) => ({ q, i })).filter(({ i }) => i > index);
@@ -93,7 +97,7 @@ export function FullPlayer({
   return (
     <>
       <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
-      <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''}`} role="dialog" aria-label="Now playing" style={style}>
+      <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''}`} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
       <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <span className="fp-grab" aria-hidden />
         <button className="fp-icon" onClick={close} aria-label="Close the player">
@@ -102,9 +106,25 @@ export function FullPlayer({
         <span className="fp-brand-name">
           <Mark size={18} /> Nightjar
         </span>
-        {inApp ? <WindowControls /> : <span className="fp-icon" aria-hidden />}
+        <span className="fp-top-end">
+          {view.kind !== 'now' && track && (
+            <button className="fp-nowbtn" onClick={() => p.showNow()} aria-label={`Now playing: ${track.title}`}>
+              <Bars on={playing} /> Now playing
+            </button>
+          )}
+          {inApp ? <WindowControls /> : view.kind === 'now' || !track ? <span className="fp-icon" aria-hidden /> : null}
+        </span>
       </div>
 
+      {view.kind === 'album' ? (
+        <AlbumView key={view.dir} dir={view.dir} onArt={onArt} />
+      ) : view.kind === 'playlist' ? (
+        <PlaylistView key={view.id} id={view.id} onArt={onArt} />
+      ) : !track ? (
+        <div className="fp-body dv-loading">
+          <p>Nothing is playing. Tap an album’s cover, then a track.</p>
+        </div>
+      ) : (
       <div className="fp-body">
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <img className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
@@ -223,6 +243,7 @@ export function FullPlayer({
           )}
         </div>
       </div>
+      )}
     </div>
     </>
   );

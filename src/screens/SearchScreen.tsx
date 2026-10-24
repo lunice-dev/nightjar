@@ -1,3 +1,5 @@
+import { PlaylistShelf } from '../components/Playlists';
+import { usePlayer } from '../lib/player';
 import { AlbumPlay } from '../components/AlbumPlay';
 import type { LibAlbum } from '../api/library';
 import { betterThanYours, inLibrary, libraryLabel, useLibraryIndex } from '../lib/libraryIndex';
@@ -167,6 +169,7 @@ function Landing() {
           </aside>
         </section>
         <Pulse />
+        <PlaylistShelf />
         <YourShares />
       </div>
     </div>
@@ -303,7 +306,13 @@ function YourShares() {
         {shown.slice(0, limit).map((f) => (
           <li key={f.key} className={`shelf-item t-${f.tier}`}>
             <span className="shelf-art">
-              <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
+              {localShareDir(f.folder, roots) ? (
+                <button className="cover-open" onClick={() => usePlayer.getState().openAlbum(localShareDir(f.folder, roots)!)} aria-label={`Open ${f.title}`}>
+                  <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
+                </button>
+              ) : (
+                <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
+              )}
               {localShareDir(f.folder, roots) && <AlbumPlay variant="overlay" dir={localShareDir(f.folder, roots)!} title={f.title} />}
             </span>
             <span className="shelf-title" title={f.title}>{f.title}</span>

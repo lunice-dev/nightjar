@@ -16,9 +16,12 @@ export interface QueueItem extends Track {
 }
 
 export type Repeat = 'off' | 'all' | 'one';
+export type DrawerView = { kind: 'now' } | { kind: 'album'; dir: string } | { kind: 'playlist'; id: string };
 
 let qn = 0;
-const toItems = (dir: string, tracks: Track[]): QueueItem[] => tracks.map((t) => ({ ...t, dir, qid: `q${++qn}` }));
+export const toItems = (dir: string, tracks: Track[]): QueueItem[] => tracks.map((t) => ({ ...t, dir, qid: `q${++qn}` }));
+/** Tracks that each know their own folder (a playlist mixes albums). */
+export const toQueue = (tracks: (Track & { dir: string })[]): QueueItem[] => tracks.map((t) => ({ ...t, qid: `q${++qn}` }));
 
 const shuffled = <T,>(a: T[]) => {
   const b = [...a];
@@ -44,6 +47,8 @@ interface PlayerState {
   loading: boolean;
   /** The large player is open. */
   expanded: boolean;
+  /** What the drawer shows: what's playing, an album, or a playlist. */
+  view: DrawerView;
   shuffle: boolean;
   repeat: Repeat;
   /** The queue in its own order, kept while shuffle is on so turning it off puts it back. */
@@ -58,6 +63,15 @@ interface PlayerState {
   /** What happens when a track ends by itself. */
   ended(): void;
   setExpanded(open: boolean): void;
+  /** Opens the drawer on an album (nothing starts playing). */
+  openAlbum(dir: string): void;
+  openPlaylist(id: string): void;
+  /** Back to what's playing. */
+  showNow(): void;
+  /** Plays a list of tracks mixed up. */
+  playShuffled(items: QueueItem[]): void;
+  /** Puts tracks right after the current one ("next") or at the end of the queue. */
+  addTracks(items: QueueItem[], where: 'next' | 'end'): void;
   play(): void;
   pause(): void;
   toggle(): void;
@@ -111,6 +125,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   converted: false,
   loading: false,
   expanded: false,
+  view: { kind: 'now' },
   shuffle: false,
   repeat: 'off',
   unshuffled: null,
@@ -205,7 +220,38 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   setExpanded(open) {
-    set({ expanded: open });
+    set(open ? { expanded: true } : { expanded: false, view: { kind: 'now' } });
+  },
+
+  openAlbum(dir) {
+    set({ expanded: true, view: { kind: 'album', dir } });
+  },
+
+  openPlaylist(id) {
+    set({ expanded: true, view: { kind: 'playlist', id } });
+  },
+
+  showNow() {
+    set({ view: { kind: 'now' } });
+  },
+
+  playShuffled(items) {
+    if (items.length === 0) return;
+    const mixed = shuffled(items);
+    set({ shuffle: true, unshuffled: items });
+    get().playQueue(mixed, 0);
+    set({ shuffle: true, unshuffled: items });
+  },
+
+  addTracks(items, where) {
+    if (items.length === 0) return;
+    const { queue, index, unshuffled } = get();
+    if (queue.length === 0) return get().playQueue(items, 0);
+    const at = where === 'next' ? index + 1 : queue.length;
+    set({ queue: [...queue.slice(0, at), ...items, ...queue.slice(at)], unshuffled: unshuffled ? [...unshuffled, ...items] : null });
+    useStore.getState().toast(
+      items.length === 1 ? `${items[0].title} ${where === 'next' ? 'plays next' : 'added to the queue'}.` : `${items.length} tracks ${where === 'next' ? 'play next' : 'added to the queue'}.`,
+    );
   },
 
   playQueue(items, start = 0) {
@@ -277,7 +323,8 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       el.removeAttribute('src');
       el.load();
     }
-    set({ queue: [], index: 0, playing: false, converted: false, expanded: false, shuffle: false, unshuffled: null });
+    const v = get().view;
+    set({ queue: [], index: 0, playing: false, converted: false, expanded: v.kind !== 'now' && get().expanded, shuffle: false, unshuffled: null });
   },
 
   setDataSaver(on) {

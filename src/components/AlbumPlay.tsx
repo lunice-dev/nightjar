@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../lib/player';
 import { Icon } from './Icon';
+import { addToPlaylist } from './Playlists';
+import { useStore } from '../store';
 
 /**
  * Play an album that's on the computer, and the "…" next to it: Play next, Add to queue.
@@ -9,7 +11,6 @@ import { Icon } from './Icon';
 export function AlbumPlay({ dir, title, variant = 'buttons' }: { dir: string; title: string; variant?: 'overlay' | 'buttons' | 'icon' }) {
   const playAlbum = usePlayer((s) => s.playAlbum);
   const addAlbum = usePlayer((s) => s.addAlbum);
-  const hasQueue = usePlayer((s) => s.queue.length > 0);
   const [menu, setMenu] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -36,7 +37,7 @@ export function AlbumPlay({ dir, title, variant = 'buttons' }: { dir: string; ti
         <Icon name="play" size={variant === 'overlay' ? 18 : 16} />
         {variant === 'buttons' && ' Play'}
       </button>
-      {hasQueue && (
+      {(
         <button
           className={variant === 'overlay' ? 'ap-more' : 'btn quiet small icon-only'}
           onClick={(e) => {
@@ -69,6 +70,17 @@ export function AlbumPlay({ dir, title, variant = 'buttons' }: { dir: string; ti
             }}
           >
             <Icon name="history" size={15} /> Add to queue
+          </button>
+          <button
+            role="menuitem"
+            onClick={async () => {
+              setMenu(false);
+              const backend = useStore.getState().backend;
+              const album = await backend?.library.tracks(dir);
+              if (album?.tracks.length) addToPlaylist(album.tracks.map((t) => ({ ...t, dir: album.dir })));
+            }}
+          >
+            <Icon name="star" size={15} /> Add to playlist
           </button>
         </span>
       )}
