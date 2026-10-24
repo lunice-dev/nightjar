@@ -1262,3 +1262,8 @@ html.in-app, html.in-app body { overflow: hidden; }
 .pq dt { color: var(--ink-3); font-weight: 600; white-space: nowrap; }
 .pq dd { margin: 0; color: var(--ink-2); }
 @media (max-width: 480px) { .pq dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } .pq dd { margin-bottom: 6px; } }
+
+/* Touch screens: iPhones zoom into any text box under 16px when you tap it, and stay zoomed. */
+@media (pointer: coarse) {
+  input, select, textarea, .input, .topbar-search .search-field .input, .small-input { font-size: 16px !important; }
+}
