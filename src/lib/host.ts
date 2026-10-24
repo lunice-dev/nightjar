@@ -36,7 +36,7 @@ if (inApp) {
   // The top bar is the title bar: press and drag on an empty part of it to move the window, double-click to maximise.
   const onBar = (e: MouseEvent) => {
     const t = e.target as HTMLElement | null;
-    return !!t?.closest('.topbar, .app-strip') && !t.closest('button, input, a, select, textarea, [role="tab"], form, .win-controls');
+    return !!t?.closest('.topbar, .app-strip, .fp-top') && !t.closest('button, input, a, select, textarea, [role="tab"], form, .win-controls');
   };
   document.addEventListener('mousedown', (e) => {
     if (e.button === 0 && e.detail === 1 && onBar(e)) webview!.postMessage({ type: 'window', action: 'drag' });

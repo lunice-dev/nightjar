@@ -1,3 +1,4 @@
+import { AlbumPlay } from '../components/AlbumPlay';
 import type { LibAlbum } from '../api/library';
 import { betterThanYours, inLibrary, libraryLabel, useLibraryIndex } from '../lib/libraryIndex';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -301,7 +302,10 @@ function YourShares() {
       <ul className="shelf">
         {shown.slice(0, limit).map((f) => (
           <li key={f.key} className={`shelf-item t-${f.tier}`}>
-            <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
+            <span className="shelf-art">
+              <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
+              {localShareDir(f.folder, roots) && <AlbumPlay variant="overlay" dir={localShareDir(f.folder, roots)!} title={f.title} />}
+            </span>
             <span className="shelf-title" title={f.title}>{f.title}</span>
             <span className="shelf-artist">{[f.parent, f.year].filter(Boolean).join(', ')}</span>
             <span className="shelf-meta">

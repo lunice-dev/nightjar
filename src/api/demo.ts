@@ -363,9 +363,14 @@ export class DemoBackend implements Backend {
     },
     imagePreview: async () => null,
     coverUrl: async () => null,
-    streamUrl: async () => null,
-    streamUrlNow: () => null,
-    shareRoots: async () => [],
+    streamUrl: async () => silence(),
+    streamUrlNow: () => silence(),
+    shareRoots: async () => {
+      // Each top folder of the sample share "lives" in a Music folder, so its albums can be played.
+      const tree = await this.browse('demo').catch(() => ({ directories: [] as { name: string }[] }));
+      const tops = new Set(tree.directories.map((d) => d.name.split('\\')[0]));
+      return [...tops].map((t) => ({ remote: t, local: `C:\\Users\\you\\Music\\${t}` }));
+    },
     lease: async () => true,
     trashDownload: async (what) => what.folders.length + what.files.length + what.partials.length,
   };
@@ -745,3 +750,19 @@ const ROOMS: [string, number][] = [
   ['northern soul', 88], ['fado', 41], ['ambient', 163], ['metal', 305], ['classical', 120],
   ['hip hop', 274], ['portugal', 67], ['field recordings', 29], ['soundtracks', 92],
 ];
+
+/** Sample data plays 30 seconds of silence (a small WAV made once). */
+let silent: string | null = null;
+function silence() {
+  if (silent) return silent;
+  const rate = 8000, n = rate * 30;
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const text = (at: number, t: string) => [...t].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  text(0, 'RIFF'); v.setUint32(4, 36 + n, true); text(8, 'WAVE'); text(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true); text(36, 'data'); v.setUint32(40, n, true);
+  new Uint8Array(buf, 44).fill(128);
+  silent = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  return silent;
+}

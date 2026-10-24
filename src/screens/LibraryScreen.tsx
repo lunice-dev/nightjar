@@ -1,4 +1,4 @@
-import { usePlayer } from '../lib/player';
+import { AlbumPlay } from '../components/AlbumPlay';
 import { onThisComputer } from '../api/remote';
 import { useEffect, useMemo, useState } from 'react';
 import type { LibAlbum, LibraryInfo } from '../api/library';
@@ -249,7 +249,6 @@ function AlbumRow({ a }: { a: LibAlbum }) {
   const toast = useStore((s) => s.toast);
   const searchFor = useStore((s) => s.search);
   const check = useQualityCheck(a.dir);
-  const playAlbum = usePlayer((s) => s.playAlbum);
   const [open, setOpen] = useState(false);
   const reveal = async () => {
     if (!(await backend?.files.reveal(a.dir))) toast('Couldn’t open Explorer. The folder may have been moved.', 'error');
@@ -289,9 +288,7 @@ function AlbumRow({ a }: { a: LibAlbum }) {
         )}
       </div>
       <div className="lib-actions">
-        <button className="btn quiet small icon-only" onClick={() => playAlbum(a.dir)} title="Play" aria-label={`Play ${a.album}`}>
-          <Icon name="play" size={16} />
-        </button>
+        <AlbumPlay variant="icon" dir={a.dir} title={a.album} />
         <CheckButton check={check} />
         {onThisComputer && (
           <button className="btn quiet small icon-only" onClick={reveal} title="Show in folder" aria-label="Show in folder">

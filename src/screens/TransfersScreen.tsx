@@ -1,4 +1,4 @@
-import { usePlayer } from '../lib/player';
+import { AlbumPlay } from '../components/AlbumPlay';
 import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Direction } from '../api/backend';
@@ -622,9 +622,7 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
         </div>
         <div className="dl-actions">
           {direction === 'download' && finished && albumDir && canFiles && !gone && (
-            <button className="btn quiet small" onClick={() => usePlayer.getState().playAlbum(albumDir)}>
-              <Icon name="play" size={16} /> Play
-            </button>
+            <AlbumPlay dir={albumDir} title={g.title} />
           )}
           {direction === 'upload' && coverDir && canFiles && onThisComputer && (
             <button className="btn quiet small" onClick={() => reveal(coverDir)} title={coverDir}>

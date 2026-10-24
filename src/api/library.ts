@@ -374,7 +374,15 @@ export function demoLibrary(): LibraryAccess {
       for (const a of albums) if (a.dupKey && albums.filter((x) => x.dupKey === a.dupKey).length < 2) a.dupKey = null;
       return { ok: true };
     },
-    tracks: async () => null,
+    tracks: async (dir) => {
+      // Sample data: a made-up album, so the player can be tried (it plays silence).
+      const name = dir.split(/[\\/]/).pop() ?? 'Sample album';
+      const titles = ['Harbour Lights', 'Slow Tide', 'The Long Road In', 'Paper Moons', 'Northern Rooms', 'Low Country', 'Ember', 'Glass Houses'];
+      return {
+        dir,
+        tracks: titles.map((title, i) => ({ path: `${dir}\\${String(i + 1).padStart(2, '0')} ${title}.flac`, title, artist: 'Halvard Moss', album: name.replace(/^\d{4} - /, ''), no: i + 1, disc: 0, seconds: 30, format: 'flac', bits: 16, rate: 44100, kbps: 900, size: 30_000_000 })),
+      };
+    },
     check: async () => ({ id: 'demo' }),
     progress: async () => {
       await wait(900);

@@ -260,7 +260,7 @@ namespace Nightjar
                 return;
             }
             var bytes = File.ReadAllBytes(file);
-            var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + type + "\r\nContent-Length: " + bytes.Length + "\r\nCache-Control: private, max-age=3600\r\nConnection: close\r\n\r\n");
+            var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + type + "\r\nContent-Length: " + bytes.Length + "\r\nCache-Control: private, max-age=3600\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n");
             stream.Write(head, 0, head.Length);
             stream.Write(bytes, 0, bytes.Length);
         }
@@ -275,7 +275,7 @@ namespace Nightjar
             if (file != null) { SendImage(stream, file); return; }
             var art = EmbeddedArt(dir);
             if (art == null) { SendImage(stream, null); return; }
-            var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + art.Item2 + "\r\nContent-Length: " + art.Item1.Length + "\r\nCache-Control: private, max-age=3600\r\nConnection: close\r\n\r\n");
+            var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + art.Item2 + "\r\nContent-Length: " + art.Item1.Length + "\r\nCache-Control: private, max-age=3600\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n");
             stream.Write(head, 0, head.Length);
             stream.Write(art.Item1, 0, art.Item1.Length);
         }

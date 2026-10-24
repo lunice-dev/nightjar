@@ -1,0 +1,280 @@
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { audioCtl, fmtTime, usePlayer, type QueueItem } from '../lib/player';
+import { generatedCover } from '../lib/covers';
+import { Icon } from './Icon';
+
+/**
+ * The large player, over the whole app: big album art, the time bar, the buttons and what plays
+ * next. Upright (phones, an iPad held upright) the art sits on top; on wide screens (the PC, an
+ * iPad held sideways) the art is on the left and the rest on the right. The background takes its
+ * colour from the album art.
+ */
+export function FullPlayer({
+  cover,
+  time,
+  duration,
+  waiting,
+  quality,
+  chip,
+}: {
+  cover: string | null;
+  time: number;
+  duration: number;
+  waiting: boolean;
+  /** The file → what's sent → device chain. */
+  quality: React.ReactNode;
+  /** The short tag: "FLAC 16/44.1", "AAC 128". */
+  chip: React.ReactNode;
+}) {
+  const { queue, index, playing, shuffle, repeat, dataSaver } = usePlayer();
+  const p = usePlayer.getState();
+  const track = queue[index];
+  const art = cover ?? (track ? generatedCover(track.dir) : '');
+  const tint = useArtColour(cover);
+  const [details, setDetails] = useState(false);
+  const [drag, setDrag] = useState(0);
+  const startY = useRef<number | null>(null);
+  const current = useRef<HTMLLIElement>(null);
+  const queueRef = useRef<HTMLDivElement>(null);
+
+  // Escape closes; the current track scrolls into view when the player opens.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && p.setExpanded(false);
+    window.addEventListener('keydown', onKey);
+    // On wide screens the list scrolls by itself: show the current track. Upright, the art stays on top.
+    const list = queueRef.current, row = current.current;
+    if (list && row && list.scrollHeight > list.clientHeight + 4) list.scrollTop = Math.max(0, row.offsetTop - list.offsetTop - 60);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!track) return null;
+  const remaining = Math.max(0, duration - time);
+  const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
+  const upNext = queue.map((q, i) => ({ q, i })).filter(({ i }) => i > index);
+  const played = queue.map((q, i) => ({ q, i })).filter(({ i }) => i < index);
+
+  // Swipe down on the art or the top bar closes it, like Apple Music.
+  const onTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0].clientY;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (startY.current == null) return;
+    setDrag(Math.max(0, e.touches[0].clientY - startY.current));
+  };
+  const onTouchEnd = () => {
+    if (drag > 110) p.setExpanded(false);
+    setDrag(0);
+    startY.current = null;
+  };
+
+  const style = {
+    '--fp-tint': tint ?? 'var(--canvas)',
+    transform: drag ? `translateY(${drag}px)` : undefined,
+    transition: drag ? 'none' : undefined,
+  } as CSSProperties;
+
+  return (
+    <div className={`full-player ${tint ? 'tinted' : ''}`} role="dialog" aria-label="Now playing" style={style}>
+      <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <button className="fp-icon" onClick={() => p.setExpanded(false)} aria-label="Close the player">
+          <Icon name="chevron" size={22} />
+        </button>
+        <span className="fp-from">
+          Playing from <strong>{track.album ?? 'your music'}</strong>
+        </span>
+        <button className={`fp-icon ${details ? 'on' : ''}`} onClick={() => setDetails((d) => !d)} aria-label="Sound quality details" aria-pressed={details}>
+          <span className="fp-i">i</span>
+        </button>
+      </div>
+
+      <div className="fp-body">
+        <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          <img className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
+        </div>
+
+        <div className="fp-side">
+          <div className="fp-now">
+            <div className="fp-titles">
+              <h2>{track.title}</h2>
+              <p>{[track.artist, track.album].filter(Boolean).join(' · ')}</p>
+            </div>
+            <span className="fp-chip">{chip}</span>
+          </div>
+
+          <div className="fp-time">
+            <input
+              className="fp-seek"
+              type="range"
+              min={0}
+              max={duration || 0}
+              step={0.5}
+              value={Math.min(time, duration || 0)}
+              aria-label="Position"
+              style={{ ['--p' as string]: `${progress}%` }}
+              onChange={(e) => {
+                if (audioCtl.el) audioCtl.el.currentTime = Number(e.target.value);
+              }}
+            />
+            <div className="fp-times">
+              <span>{fmtTime(time)}</span>
+              <span>{waiting && playing ? 'loading…' : ''}</span>
+              <span>−{fmtTime(remaining)}</span>
+            </div>
+          </div>
+
+          <div className="fp-controls">
+            <button className={`fp-icon small ${shuffle ? 'on' : ''}`} onClick={() => p.setShuffle(!shuffle)} aria-label="Shuffle" aria-pressed={shuffle} title="Shuffle">
+              <ShuffleGlyph />
+            </button>
+            <button className="fp-icon big" onClick={() => p.prev()} aria-label="Previous track">
+              <Icon name="prev" size={30} />
+            </button>
+            <button className="fp-play" onClick={() => p.toggle()} aria-label={playing ? 'Pause' : 'Play'}>
+              <Icon name={playing ? 'pause' : 'play'} size={34} />
+            </button>
+            <button className="fp-icon big" onClick={() => p.next()} disabled={index + 1 >= queue.length && repeat !== 'all'} aria-label="Next track">
+              <Icon name="next" size={30} />
+            </button>
+            <button
+              className={`fp-icon small ${repeat !== 'off' ? 'on' : ''}`}
+              onClick={() => p.cycleRepeat()}
+              aria-label={repeat === 'off' ? 'Repeat: off' : repeat === 'all' ? 'Repeat: the whole queue' : 'Repeat: this track'}
+              title={repeat === 'off' ? 'Repeat' : repeat === 'all' ? 'Repeating the queue' : 'Repeating this track'}
+            >
+              <RepeatGlyph one={repeat === 'one'} />
+            </button>
+          </div>
+
+          {details ? (
+            <div className="fp-details">
+              {quality}
+              <label className="toggle">
+                <input type="checkbox" checked={dataSaver} onChange={(e) => p.setDataSaver(e.target.checked)} />
+                Use less data (smaller AAC copies made by your computer)
+              </label>
+            </div>
+          ) : (
+            <div className="fp-queue" ref={queueRef}>
+              <div className="fp-queue-head">
+                <strong>Up next</strong>
+                {shuffle && <span className="dim">Shuffled</span>}
+                {repeat !== 'off' && <span className="dim">{repeat === 'one' ? 'Repeating this track' : 'Repeating the queue'}</span>}
+              </div>
+              <ol>
+                {played.map(({ q, i }) => (
+                  <QueueRow key={q.qid} q={q} state="played" onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                ))}
+                <li ref={current} className="fp-row now" aria-current="true">
+                  <span className="fp-row-n">
+                    <span className={`fp-bars ${playing ? 'on' : ''}`} aria-hidden>
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                  </span>
+                  <span className="fp-row-t">
+                    <strong>{track.title}</strong>
+                    <span>{track.artist}</span>
+                  </span>
+                  <span className="fp-row-d">{fmtTime(track.seconds)}</span>
+                </li>
+                {upNext.map(({ q, i }) => (
+                  <QueueRow key={q.qid} q={q} state="next" onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                ))}
+                {upNext.length === 0 && <li className="fp-row empty">Nothing after this{repeat === 'all' ? ': the queue starts again' : ''}.</li>}
+              </ol>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QueueRow({ q, state, onPlay, onRemove }: { q: QueueItem; state: 'played' | 'next'; onPlay: () => void; onRemove: () => void }) {
+  return (
+    <li className={`fp-row ${state}`}>
+      <button className="fp-row-main" onClick={onPlay}>
+        <span className="fp-row-n">{q.no || ''}</span>
+        <span className="fp-row-t">
+          <strong>{q.title}</strong>
+          <span>{[q.artist, q.album].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className="fp-row-d">{fmtTime(q.seconds)}</span>
+      </button>
+      <button className="fp-row-x" onClick={onRemove} aria-label={`Remove ${q.title} from the queue`} title="Remove from the queue">
+        <Icon name="close" size={14} />
+      </button>
+    </li>
+  );
+}
+
+function ShuffleGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7h3.5c2 0 3.3 1 4.4 2.6l2.2 3.3c1.1 1.6 2.4 2.6 4.4 2.6H21M3 17h3.5c1.4 0 2.4-.5 3.3-1.3M14.2 8.3c.9-.8 1.9-1.3 3.3-1.3H21M18 4l3 3-3 3M18 13l3 3-3 3" />
+    </svg>
+  );
+}
+
+function RepeatGlyph({ one }: { one: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 11V9.5A3.5 3.5 0 0 1 7.5 6H19M16 3l3 3-3 3M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5M8 21l-3-3 3-3" />
+      {one && <text x="12" y="14.6" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none" fontFamily="system-ui">1</text>}
+    </svg>
+  );
+}
+
+/**
+ * A deep colour from the album art for the background: the average of its colourful pixels, darkened
+ * so white text stays readable. Null while it isn't known (or the picture can't be read).
+ */
+function useArtColour(src: string | null) {
+  const [colour, setColour] = useState<string | null>(null);
+  useEffect(() => {
+    if (!src) {
+      setColour(null);
+      return;
+    }
+    let alive = true;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 24;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        if (!g) return;
+        g.drawImage(img, 0, 0, 24, 24);
+        const d = g.getImageData(0, 0, 24, 24).data;
+        let r = 0, gr = 0, b = 0, w = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const R = d[i], G = d[i + 1], B = d[i + 2];
+          const max = Math.max(R, G, B), min = Math.min(R, G, B);
+          const sat = max === 0 ? 0 : (max - min) / max;
+          const weight = 0.15 + sat * 2; // colourful pixels count more than greys
+          r += R * weight;
+          gr += G * weight;
+          b += B * weight;
+          w += weight;
+        }
+        if (!w) return;
+        r /= w;
+        gr /= w;
+        b /= w;
+        // Keep it deep: scale so the brightest channel is at most ~110.
+        const k = Math.min(1, 110 / Math.max(r, gr, b, 1));
+        if (alive) setColour(`rgb(${Math.round(r * k)} ${Math.round(gr * k)} ${Math.round(b * k)})`);
+      } catch {
+        if (alive) setColour(null); // a picture from a server that doesn't allow reading it
+      }
+    };
+    img.onerror = () => alive && setColour(null);
+    img.src = src;
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  return colour;
+}

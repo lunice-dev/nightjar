@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { audioCtl, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
+import { FullPlayer } from './FullPlayer';
 import { generatedCover, onlineCover } from '../lib/covers';
 
 /**
@@ -37,12 +38,11 @@ const loads = (src: string) =>
 export function Player() {
   const backend = useStore((s) => s.backend);
   const toast = useStore((s) => s.toast);
-  const { queue, index, playing, dataSaver, converted } = usePlayer();
+  const { queue, index, playing, dataSaver, converted, expanded } = usePlayer();
   const audio = useRef<HTMLAudioElement>(null);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cover, setCover] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const track = queue[index];
 
@@ -177,11 +177,7 @@ export function Player() {
         if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration);
         reportPosition(e.currentTarget);
       }}
-      onEnded={() => {
-        const { index: i, queue: q } = usePlayer.getState();
-        if (i + 1 < q.length) usePlayer.getState().next();
-        else audioCtl.wantPlay = false;
-      }}
+      onEnded={() => usePlayer.getState().ended()}
       onError={onError}
       onWaiting={() => setWaiting(true)}
       onPlaying={() => setWaiting(false)}
@@ -206,13 +202,13 @@ export function Player() {
   const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
 
   return (
-    <div className={`player ${open ? 'open' : ''}`} role="region" aria-label="Now playing">
+    <div className="player" role="region" aria-label="Now playing">
       {element}
       <div className="player-bar">
-        <button className="player-art" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Hide the queue' : 'Show the queue'}>
+        <button className="player-art" onClick={() => p.setExpanded(true)} aria-label="Open the player">
           <img src={cover ?? generatedCover(track.dir)} alt="" />
         </button>
-        <button className="player-text" onClick={() => setOpen((o) => !o)}>
+        <button className="player-text" onClick={() => p.setExpanded(true)}>
           <strong>{track.title}</strong>
           <span>
             <QualityChip />
@@ -227,7 +223,7 @@ export function Player() {
           <button className="player-btn main" onClick={() => p.toggle()} aria-label={playing ? 'Pause' : 'Play'}>
             <Icon name={playing ? 'pause' : 'play'} size={22} />
           </button>
-          <button className="player-btn" onClick={() => p.next()} disabled={index + 1 >= queue.length} aria-label="Next track">
+          <button className="player-btn" onClick={() => p.next()} disabled={index + 1 >= queue.length && usePlayer.getState().repeat !== 'all'} aria-label="Next track">
             <Icon name="next" size={20} />
           </button>
         </div>
@@ -251,29 +247,7 @@ export function Player() {
           }}
         />
       </div>
-      {open && (
-        <div className="player-queue">
-          <div className="player-queue-head">
-            <strong>{track.album ?? 'Playing'}</strong>
-            <label className="toggle" title="Lossless files come as smaller AAC copies made by your computer">
-              <input type="checkbox" checked={dataSaver} onChange={(e) => p.setDataSaver(e.target.checked)} />
-              Use less data
-            </label>
-          </div>
-          <QualityInfo />
-          <ol>
-            {queue.map((t, i) => (
-              <li key={t.path} aria-current={i === index ? 'true' : undefined}>
-                <button onClick={() => p.jump(i)}>
-                  <span className="n">{t.no || i + 1}</span>
-                  <span className="t">{t.title}</span>
-                  <span className="d">{fmtTime(t.seconds)}</span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+      {expanded && <FullPlayer cover={cover} time={time} duration={duration} waiting={waiting} quality={<QualityInfo />} chip={<QualityChip />} />}
     </div>
   );
 }

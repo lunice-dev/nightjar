@@ -11,7 +11,23 @@ import { useStore } from '../store';
 export interface QueueItem extends Track {
   /** The album's folder, for its cover. */
   dir: string;
+  /** Tells apart the same track queued twice. */
+  qid: string;
 }
+
+export type Repeat = 'off' | 'all' | 'one';
+
+let qn = 0;
+const toItems = (dir: string, tracks: Track[]): QueueItem[] => tracks.map((t) => ({ ...t, dir, qid: `q${++qn}` }));
+
+const shuffled = <T,>(a: T[]) => {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+};
 
 interface PlayerState {
   queue: QueueItem[];
@@ -26,8 +42,22 @@ interface PlayerState {
   /** Set when the current track had to be converted because this device couldn't play the original. */
   converted: boolean;
   loading: boolean;
+  /** The large player is open. */
+  expanded: boolean;
+  shuffle: boolean;
+  repeat: Repeat;
+  /** The queue in its own order, kept while shuffle is on so turning it off puts it back. */
+  unshuffled: QueueItem[] | null;
   playAlbum(dir: string, start?: number): Promise<void>;
   playQueue(items: QueueItem[], start?: number): void;
+  /** Adds an album right after the current track ("next") or at the end of the queue. */
+  addAlbum(dir: string, where: 'next' | 'end'): Promise<void>;
+  remove(qid: string): void;
+  setShuffle(on: boolean): void;
+  cycleRepeat(): void;
+  /** What happens when a track ends by itself. */
+  ended(): void;
+  setExpanded(open: boolean): void;
   play(): void;
   pause(): void;
   toggle(): void;
@@ -80,6 +110,10 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   })(),
   converted: false,
   loading: false,
+  expanded: false,
+  shuffle: false,
+  repeat: 'off',
+  unshuffled: null,
 
   async playAlbum(dir, start = 0) {
     const { backend, toast } = useStore.getState();
@@ -91,7 +125,87 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       toast('Couldn’t find music to play in that folder.', 'error');
       return;
     }
-    get().playQueue(album.tracks.map((t) => ({ ...t, dir: album.dir })), start);
+    set({ shuffle: false, unshuffled: null });
+    get().playQueue(toItems(album.dir, album.tracks), start);
+  },
+
+  async addAlbum(dir, where) {
+    const { backend, toast } = useStore.getState();
+    if (!backend) return;
+    const album = await backend.library.tracks(dir);
+    if (!album || album.tracks.length === 0) {
+      toast('Couldn’t find music to play in that folder.', 'error');
+      return;
+    }
+    const items = toItems(album.dir, album.tracks);
+    const { queue, index, unshuffled } = get();
+    if (queue.length === 0) {
+      get().playQueue(items, 0);
+      return;
+    }
+    const at = where === 'next' ? index + 1 : queue.length;
+    set({
+      queue: [...queue.slice(0, at), ...items, ...queue.slice(at)],
+      unshuffled: unshuffled ? [...unshuffled, ...items] : null,
+    });
+    const name = album.tracks[0]?.album ?? 'The album';
+    toast(where === 'next' ? `${name} plays next.` : `${name} added to the queue.`);
+  },
+
+  remove(qid) {
+    const { queue, index, unshuffled } = get();
+    const i = queue.findIndex((q) => q.qid === qid);
+    if (i < 0) return;
+    if (i === index) {
+      // Removing what's playing: go on with the next one (or stop if it was the last).
+      if (queue.length === 1) return get().stop();
+      const rest = queue.filter((q) => q.qid !== qid);
+      const ni = Math.min(i, rest.length - 1);
+      const playing = !!audioCtl.el && !audioCtl.el.paused;
+      audioCtl.wantPlay = playing;
+      loadNow(rest[ni]);
+      set({ queue: rest, index: ni, converted: false, unshuffled: unshuffled?.filter((q) => q.qid !== qid) ?? null });
+      return;
+    }
+    set({
+      queue: queue.filter((q) => q.qid !== qid),
+      index: i < index ? index - 1 : index,
+      unshuffled: unshuffled?.filter((q) => q.qid !== qid) ?? null,
+    });
+  },
+
+  setShuffle(on) {
+    const { queue, index, unshuffled } = get();
+    const current = queue[index];
+    if (on) {
+      // What has played stays; what's coming is mixed.
+      set({ shuffle: true, unshuffled: queue, queue: [...queue.slice(0, index + 1), ...shuffled(queue.slice(index + 1))] });
+    } else {
+      const back = unshuffled ?? queue;
+      const ni = current ? Math.max(0, back.findIndex((q) => q.qid === current.qid)) : 0;
+      set({ shuffle: false, unshuffled: null, queue: back, index: ni });
+    }
+  },
+
+  cycleRepeat() {
+    const r = get().repeat;
+    set({ repeat: r === 'off' ? 'all' : r === 'all' ? 'one' : 'off' });
+  },
+
+  ended() {
+    const { repeat, index, queue } = get();
+    const el = audioCtl.el;
+    if (repeat === 'one' && el) {
+      el.currentTime = 0;
+      get().play();
+      return;
+    }
+    if (index + 1 < queue.length || repeat === 'all') get().next();
+    else audioCtl.wantPlay = false;
+  },
+
+  setExpanded(open) {
+    set({ expanded: open });
   },
 
   playQueue(items, start = 0) {
@@ -120,11 +234,13 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   next() {
-    const { index, queue } = get();
-    if (index + 1 >= queue.length) return;
+    const { index, queue, repeat } = get();
+    // At the end, "repeat all" goes round to the first track.
+    const ni = index + 1 < queue.length ? index + 1 : repeat === 'all' && queue.length ? 0 : -1;
+    if (ni < 0) return;
     audioCtl.wantPlay = true;
-    loadNow(queue[index + 1]);
-    set({ index: index + 1, converted: false });
+    loadNow(queue[ni]);
+    set({ index: ni, converted: false });
   },
 
   prev() {
@@ -161,7 +277,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       el.removeAttribute('src');
       el.load();
     }
-    set({ queue: [], index: 0, playing: false, converted: false });
+    set({ queue: [], index: 0, playing: false, converted: false, expanded: false, shuffle: false, unshuffled: null });
   },
 
   setDataSaver(on) {
