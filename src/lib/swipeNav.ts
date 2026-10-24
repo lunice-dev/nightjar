@@ -61,29 +61,49 @@ function end(cancel = false) {
     }, 260);
     return;
   }
-  // Far enough: the page carries on out, and the next tab comes in from the other side, like turning a page.
+  // Far enough: a picture of this page carries on out while the next tab slides in right behind it, both
+  // at once, so there's never a gap between them.
   const out = dir === -1 ? w : -w;
-  const left = Math.abs(out - dx) / w; // how much of the way is still to go
-  const ms = Math.round(140 + 120 * left);
-  el.style.transition = `transform ${ms}ms ${ease}`;
-  el.style.transform = `translateX(${out}px)`;
-  setTimeout(() => {
-    useStore.getState().go(to);
-    requestAnimationFrame(() => {
-      const next = target();
-      if (!next) return;
-      next.style.transition = 'none';
-      next.style.transform = `translateX(${-out}px)`;
-      next.getBoundingClientRect(); // start from there
-      next.style.transition = `transform 0.3s ${ease}`;
-      next.style.transform = 'translateX(0)';
-      setTimeout(() => {
-        next.style.transition = '';
-        next.style.transform = '';
-        next.classList.remove('swiping');
-      }, 320);
-    });
-  }, ms);
+  const ms = Math.round(160 + 140 * (Math.abs(out - dx) / w));
+  const ghost = snapshot(el, dx);
+
+  useStore.getState().go(to);
+  el.style.transition = 'none';
+  el.style.transform = `translateX(${dx - out}px)`; // just beside the picture, on the other side
+  requestAnimationFrame(() => {
+    el.getBoundingClientRect();
+    const move = `transform ${ms}ms ${ease}`;
+    el.style.transition = move;
+    ghost.style.transition = move;
+    el.style.transform = 'translateX(0)';
+    ghost.style.transform = `translateX(${out}px)`;
+    setTimeout(() => {
+      ghost.remove();
+      el.style.transition = '';
+      el.style.transform = '';
+      el.classList.remove('swiping');
+    }, ms + 20);
+  });
+}
+
+/** A still copy of the page, scrolled where it was, laid exactly over it. */
+function snapshot(el: HTMLElement, dx: number) {
+  const r = el.getBoundingClientRect();
+  const copy = el.cloneNode(true) as HTMLElement;
+  copy.classList.add('swipe-ghost');
+  copy.removeAttribute('id');
+  Object.assign(copy.style, { position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, margin: '0', zIndex: '5', pointerEvents: 'none' });
+  // Copies start scrolled to the top: put each scrolled part back where it was.
+  const from = [el, ...el.querySelectorAll<HTMLElement>('*')];
+  const to = [copy, ...copy.querySelectorAll<HTMLElement>('*')];
+  const scrolled: [HTMLElement, number, number][] = [];
+  from.forEach((n, k) => {
+    if ((n.scrollTop || n.scrollLeft) && to[k]) scrolled.push([to[k], n.scrollTop, n.scrollLeft]);
+  });
+  copy.style.transform = `translateX(${dx}px)`;
+  document.body.appendChild(copy);
+  scrolled.forEach(([n, t, l]) => ((n.scrollTop = t), (n.scrollLeft = l)));
+  return copy;
 }
 
 /** Things you drag sideways yourself: a swipe that starts on them is theirs. */
