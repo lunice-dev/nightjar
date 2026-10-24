@@ -21,7 +21,7 @@ const time = (iso: string) => {
 export function MessageList({ lines, showNames, empty }: { lines: Line[]; showNames: boolean; empty: string }) {
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
-  const browse = useStore((s) => s.browse);
+  const openProfile = useStore((s) => s.openProfile);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -48,7 +48,7 @@ export function MessageList({ lines, showNames, empty }: { lines: Line[]; showNa
             {!grouped && (
               <div className="msg-head">
                 {showNames && !l.mine && (
-                  <button className="user-link" onClick={() => browse(l.username)}>
+                  <button className="user-link" onClick={() => openProfile(l.username)}>
                     {l.username}
                   </button>
                 )}

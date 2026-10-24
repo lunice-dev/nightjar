@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Settings, ShareStatus } from '../api/types';
+import type { LeechMode, Settings, ShareStatus } from '../api/types';
 import { Icon } from '../components/Icon';
 import type { PortCheck } from '../api/backend';
 import { usePrefs, type NotifyPrefs } from '../prefs';
 import { useStore } from '../store';
+import { setFriendsFirst } from '../lib/friends';
 
 /**
  * slskd writes shared folders as plain paths, with two optional markers:
@@ -279,6 +280,8 @@ export function SettingsScreen() {
         )}
 
         <SpeedSection settings={settings} readOnly={ro} onSaved={afterSave} />
+
+        <WhoGetsUploads settings={settings} readOnly={ro} onSaved={afterSave} />
 
         <LibrarySection />
 
@@ -779,6 +782,141 @@ function SpeedSection({ settings, readOnly, onSaved }: { settings: Settings; rea
           </button>
         )}
       </div>
+    </section>
+  );
+}
+
+const LEECH_CHOICES: { mode: LeechMode; title: string; text: string }[] = [
+  { mode: 'off', title: 'Treat everyone the same', text: 'People who share nothing wait in the same line as everyone else.' },
+  {
+    mode: 'gentle',
+    title: 'Back of the line',
+    text: 'They only get a slot when nobody else is waiting, one of them at a time, and can queue up to 60 files.',
+  },
+  {
+    mode: 'strict',
+    title: 'Slow lane',
+    text: 'Back of the line, at most 100 KB/s, up to 20 files queued and 50 files a day.',
+  },
+];
+
+const THRESHOLDS = [
+  { files: 1, label: 'share nothing at all' },
+  { files: 50, label: 'share fewer than 50 files' },
+  { files: 500, label: 'share fewer than 500 files' },
+];
+
+/**
+ * Who goes first when people download from you: friends ahead of everyone, and people who share
+ * nothing ("leechers") behind everyone.
+ */
+function WhoGetsUploads({ settings, readOnly, onSaved }: { settings: Settings; readOnly: boolean; onSaved: () => Promise<boolean> }) {
+  const backend = useStore((s) => s.backend);
+  const toast = useStore((s) => s.toast);
+  const go = useStore((s) => s.go);
+  const buddies = usePrefs((s) => s.buddies.length);
+  const [busy, setBusy] = useState(false);
+
+  const saveLeech = async (mode: LeechMode, files = settings.leech.files) => {
+    setBusy(true);
+    try {
+      await backend!.saveSettings({ leech: { mode, files } });
+      await onSaved();
+      toast(mode === 'off' ? 'Everyone is treated the same again' : 'Saved. New downloads from you follow the new rule.');
+    } catch (e) {
+      toast(`Couldn't save: ${(e as Error).message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const threshold = THRESHOLDS.some((t) => t.files === settings.leech.files)
+    ? THRESHOLDS
+    : [...THRESHOLDS, { files: settings.leech.files, label: `share fewer than ${settings.leech.files} files` }];
+
+  return (
+    <section className="settings-block" id="who-uploads" aria-labelledby="who-h">
+      <h2 id="who-h">Who gets your uploads first</h2>
+      <p className="hint-text">When more people want your files than you have upload slots, this decides who waits.</p>
+
+      <label className="toggle" htmlFor="friends-first">
+        <input
+          id="friends-first"
+          type="checkbox"
+          checked={settings.friendsFirst}
+          disabled={readOnly || busy}
+          onChange={async (e) => {
+            setBusy(true);
+            if (await setFriendsFirst(e.target.checked)) {
+              await onSaved();
+              toast(e.target.checked ? 'Your people now go first' : 'Your people wait in line like everyone else');
+            }
+            setBusy(false);
+          }}
+        />
+        Friends first: people on your People list skip ahead of everyone else
+      </label>
+      <p className="hint-text small">
+        {buddies === 0 ? (
+          <>
+            Nobody is on your People list yet.{' '}
+            <button className="link" onClick={() => go('people')}>
+              Add people
+            </button>
+          </>
+        ) : settings.friendsFirst ? (
+          `${settings.friends.length} ${settings.friends.length === 1 ? 'person' : 'people'} from your People list. Adding or removing someone there updates this.`
+        ) : (
+          `${buddies} ${buddies === 1 ? 'person is' : 'people are'} on your People list.`
+        )}
+      </p>
+
+      <h3 className="sub-h">People who don’t share</h3>
+      <p className="hint-text">
+        Soulseek works because people share back. Many clients put people who share nothing at the back of their queue. Friends
+        are never counted as leechers.
+      </p>
+      <div className="choices" role="radiogroup" aria-label="People who don’t share">
+        {LEECH_CHOICES.map((c) => (
+          <label key={c.mode} className={`choice ${settings.leech.mode === c.mode ? 'on' : ''}`}>
+            <input
+              type="radio"
+              name="leech"
+              checked={settings.leech.mode === c.mode}
+              disabled={readOnly || busy}
+              onChange={() => saveLeech(c.mode)}
+            />
+            <span>
+              <b>{c.title}</b>
+              <small>{c.text}</small>
+            </span>
+          </label>
+        ))}
+      </div>
+      {settings.leech.mode !== 'off' && (
+        <label className="field inline" htmlFor="leech-threshold">
+          <span>This applies to people who</span>
+          <select
+            id="leech-threshold"
+            className="input"
+            value={settings.leech.files}
+            disabled={readOnly || busy}
+            onChange={(e) => saveLeech(settings.leech.mode, Number(e.target.value))}
+          >
+            {threshold.map((t) => (
+              <option key={t.files} value={t.files}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <p className="hint-text small">
+        {settings.blocked.length
+          ? `${settings.blocked.length} ${settings.blocked.length === 1 ? 'person is' : 'people are'} blocked from downloading from you. `
+          : ''}
+        To block someone, use Block on the Uploads page or on their profile.
+      </p>
     </section>
   );
 }

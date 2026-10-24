@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../components/Icon';
-import { setBlocked } from '../lib/blocking';
+import { setBlocked, useBlocked } from '../lib/blocking';
 import { usePrefs, type Buddy } from '../prefs';
 import { useStore } from '../store';
 
@@ -16,25 +16,12 @@ export function PeopleScreen() {
   const ignored = usePrefs((s) => s.ignored);
   const addBuddy = usePrefs((s) => s.addBuddy);
   const unignore = usePrefs((s) => s.unignore);
-  const browse = useStore((s) => s.browse);
-  const backend = useStore((s) => s.backend);
+  const openProfile = useStore((s) => s.openProfile);
   const [name, setName] = useState('');
-  const [blocked, setBlockedList] = useState<string[]>();
-  const [editable, setEditable] = useState(true);
-
-  const loadBlocked = () =>
-    backend
-      ?.settings()
-      .then((s) => {
-        setBlockedList(s.blocked);
-        setEditable(s.editable);
-      })
-      .catch(() => setBlockedList([]));
-
+  const { list: blocked, editable, reload } = useBlocked();
   useEffect(() => {
-    loadBlocked();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backend]);
+    reload();
+  }, [reload]);
 
   const order = { Online: 0, Away: 1, Offline: 2 } as const;
   const sorted = [...buddies].sort(
@@ -69,10 +56,12 @@ export function PeopleScreen() {
           <button className="btn quiet" type="submit" disabled={!name.trim()}>
             Add person
           </button>
-          <button className="btn quiet" type="button" disabled={!name.trim()} onClick={() => browse(name.trim())}>
+          <button className="btn quiet" type="button" disabled={!name.trim()} onClick={() => openProfile(name.trim())}>
             Look up
           </button>
         </form>
+
+        <FriendsFirstNote />
 
         {buddies.length === 0 ? (
           <p className="callout" style={{ marginTop: 16 }}>
@@ -119,12 +108,14 @@ export function PeopleScreen() {
             <ul className="chips">
               {blocked.map((u) => (
                 <li key={u} className="chip plain">
-                  {u}
+                  <button className="user-link" onClick={() => openProfile(u)}>
+                    {u}
+                  </button>
                   <button
                     className="link"
                     disabled={!editable}
                     onClick={async () => {
-                      if (await setBlocked(u, false)) loadBlocked();
+                      await setBlocked(u, false);
                     }}
                   >
                     Share again
@@ -142,7 +133,7 @@ export function PeopleScreen() {
 function BuddyRow({ b }: { b: Buddy }) {
   const updateBuddy = usePrefs((s) => s.updateBuddy);
   const removeBuddy = usePrefs((s) => s.removeBuddy);
-  const browse = useStore((s) => s.browse);
+  const openProfile = useStore((s) => s.openProfile);
   const message = useStore((s) => s.message);
   const [note, setNote] = useState(b.note);
   const presence = (b.presence ?? 'Offline').toLowerCase();
@@ -151,7 +142,7 @@ function BuddyRow({ b }: { b: Buddy }) {
     <li className="buddy">
       <span className={`presence ${b.presence ? presence : 'offline'}`} aria-hidden />
       <div className="buddy-main">
-        <button className="user-link buddy-name" onClick={() => browse(b.username)}>
+        <button className="user-link buddy-name" onClick={() => openProfile(b.username)}>
           {b.username}
         </button>
         <span className="dim buddy-seen">{seen(b)}</span>
@@ -186,5 +177,27 @@ function BuddyRow({ b }: { b: Buddy }) {
         </button>
       </div>
     </li>
+  );
+}
+
+/** Whether your people skip your upload queue, with a way to turn it on. */
+function FriendsFirstNote() {
+  const backend = useStore((s) => s.backend);
+  const go = useStore((s) => s.go);
+  const [on, setOn] = useState<boolean>();
+  useEffect(() => {
+    backend
+      ?.settings()
+      .then((s) => setOn(s.friendsFirst))
+      .catch(() => undefined);
+  }, [backend]);
+  if (on === undefined) return null;
+  return (
+    <p className="hint-text small friends-note">
+      {on ? 'Friends first is on: the people here skip ahead in your upload queue.' : 'Want the people here to skip ahead in your upload queue?'}{' '}
+      <button className="link" onClick={() => go('settings')}>
+        {on ? 'Change' : 'Turn on Friends first'}
+      </button>
+    </p>
   );
 }

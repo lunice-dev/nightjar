@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Backend } from '../api/backend';
 import { usePrefs, type SavedCheck } from '../prefs';
 import { useStore } from '../store';
+import { noteCheck } from './fakes';
 
 /**
  * Checks one album's files with the Nightjar app and keeps the verdict with the album.
@@ -31,6 +32,7 @@ export async function runCheck(backend: Backend, dir: string, onProgress?: (done
       tracks: p.tracks.map((t) => ({ name: t.name, verdict: t.verdict, note: t.note, cutoff: t.cutoff, severity: t.severity })),
     };
     usePrefs.getState().saveCheck(dir, check);
+    noteCheck(dir, check);
     return null;
   }
 }

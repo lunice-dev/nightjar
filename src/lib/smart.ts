@@ -49,7 +49,9 @@ function etaOf(s: Pick<SourceOption, 'username' | 'uploadSpeed' | 'hasFreeUpload
 
 /** Copies of the same album, quickest to arrive first. */
 export function rankSources<T extends Pick<SourceOption, 'username' | 'uploadSpeed' | 'hasFreeUploadSlot' | 'queueLength'>>(list: T[]): T[] {
-  return [...list].sort((a, b) => etaOf(a) - etaOf(b));
+  // People who sent a fake copy before go last, however fast they are.
+  const fakers = new Set(usePrefs.getState().fakes.map((f) => f.user));
+  return [...list].sort((a, b) => Number(fakers.has(a.username)) - Number(fakers.has(b.username)) || etaOf(a) - etaOf(b));
 }
 
 /** The fastest copy among the given ones, for the Download button. */

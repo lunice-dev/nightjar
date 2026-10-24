@@ -489,13 +489,16 @@ export class DemoBackend implements Backend {
     downloadLimit: null,
     uploadSlots: 10,
     blocked: [],
+    leech: { mode: 'off', files: 1 },
+    friendsFirst: false,
+    friends: [],
     description: 'Sample profile. Lossless rips from my own CDs and records.',
     picture: '',
   };
   private scanStarted = 0;
 
   async settings(): Promise<Settings> {
-    return { ...this.config, sharedFolders: [...this.config.sharedFolders], blocked: [...this.config.blocked], editable: true };
+    return { ...this.config, sharedFolders: [...this.config.sharedFolders], blocked: [...this.config.blocked], friends: [...this.config.friends], editable: true };
   }
 
   async saveSettings(patch: SettingsPatch) {

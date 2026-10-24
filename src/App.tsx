@@ -20,6 +20,9 @@ import { WishlistScreen } from './screens/WishlistScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { TransfersScreen } from './screens/TransfersScreen';
 import { useBackground } from './lib/background';
+import { ProfileCard } from './components/ProfileCard';
+import { useFriendsSync } from './lib/friends';
+import { backfillFakes } from './lib/fakes';
 import { sharePrefsThrough, usePrefs } from './prefs';
 import { HELPER } from './api/slskd';
 import { useStore, type Route } from './store';
@@ -252,6 +255,8 @@ function Shell() {
   }, [refreshLimits]);
   const [moreOpen, setMoreOpen] = useState(false);
   useBackground();
+  useFriendsSync();
+  useEffect(() => backfillFakes(), []);
   useEffect(() => {
     useStore.getState().loadLocal();
   }, []);
@@ -395,6 +400,7 @@ function Shell() {
           </div>
         </div>
       )}
+      <ProfileCard />
       <Toasts />
     </div>
   );

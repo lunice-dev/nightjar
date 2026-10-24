@@ -43,6 +43,8 @@ interface State {
   watchLink(): () => void;
   route: Route;
   browseUser?: string;
+  /** Whose profile card is open, over whatever page you're on. */
+  profileUser?: string;
 
   tabs: SearchTab[];
   activeTab?: string;
@@ -74,6 +76,7 @@ interface State {
   loadLocal(): Promise<void>;
   go(route: Route): void;
   browse(username: string): void;
+  openProfile(username?: string): void;
   message(username: string): void;
   openRoom(name?: string): void;
   refreshConversations(): Promise<void>;
@@ -168,8 +171,9 @@ export const useStore = create<State>((set, get) => ({
   setBackend: (backend, phase) => set({ backend, phase }),
   ready: (me) => set({ phase: 'ready', me }),
   go: (route) => set({ route }),
-  browse: (username) => set({ route: 'browse', browseUser: username }),
-  message: (username) => set({ route: 'messages', chatWith: username }),
+  browse: (username) => set({ route: 'browse', browseUser: username, profileUser: undefined }),
+  openProfile: (username) => set({ profileUser: username?.trim() || undefined }),
+  message: (username) => set({ route: 'messages', chatWith: username, profileUser: undefined }),
   openRoom: (name) => set({ route: 'rooms', room: name }),
 
   async refreshConversations() {

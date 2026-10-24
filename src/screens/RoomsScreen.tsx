@@ -111,7 +111,7 @@ export function RoomsScreen() {
 function RoomView({ name, onLeave }: { name: string; onLeave: () => void }) {
   const backend = useStore((s) => s.backend);
   const me = useStore((s) => s.me);
-  const browse = useStore((s) => s.browse);
+  const openProfile = useStore((s) => s.openProfile);
   const message = useStore((s) => s.message);
   const toast = useStore((s) => s.toast);
   const ignored = usePrefs((s) => s.ignored);
@@ -190,7 +190,7 @@ function RoomView({ name, onLeave }: { name: string; onLeave: () => void }) {
           {users.map((u) => (
             <li key={u.username} className="person">
               <span className={`presence ${String(u.status ?? 'Online').toLowerCase()}`} aria-label={String(u.status ?? 'Online')} />
-              <button className="user-link" onClick={() => browse(u.username)}>
+              <button className="user-link" onClick={() => openProfile(u.username)}>
                 {u.username}
               </button>
               <span className="dim">{u.averageSpeed ? speed(u.averageSpeed) : ''}</span>

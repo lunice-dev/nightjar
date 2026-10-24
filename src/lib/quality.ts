@@ -82,6 +82,8 @@ export interface FolderResult {
   score: number;
   /** Only seen in an earlier search for the same words. */
   earlier?: boolean;
+  /** How many fake copies this person has sent you before (Check quality found them). */
+  fakes?: number;
 }
 
 export interface Release {
@@ -184,6 +186,8 @@ function dominantTier(files: SearchFile[]): Tier {
 }
 
 function score(r: Omit<FolderResult, 'score'>, speeds?: Map<string, number>) {
+  // Someone who sent you a fake before: their "lossless" may not be. Below an honest copy of the same quality.
+  const fakePenalty = r.fakes ? 90 + Math.min(60, (r.fakes - 1) * 30) : 0;
   // What this person really sent you before beats what their client claims.
   const speedMbps = (speeds?.get(r.username) ?? r.uploadSpeed) / 1_000_000;
   return (
@@ -192,11 +196,12 @@ function score(r: Omit<FolderResult, 'score'>, speeds?: Map<string, number>) {
     Math.min(40, Math.log2(1 + speedMbps) * 12) -
     Math.min(50, r.queueLength * 2) +
     Math.min(20, r.audio.length) -
-    (r.earlier ? 40 : 0)
+    (r.earlier ? 40 : 0) -
+    fakePenalty
   );
 }
 
-export function toFolders(responses: SearchResponse[], speeds?: Map<string, number>): FolderResult[] {
+export function toFolders(responses: SearchResponse[], speeds?: Map<string, number>, fakes?: Map<string, number>): FolderResult[] {
   const out: FolderResult[] = [];
   for (const resp of responses) {
     const byFolder = new Map<string, { title: string; parent: string; files: SearchFile[]; locked: number }>();
@@ -237,6 +242,7 @@ export function toFolders(responses: SearchResponse[], speeds?: Map<string, numb
         uploadSpeed: resp.uploadSpeed,
         queueLength: resp.queueLength,
         earlier: resp.earlier,
+        fakes: fakes?.get(resp.username),
       };
       out.push({ ...base, score: score(base, speeds) });
     });

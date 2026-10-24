@@ -152,8 +152,26 @@ export interface Settings {
   description: string;
   /** Full path of the profile picture on this computer, or '' for none. */
   picture: string;
+  /** How people who share nothing (or very little) are treated when they download from you. */
+  leech: LeechRules;
+  /** People on your People list get uploads before everyone else. */
+  friendsFirst: boolean;
+  /** Who counts as a friend for that (kept in step with the People list). */
+  friends: string[];
   /** False when the engine refuses config changes from the UI. */
   editable: boolean;
+}
+
+/**
+ * off: everyone is treated the same. gentle: they wait behind everyone else, one at a time.
+ * strict: also slow (100 KB/s) and only a few files at a time.
+ */
+export type LeechMode = 'off' | 'gentle' | 'strict';
+
+export interface LeechRules {
+  mode: LeechMode;
+  /** Sharing fewer files than this counts as sharing nothing. */
+  files: number;
 }
 
 export type SettingsPatch = Partial<Omit<Settings, 'editable'>>;

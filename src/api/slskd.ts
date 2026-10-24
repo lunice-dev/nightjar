@@ -51,6 +51,19 @@ function setList(doc: Document, path: string[], values: string[]) {
   seq.items = values.map((v) => kept.get(v) ?? doc.createNode(v)) as typeof seq.items;
 }
 
+const LEECHERS = ['transfers', 'groups', 'leechers'];
+const DEFAULT_GROUP = ['transfers', 'groups', 'default'];
+/** The engine's user-defined group for the People list. */
+const FRIENDS = ['transfers', 'groups', 'user_defined', 'friends'];
+
+/** Removes group sections left empty, so the config file stays tidy. */
+function pruneGroups(doc: Document) {
+  for (const path of [['transfers', 'groups', 'default', 'upload'], DEFAULT_GROUP, ['transfers', 'groups', 'user_defined'], ['transfers', 'groups']]) {
+    const node = doc.getIn(path, true) as { items?: unknown[] } | undefined;
+    if (node && Array.isArray(node.items) && node.items.length === 0) doc.deleteIn(path);
+  }
+}
+
 interface SlskdOptions {
   remoteConfiguration?: boolean;
   soulseek?: { username?: string; description?: string; picture?: string | null };
@@ -405,6 +418,7 @@ export class SlskdBackend implements Backend {
     // The same goes for the profile.
     let downloadDir = o.directories?.downloads ?? '';
     const profile: { description?: string; picture?: string } = {};
+    const groups: Pick<Settings, 'leech' | 'friendsFirst' | 'friends'> = { leech: { mode: 'off', files: 1 }, friendsFirst: false, friends: [] };
     if (o.remoteConfiguration) {
       try {
         const raw = await this.request<string>('GET', '/options/yaml');
@@ -415,6 +429,16 @@ export class SlskdBackend implements Backend {
         if (typeof desc === 'string') profile.description = desc;
         const pic = doc.getIn(['soulseek', 'picture']);
         if (typeof pic === 'string') profile.picture = pic;
+        // The rules Nightjar writes (see saveSettings): leechers with a speed cap are "strict".
+        if (doc.hasIn(LEECHERS)) {
+          const files = Number(doc.getIn([...LEECHERS, 'thresholds', 'files']));
+          groups.leech = { mode: doc.hasIn([...LEECHERS, 'upload', 'speed_limit']) ? 'strict' : 'gentle', files: files > 0 ? files : 1 };
+        }
+        if (doc.hasIn(FRIENDS)) {
+          groups.friendsFirst = true;
+          const m = doc.getIn([...FRIENDS, 'members']);
+          groups.friends = isSeq(m) ? m.items.map((i) => String(isScalar(i) ? i.value : i)) : [];
+        }
       } catch {
         /* fall back to the running values */
       }
@@ -426,6 +450,9 @@ export class SlskdBackend implements Backend {
       downloadLimit: limitOf(o.transfers?.download?.speedLimit),
       uploadSlots: o.transfers?.upload?.slots ?? 20,
       blocked: o.transfers?.groups?.blacklisted?.members ?? [],
+      leech: groups.leech,
+      friendsFirst: groups.friendsFirst,
+      friends: groups.friends,
       description: profile.description ?? o.soulseek?.description ?? '',
       picture: profile.picture ?? o.soulseek?.picture ?? '',
       editable: !!o.remoteConfiguration,
@@ -450,6 +477,39 @@ export class SlskdBackend implements Backend {
     if (patch.downloadLimit !== undefined) set(['transfers', 'download', 'speed_limit'], patch.downloadLimit);
     if (patch.uploadSlots !== undefined) set(['transfers', 'upload', 'slots'], patch.uploadSlots);
     if (patch.blocked !== undefined) setList(doc, ['transfers', 'groups', 'blacklisted', 'members'], patch.blocked);
+    if (patch.leech !== undefined) {
+      if (patch.leech.mode === 'off') doc.deleteIn(LEECHERS);
+      else {
+        const strict = patch.leech.mode === 'strict';
+        // Lower priority numbers go first; everyone else is priority 1 (or 2 with friends first).
+        doc.setIn(LEECHERS, {
+          thresholds: { files: Math.max(1, Math.round(patch.leech.files)), directories: 1 },
+          upload: {
+            priority: 999,
+            strategy: 'roundrobin',
+            slots: 1,
+            ...(strict && { speed_limit: 100 }),
+            limits: strict
+              ? { queued: { files: 20, megabytes: 500 }, daily: { files: 50, megabytes: 1500 } }
+              : { queued: { files: 60, megabytes: 3000 } },
+          },
+        });
+      }
+      pruneGroups(doc);
+    }
+    if (patch.friendsFirst !== undefined || patch.friends !== undefined) {
+      const on = patch.friendsFirst ?? doc.hasIn(FRIENDS);
+      if (!on) {
+        doc.deleteIn(FRIENDS);
+        if (doc.getIn([...DEFAULT_GROUP, 'upload', 'priority']) === 2) doc.deleteIn([...DEFAULT_GROUP, 'upload', 'priority']);
+      } else {
+        // Friends are priority 1, everyone else 2: the engine serves the lowest number first.
+        if (!doc.hasIn(FRIENDS)) doc.setIn(FRIENDS, { upload: { priority: 1, strategy: 'firstinfirstout' }, members: [] });
+        doc.setIn([...DEFAULT_GROUP, 'upload', 'priority'], 2);
+        if (patch.friends !== undefined) setList(doc, [...FRIENDS, 'members'], patch.friends);
+      }
+      pruneGroups(doc);
+    }
     if (patch.description !== undefined) {
       // A block scalar keeps line breaks the way the person typed them.
       const node = doc.createNode(patch.description.replace(/\r\n/g, '\n'));

@@ -17,6 +17,7 @@ import { OrganizeDialog } from '../components/Organize';
 import { useFilesAvailable } from '../lib/files';
 import type { RecentMove, WaitingAlbum } from '../api/library';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
+import { blockAndStop, setBlocked, useBlocked } from '../lib/blocking';
 
 const COPY = {
   download: {
@@ -465,10 +466,13 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
   const backend = useStore((s) => s.backend);
   const refresh = useStore((s) => s.refreshTransfers);
   const enqueue = useStore((s) => s.enqueue);
-  const browse = useStore((s) => s.browse);
+  const openProfile = useStore((s) => s.openProfile);
   const message = useStore((s) => s.message);
   const toast = useStore((s) => s.toast);
   const notes = g.plan?.notes ?? NO_NOTES;
+  const blockedList = useBlocked().list;
+  const isBlocked = direction === 'upload' && !!blockedList?.includes(g.username);
+  const [confirmBlock, setConfirmBlock] = useState(false);
   const addBatch = usePrefs((s) => s.updatePlan);
   const canFiles = useFilesAvailable();
   const where = useStore((s) => s.local);
@@ -624,6 +628,35 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           )}
         </div>
       </div>
+      {confirmBlock && (
+        <div className="confirm" role="alertdialog" aria-label={`Block ${g.username}`}>
+          <span>
+            Block {g.username}? They won’t be able to download anything from you
+            {unfinished.length ? `, and the ${unfinished.length} ${unfinished.length === 1 ? 'file' : 'files'} still going to them stop now` : ''}. You can undo
+            this later.
+          </span>
+          <button
+            className="btn small danger"
+            onClick={async () => {
+              setConfirmBlock(false);
+              await blockAndStop(g.username);
+            }}
+          >
+            Block
+          </button>
+          <button className="btn quiet small" onClick={() => setConfirmBlock(false)}>
+            Keep sharing
+          </button>
+        </div>
+      )}
+      {isBlocked && (
+        <p className="hint-text moved-line">
+          {g.username} is blocked: they can’t download from you.{' '}
+          <button className="link" onClick={() => setBlocked(g.username, false)}>
+            Unblock
+          </button>
+        </p>
+      )}
       {confirmDelete && (
         <div className="confirm" role="alertdialog" aria-label="Confirm delete">
           <span>
@@ -667,7 +700,7 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           {g.usernames.map((u, i) => (
             <span key={u}>
               {i > 0 && (i === g.usernames.length - 1 ? ' and ' : ', ')}
-              <button className="user-link" onClick={() => browse(u)}>
+              <button className="user-link" onClick={() => openProfile(u)}>
                 {u}
               </button>
             </span>
@@ -676,6 +709,11 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
         {direction === 'upload' && (
           <button className="link" onClick={() => message(g.username)}>
             Message
+          </button>
+        )}
+        {direction === 'upload' && blockedList && !isBlocked && (
+          <button className="link" onClick={() => setConfirmBlock(true)}>
+            Block
           </button>
         )}
         {before && (
@@ -824,7 +862,7 @@ function UploadActivity() {
   const all = usePrefs((s) => s.activity);
   const clear = usePrefs((s) => s.clearActivity);
   const me = useStore((s) => s.me);
-  const browse = useStore((s) => s.browse);
+  const openProfile = useStore((s) => s.openProfile);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [limit, setLimit] = useState(30);
 
@@ -889,7 +927,7 @@ function UploadActivity() {
               <time dateTime={new Date(e.at).toISOString()} title={new Date(e.at).toLocaleString()}>
                 {when(e.at)}
               </time>
-              <button className="user-link" onClick={() => browse(e.user)}>
+              <button className="user-link" onClick={() => openProfile(e.user)}>
                 {e.user}
               </button>
               <span className="feed-kind">{KIND_LABEL[e.kind]}</span>

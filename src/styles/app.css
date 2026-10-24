@@ -1124,3 +1124,36 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* Search: what you already have. */
 .in-library { display: inline-block; margin-top: 4px; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: color-mix(in srgb, var(--t-high) 14%, transparent); color: var(--t-high); }
 .in-library.better { background: color-mix(in srgb, var(--t-hires) 14%, transparent); color: var(--t-hires); }
+
+/* ---------- settings: who gets your uploads ---------- */
+.sub-h { margin: 22px 0 6px; font-size: 15px; font-weight: 650; }
+.choices { display: grid; gap: 8px; margin: 8px 0 14px; max-width: 640px; }
+.choice { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.choice.on { border-color: var(--ink); }
+.choice input { margin-top: 3px; accent-color: var(--ink); flex: none; }
+.choice span { display: grid; gap: 2px; }
+.choice b { font-weight: 600; font-size: 14.5px; }
+.choice small { color: var(--ink-2); font-size: 13px; }
+.field.inline select.input { width: auto; height: 36px; }
+.fake-note { color: var(--t-mid); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+
+/* ---------- profile card ---------- */
+.profile-card { width: min(560px, 100%); padding: 22px 24px; }
+.pc-head { display: flex; gap: 16px; align-items: flex-start; }
+.pc-title { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.pc-title h2 { margin: 0; font-size: 24px; overflow-wrap: anywhere; }
+.pc-title .profile-facts { margin: 0; }
+.pc-title .profile-facts.dim { font-weight: 400; color: var(--ink-2); font-size: 13.5px; }
+.pc-close { margin: -6px -8px 0 0; }
+.pc-tag { padding: 1px 9px; border-radius: 999px; background: var(--sunken); color: var(--ink-2); font-size: 12px; font-weight: 600; }
+.pc-tag.bad { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
+.pc-bio { margin: 16px 0 0; max-height: 9em; overflow: auto; }
+.pc-note { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); font-style: italic; }
+.pc-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 14px; }
+.pc-section h3 { margin: 0 0 8px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
+.pc-section .small { font-size: 13px; margin: 8px 0 0; }
+.pc-facts { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ink-2); }
+.pc-facts b { color: var(--ink); font-weight: 600; }
+.pc-fakes h3 { color: var(--t-mid); }
+.pc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.friends-note { margin: 4px 0 12px; }

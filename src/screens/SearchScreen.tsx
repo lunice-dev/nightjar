@@ -27,6 +27,7 @@ import {
 } from '../lib/quality';
 import { bestStart, sameFiles, smartDownload } from '../lib/smart';
 import { usePrefs } from '../prefs';
+import { fakeCounts } from '../lib/fakes';
 import { defaultFilters, useStore, type Filters } from '../store';
 
 export function SearchScreen() {
@@ -353,6 +354,7 @@ function Results({ id }: { id: string }) {
   const go = useStore((s) => s.go);
   const scroller = useRef<HTMLDivElement>(null);
   const speeds = useStore((s) => s.speeds);
+  const fakes = usePrefs((s) => s.fakes);
   const query = tab.search.searchText;
   // Grouping thousands of files takes a moment: the screen keeps responding while it catches up.
   const responses = useDeferredValue(tab.responses);
@@ -361,8 +363,8 @@ function Results({ id }: { id: string }) {
     // People who answered an earlier search for the same words but not this one still count, ranked lower.
     const now = new Set(responses.map((r) => r.username));
     const all = [...responses, ...(earlier ?? []).filter((r) => !now.has(r.username))];
-    return toReleases(toFolders(all.filter((r) => !ignored.includes(r.username)), speeds), query);
-  }, [responses, earlier, ignored, speeds, query]);
+    return toReleases(toFolders(all.filter((r) => !ignored.includes(r.username)), speeds, fakeCounts(fakes)), query);
+  }, [responses, earlier, ignored, speeds, query, fakes]);
   const ranked = useMemo(() => applyFilters(releases, filters, query), [releases, filters, query]);
 
   // Results keep their place once you start reading them; newcomers wait behind a button.
@@ -574,6 +576,15 @@ function Results({ id }: { id: string }) {
  * What Download will do for this album: several people sending at once (fast), or a copy only one person
  * has. Download picks the group of identical copies that sends fastest together.
  */
+/** "Sent a fake copy before": Check quality caught this person's files claiming more than they are. */
+function FakeNote({ n }: { n: number }) {
+  return (
+    <span className="fake-note" title="Check quality found that an album you got from them wasn’t what it claimed (for example a FLAC made from an MP3). Their copies are ranked lower.">
+      ⚠ sent {n === 1 ? 'a fake copy' : `${n} fake copies`} before
+    </span>
+  );
+}
+
 function TeamChip({ release }: { release: Release }) {
   const speeds = useStore((s) => s.speeds);
   const { copies, atOnce } = useMemo(() => sameFiles(release, bestStart(release)), [release, speeds]);
@@ -652,7 +663,7 @@ export const ReleaseRow = memo(function ReleaseRow({
   const r = release.best;
   const better = betterThanYours(release, have);
   const others = release.sources.length - 1;
-  const browse = useStore((s) => s.browse);
+  const openProfile = useStore((s) => s.openProfile);
   const enqueue = useStore((s) => s.enqueue);
   const queuedKeys = useStore((s) => s.queuedKeys);
   const panelId = `rel-${r.key.replace(/[^a-z0-9]/gi, '')}`;
@@ -682,9 +693,10 @@ export const ReleaseRow = memo(function ReleaseRow({
           <DownloadButton r={r} release={release} auto />
         </div>
         <div className="meta">
-          <button className="user-link" onClick={() => browse(r.username)} title={`Browse everything ${r.username} shares`}>
+          <button className="user-link" onClick={() => openProfile(r.username)} title={`About ${r.username}`}>
             {r.username}
           </button>
+          {r.fakes ? <FakeNote n={r.fakes} /> : null}
           <span>{r.audio.length} tracks</span>
           <span>{bytes(r.size)}</span>
           {r.length > 0 && <span>{duration(r.length)}</span>}
@@ -730,7 +742,8 @@ export const ReleaseRow = memo(function ReleaseRow({
                   {release.sources.map((s) => (
                     <tr key={s.key} className={`t-${s.tier}`}>
                       <td>
-                        <button className="user-link" onClick={() => browse(s.username)}>{s.username}</button>
+                        <button className="user-link" onClick={() => openProfile(s.username)}>{s.username}</button>
+                        {s.fakes ? <FakeNote n={s.fakes} /> : null}
                       </td>
                       <td><span className="tier-cell">{s.format}</span></td>
                       <td className="hide-sm">{bytes(s.size)}</td>

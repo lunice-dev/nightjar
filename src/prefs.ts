@@ -192,6 +192,16 @@ export interface FinishedAlbum {
   at: number;
 }
 
+/** An album that failed Check quality as a fake (lossy source, upsampled, fake 24-bit…), and who sent it. */
+export interface FakeCopy {
+  user: string;
+  album: string;
+  verdict: string;
+  /** The album's folder when it was checked, so checking it again doesn't count twice. */
+  dir: string;
+  at: number;
+}
+
 /** One file someone downloaded from you, kept for the statistics after the Uploads list is cleared. */
 export interface SentFile {
   id: string;
@@ -233,6 +243,11 @@ interface Prefs {
   saveCheck(dir: string, check: SavedCheck | null): void;
   /** An album moved into the library: its check and history follow it. */
   albumMoved(from: string, to: string): void;
+  /** Fake copies, newest first: who sent them gets pushed down in search results. */
+  fakes: FakeCopy[];
+  recordFake(fake: FakeCopy): void;
+  /** Forgets one album's fake mark (it was checked again and passed) or everything about one person. */
+  forgetFakes(match: { dir?: string; user?: string }): void;
   /** Files people finished downloading from you, newest first. */
   sent: SentFile[];
   recordSent(files: SentFile[]): void;
@@ -309,8 +324,22 @@ export const usePrefs = create<Prefs>()(
             delete checks[from.toLowerCase()];
             checks[to.toLowerCase()] = c;
           }
-          return { checks, finished: s.finished.map((a) => (a.dir && a.dir.toLowerCase() === from.toLowerCase() ? { ...a, dir: to } : a)) };
+          const moved = (d?: string) => !!d && d.toLowerCase() === from.toLowerCase();
+          return {
+            checks,
+            finished: s.finished.map((a) => (moved(a.dir) ? { ...a, dir: to } : a)),
+            fakes: s.fakes.map((f) => (moved(f.dir) ? { ...f, dir: to } : f)),
+          };
         }),
+      fakes: [],
+      recordFake: (fake) =>
+        set((s) => ({
+          fakes: [fake, ...s.fakes.filter((f) => !(f.user === fake.user && f.dir.toLowerCase() === fake.dir.toLowerCase()))].slice(0, 500),
+        })),
+      forgetFakes: ({ dir, user }) =>
+        set((s) => ({
+          fakes: s.fakes.filter((f) => !((dir && f.dir.toLowerCase() === dir.toLowerCase()) || (user && f.user === user))),
+        })),
       sent: [],
       recordSent(files) {
         if (!files.length) return;
