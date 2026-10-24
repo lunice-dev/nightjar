@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { fmtTime, streamChoice, usePlayer } from '../lib/player';
 import { Icon } from './Icon';
+import { generatedCover, onlineCover } from '../lib/covers';
+
+/** Whether a picture really loads (a missing cover answers 404). */
+const loads = (src: string) =>
+  new Promise<boolean>((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth > 0);
+    img.onerror = () => resolve(false);
+    img.src = src;
+    setTimeout(() => resolve(false), 8000);
+  });
 
 /**
  * The "now playing" bar: one <audio> element for the whole app, its controls, the queue,
@@ -51,11 +62,18 @@ export function Player() {
     if (!playing && !el.paused) el.pause();
   }, [playing]);
 
-  // The album's cover, for the bar and the lock screen.
+  // The album's cover, for the bar and the lock screen: the picture on the computer (a file in the
+  // folder, or the art inside the music files), else the Cover Art Archive. Nothing found: a generated one in the bar only.
   useEffect(() => {
     if (!track || !backend) return;
     let alive = true;
-    backend.files.coverUrl(track.dir).then((u) => alive && setCover(u));
+    setCover(null);
+    (async () => {
+      const local = await backend.files.coverUrl(track.dir).catch(() => null);
+      if (local && (await loads(local))) return alive && setCover(local);
+      const web = await onlineCover(track.artist ?? undefined, track.album ?? undefined).catch(() => null);
+      if (web && (await loads(web))) return alive && setCover(web);
+    })();
     return () => {
       alive = false;
     };
@@ -134,7 +152,7 @@ export function Player() {
       />
       <div className="player-bar">
         <button className="player-art" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Hide the queue' : 'Show the queue'}>
-          {cover ? <img src={cover} alt="" /> : <Icon name="play" size={18} />}
+          <img src={cover ?? generatedCover(track.dir)} alt="" />
         </button>
         <button className="player-text" onClick={() => setOpen((o) => !o)}>
           <strong>{track.title}</strong>

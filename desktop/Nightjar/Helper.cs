@@ -191,6 +191,56 @@ namespace Nightjar
             stream.Write(bytes, 0, bytes.Length);
         }
 
+        /// <summary>
+        /// An album's picture: an image file in its folder, or else the artwork saved inside its
+        /// music files (most downloads only have that). Embedded pictures are kept in memory a while.
+        /// </summary>
+        static void SendCover(Stream stream, string dir)
+        {
+            var file = FindCover(dir);
+            if (file != null) { SendImage(stream, file); return; }
+            var art = EmbeddedArt(dir);
+            if (art == null) { SendImage(stream, null); return; }
+            var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + art.Item2 + "\r\nContent-Length: " + art.Item1.Length + "\r\nCache-Control: private, max-age=3600\r\nConnection: close\r\n\r\n");
+            stream.Write(head, 0, head.Length);
+            stream.Write(art.Item1, 0, art.Item1.Length);
+        }
+
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Tuple<byte[], string>> embedded = new System.Collections.Concurrent.ConcurrentDictionary<string, Tuple<byte[], string>>(StringComparer.OrdinalIgnoreCase);
+
+        static Tuple<byte[], string> EmbeddedArt(string dir)
+        {
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
+            if (embedded.TryGetValue(dir, out var hit)) return hit;
+            Tuple<byte[], string> art = null;
+            try
+            {
+                // The first few tracks, disc folders included: one of them usually carries the front cover.
+                foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).Where(Media.IsAudio).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).Take(4))
+                {
+                    try
+                    {
+                        using (var t = TagLib.File.Create(f))
+                        {
+                            var pics = t.Tag.Pictures;
+                            if (pics == null || pics.Length == 0) continue;
+                            var pic = pics.FirstOrDefault(p => p.Type == TagLib.PictureType.FrontCover) ?? pics[0];
+                            var bytes = pic.Data?.Data;
+                            if (bytes == null || bytes.Length == 0 || bytes.Length > 15 * 1024 * 1024) continue;
+                            var type = string.IsNullOrEmpty(pic.MimeType) || !pic.MimeType.StartsWith("image/") ? (bytes[0] == 0x89 ? "image/png" : "image/jpeg") : pic.MimeType;
+                            art = Tuple.Create(bytes, type);
+                            break;
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            if (embedded.Count > 200) embedded.Clear();
+            embedded[dir] = art;
+            return art;
+        }
+
         static string FindCover(string dir)
         {
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
@@ -301,7 +351,8 @@ namespace Nightjar
                 var k = req.Q("k");
                 if (k != imgKey && !Remote.MediaKeyOk(k)) { Reply(stream, 403, null, new { }); return; }
                 if (req.Path == "/stream") await SendTrack(req, stream).ConfigureAwait(false);
-                else SendImage(stream, req.Path == "/cover" ? FindCover(req.Q("dir")) : req.Q("path"));
+                else if (req.Path == "/cover") SendCover(stream, req.Q("dir"));
+                else SendImage(stream, req.Q("path"));
                 return;
             }
 
