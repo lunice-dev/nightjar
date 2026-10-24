@@ -5,6 +5,21 @@ import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { generatedCover, onlineCover } from '../lib/covers';
 
+/**
+ * Tells the lock screen exactly where the song is, at the moments its own guess would drift: a new track,
+ * play, pause and every seek. Between those it moves the bar on by itself.
+ */
+function reportPosition(el: HTMLAudioElement) {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  const duration = el.duration;
+  if (!Number.isFinite(duration) || duration <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({ duration, playbackRate: el.playbackRate || 1, position: Math.min(Math.max(0, el.currentTime), duration) });
+  } catch {
+    /* an odd moment while a track changes: the next report fixes it */
+  }
+}
+
 /** Whether a picture really loads (a missing cover answers 404). */
 const loads = (src: string) =>
   new Promise<boolean>((resolve) => {
@@ -119,7 +134,11 @@ export function Player() {
     set('nexttrack', () => p().next());
     set('previoustrack', () => p().prev());
     set('seekto', (d) => {
-      if (audio.current && d.seekTime != null) audio.current.currentTime = d.seekTime;
+      const el = audio.current;
+      if (!el || d.seekTime == null) return;
+      if (d.fastSeek && 'fastSeek' in el) el.fastSeek(d.seekTime);
+      else el.currentTime = d.seekTime;
+      reportPosition(el);
     });
   }, [track, cover]);
 
@@ -153,7 +172,10 @@ export function Player() {
       ref={audio}
       preload="auto"
       onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-      onDurationChange={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration)}
+      onDurationChange={(e) => {
+        if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration);
+        reportPosition(e.currentTarget);
+      }}
       onEnded={() => {
         const { index: i, queue: q } = usePlayer.getState();
         if (i + 1 < q.length) usePlayer.getState().next();
@@ -163,8 +185,17 @@ export function Player() {
       onWaiting={() => setWaiting(true)}
       onPlaying={() => setWaiting(false)}
       onCanPlay={() => setWaiting(false)}
-      onPlay={() => usePlayer.setState({ playing: true })}
-      onPause={() => usePlayer.setState({ playing: false })}
+      onPlay={(e) => {
+        usePlayer.setState({ playing: true });
+        reportPosition(e.currentTarget);
+      }}
+      onPause={(e) => {
+        usePlayer.setState({ playing: false });
+        reportPosition(e.currentTarget);
+      }}
+      onLoadedMetadata={(e) => reportPosition(e.currentTarget)}
+      onSeeked={(e) => reportPosition(e.currentTarget)}
+      onRateChange={(e) => reportPosition(e.currentTarget)}
     />
   );
 
