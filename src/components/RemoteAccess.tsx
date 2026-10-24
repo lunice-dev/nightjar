@@ -297,7 +297,7 @@ function HomeNetwork({ st, onSaved }: { st: RemoteStatus; onSaved: () => void })
       </label>
       <p className="hint-text small">
         {st.lan
-          ? `On a phone on the same Wi-Fi, open ${st.lanAddresses.map((a) => `http://${a}:5030`).join(' or ') || 'this computer’s address with :5030'} and sign in with the name “${st.username ?? ''}” and your remote password. Search, downloads and chat work there; your library and playing music need the Tailscale address.`
+          ? `On a phone on the same Wi-Fi, open ${st.lanAddresses.map((a) => `http://${a}:5030`).join(' or ') || 'this computer’s address with :5030'} and sign in with a code from this page or your remote password. Everything works there, playing music too. It isn’t encrypted like the Tailscale address, so use it only on your own Wi-Fi.`
           : st.passwordSet
             ? 'Off: only this computer and your Tailscale devices can open Nightjar.'
             : 'Set a remote password first: it’s what you type on the home Wi-Fi.'}
