@@ -53,6 +53,7 @@ namespace Nightjar
             helper = new Helper(fn => form.Invoke(fn), () => form.BeginInvoke((Action)(() => Quit())), () => form.BeginInvoke((Action)ShowWindow), () => Task.Run(() => engine.Restart()));
             Updater.Start(() => form.BeginInvoke((Action)(() => Quit())));
             helper.Start();
+            Tailscale.UpgradeServe();
 
             engine.Status += text => form.BeginInvoke((Action)(() => form.SetStatus(text)));
             engine.Failed += p => form.BeginInvoke((Action)(() => { form.ShowProblem(p); ShowWindow(); }));

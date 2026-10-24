@@ -52,47 +52,60 @@ namespace Nightjar
             this.restart = restart;
         }
 
-        /// <summary>Takes the port, and keeps trying every few seconds while another program holds it.</summary>
+        /// <summary>
+        /// Takes the ports, and keeps trying every few seconds while another program holds one. 5031 is for
+        /// pages on this computer; 5032 only receives what Tailscale passes on from your other devices, so
+        /// those requests can never pass for this computer's own window, whatever headers they send.
+        /// </summary>
         public void Start()
+        {
+            Listen(Paths.HelperPort, false);
+            Listen(Paths.RemoteHelperPort, true);
+        }
+
+        void Listen(int port, bool remote)
         {
             var t = new Thread(() =>
             {
                 while (true)
                 {
+                    TcpListener l = null;
                     try
                     {
-                        listener = new TcpListener(IPAddress.Loopback, Paths.HelperPort);
-                        listener.Start();
-                        Listening = true;
-                        Log.Write("Helper listening on " + Paths.HelperPort);
+                        l = new TcpListener(IPAddress.Loopback, port);
+                        l.Start();
+                        if (!remote) { listener = l; Listening = true; }
+                        Log.Write("Helper listening on " + port);
                         while (true)
                         {
-                            var client = listener.AcceptTcpClient();
-                            Task.Run(() => Serve(client));
+                            var client = l.AcceptTcpClient();
+                            Task.Run(() => Serve(client, remote));
                         }
                     }
                     catch (Exception e)
                     {
-                        Listening = false;
-                        try { listener?.Stop(); } catch { }
-                        Log.Write("Helper port " + Paths.HelperPort + " unavailable (" + e.Message + "); trying again shortly");
+                        if (!remote) Listening = false;
+                        try { l?.Stop(); } catch { }
+                        Log.Write("Helper port " + port + " unavailable (" + e.Message + "); trying again shortly");
                         Thread.Sleep(5000);
                     }
                 }
-            }) { IsBackground = true, Name = "helper" };
+            }) { IsBackground = true, Name = remote ? "helper-remote" : "helper" };
             t.Start();
         }
 
         sealed class Request
         {
             public string Method, Path, Origin;
+            /// <summary>Came in through Tailscale (the remote port).</summary>
+            public bool Remote;
             public Dictionary<string, string> Query = new Dictionary<string, string>();
             public Dictionary<string, string> Headers = new Dictionary<string, string>();
             public byte[] Body = new byte[0];
             public string Q(string k) => Query.TryGetValue(k, out var v) ? v : null;
         }
 
-        async Task Serve(TcpClient client)
+        async Task Serve(TcpClient client, bool remote)
         {
             using (client)
             {
@@ -103,6 +116,7 @@ namespace Nightjar
                     var stream = client.GetStream();
                     var req = ReadRequest(stream);
                     if (req == null) return;
+                    req.Remote = remote;
                     await Handle(req, stream).ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -336,7 +350,7 @@ namespace Nightjar
         /// </summary>
         static readonly HashSet<string> ThisComputerOnly = new HashSet<string>
         {
-            "/pick-folder", "/pick-image", "/reveal", "/upnp", "/firewall", "/quit", "/show",
+            "/pick-folder", "/pick-image", "/image", "/reveal", "/upnp", "/firewall", "/quit", "/show",
             "/remote/code", "/remote/lan", "/tailscale/install", "/tailscale/login", "/tailscale/serve", "/tailscale/test",
         };
 
@@ -349,7 +363,16 @@ namespace Nightjar
             if (req.Path == "/img" || req.Path == "/cover" || req.Path == "/stream")
             {
                 var k = req.Q("k");
-                if (k != imgKey && !Remote.MediaKeyOk(k)) { Reply(stream, 403, null, new { }); return; }
+                if (req.Remote ? !Remote.MediaKeyOk(k) : k != imgKey && !Remote.MediaKeyOk(k)) { Reply(stream, 403, null, new { }); return; }
+                // Other devices only get pictures from your music folders (and Nightjar's own, for your profile picture).
+                if (req.Remote)
+                {
+                    var asked = req.Path == "/cover" ? req.Q("dir") : req.Q("path");
+                    string full = null;
+                    try { full = string.IsNullOrEmpty(asked) ? null : Path.GetFullPath(asked); } catch { }
+                    if (full == null || (Media.Allowed(full) == null && !full.StartsWith(Paths.Data + "\\", StringComparison.OrdinalIgnoreCase)))
+                    { Reply(stream, 403, null, new { }); return; }
+                }
                 if (req.Path == "/stream") await SendTrack(req, stream).ConfigureAwait(false);
                 else if (req.Path == "/cover") SendCover(stream, req.Q("dir"));
                 else SendImage(stream, req.Q("path"));
@@ -358,7 +381,7 @@ namespace Nightjar
 
             // The page in Nightjar's window (and luniceOS) comes from 127.0.0.1:5030, so the browser always says so.
             // Anything else (a phone through Tailscale, which asks from the same address) must show a device token.
-            var local = Origins.Contains(req.Origin);
+            var local = !req.Remote && Origins.Contains(req.Origin);
             var origin = local ? req.Origin : RemoteOrigin(req.Origin);
             if (req.Method == "OPTIONS") { Reply(stream, 204, origin, ""); return; }
             Remote.Device device = null;

@@ -21,6 +21,8 @@ namespace Nightjar
         public static readonly string Incomplete = Path.Combine(Data, "incomplete");
         public const string EngineUrl = "http://127.0.0.1:5030";
         public const int HelperPort = 5031;
+        /// <summary>The helper's door for Tailscale: everything arriving here is from another device and needs its token.</summary>
+        public const int RemoteHelperPort = 5032;
     }
 
     static class Log

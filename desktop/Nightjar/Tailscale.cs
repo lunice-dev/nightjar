@@ -17,7 +17,7 @@ namespace Nightjar
     /// Nightjar installs it (the official installer, after checking it is signed by Tailscale),
     /// starts its sign-in, and asks it to serve Nightjar on this computer's private https address:
     ///   /    → slskd and the page (127.0.0.1:5030)
-    ///   /nj  → this app's helper (127.0.0.1:5031)
+    ///   /nj  → this app's helper, on its door for other devices (127.0.0.1:5032)
     /// Only devices signed in to the same Tailscale account can reach that address.
     /// </summary>
     static class Tailscale
@@ -139,7 +139,7 @@ namespace Nightjar
             if (code != 0) return false;
             // {"TCP":{"443":{"HTTPS":true}},"Web":{"name:443":{"Handlers":{"/":{"Proxy":"http://127.0.0.1:5030"},"/nj":{"Proxy":"http://127.0.0.1:5031"}}}}}
             return Regex.IsMatch(text, @"""/""\s*:\s*\{\s*""Proxy""\s*:\s*""http://127\.0\.0\.1:5030/?""")
-                && Regex.IsMatch(text, @"""" + HelperPath + @"/?""\s*:\s*\{\s*""Proxy""\s*:\s*""http://127\.0\.0\.1:" + Paths.HelperPort + @"/?""");
+                && Regex.IsMatch(text, @"""" + HelperPath + @"/?""\s*:\s*\{\s*""Proxy""\s*:\s*""http://127\.0\.0\.1:" + Paths.RemoteHelperPort + @"/?""");
         }
 
         // --- install ------------------------------------------------------------------
@@ -316,7 +316,7 @@ namespace Nightjar
             foreach (var args in new[]
             {
                 "serve --bg --yes --https=443 http://127.0.0.1:5030",
-                "serve --bg --yes --https=443 --set-path=" + HelperPath + " http://127.0.0.1:" + Paths.HelperPort,
+                "serve --bg --yes --https=443 --set-path=" + HelperPath + " http://127.0.0.1:" + Paths.RemoteHelperPort,
             })
             {
                 var (code, text) = Run(args, 20000, all => LoginUrl.IsMatch(all));
@@ -341,6 +341,27 @@ namespace Nightjar
             st = Status(true);
             Log.Write("Tailscale serve on: " + Address);
             return new { ok = st.serving, address = Address, error = st.serving ? null : "Tailscale didn't keep the setting." };
+        }
+
+        /// <summary>
+        /// At start: remote access set up by an earlier version sent devices to the helper's local door (5031).
+        /// Moves it to the door for other devices (5032). Runs in the background; does nothing otherwise.
+        /// </summary>
+        public static void UpgradeServe()
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    if (Exe == null) return;
+                    var (code, text) = Run("serve status --json", 8000);
+                    if (code != 0 || !Regex.IsMatch(text, @"""" + HelperPath + @"/?""\s*:\s*\{\s*""Proxy""\s*:\s*""http://127\.0\.0\.1:" + Paths.HelperPort)) return;
+                    Log.Write("Moving remote access to the helper's door for other devices");
+                    Run("serve --https=443 --set-path=" + HelperPath + " off", 10000);
+                    Serve(true);
+                }
+                catch (Exception e) { Log.Write("Remote access upgrade failed: " + e.Message); }
+            });
         }
 
         /// <summary>Opens Nightjar's own address the way a phone would, to prove the whole path works.</summary>
