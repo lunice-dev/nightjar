@@ -291,14 +291,15 @@ export function releaseScore(best: FolderResult, sources: FolderResult[], query 
 }
 
 /**
- * How many tracks the album has, judged from its copies: the biggest track count that at least two people
- * agree on, or (when nobody agrees) the biggest count found.
+ * How many tracks the album has, judged from its copies: the track count most people have (single stray tracks
+ * aside; a tie goes to the bigger count), or the biggest count found when no two copies agree. Deluxe editions
+ * with more tracks don't change it.
  */
 export function expectedTracks(sources: Pick<FolderResult, 'audio'>[]) {
   const counts = new Map<number, number>();
   for (const s of sources) counts.set(s.audio.length, (counts.get(s.audio.length) ?? 0) + 1);
-  const shared = Math.max(0, ...[...counts].filter(([, n]) => n >= 2).map(([c]) => c));
-  return { of: shared || Math.max(0, ...counts.keys()), agreed: shared > 0 };
+  const common = [...counts].filter(([c, n]) => c > 1 && n >= 2).sort((a, b) => b[1] - a[1] || b[0] - a[0])[0];
+  return common ? { of: common[0], agreed: true } : { of: Math.max(0, ...counts.keys()), agreed: false };
 }
 
 /**
