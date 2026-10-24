@@ -51,6 +51,13 @@ export function App() {
   const ready = useStore((s) => s.ready);
   const [error, setError] = useState<string>();
   const [connecting, setConnecting] = useState(true);
+  // On a phone or another computer, the opening screen stays at least 2.5 s (the Windows app has its own splash).
+  const [splash, setSplash] = useState(!inApp);
+  useEffect(() => {
+    if (!splash) return;
+    const t = setTimeout(() => setSplash(false), 2500);
+    return () => clearTimeout(t);
+  }, [splash]);
 
   const connect = useCallback(async () => {
     setError(undefined);
@@ -97,6 +104,7 @@ export function App() {
     connect();
   }, [connect]);
 
+  if (splash || (phase === 'connect' && connecting)) return <WithStrip><LoadingScreen /></WithStrip>;
   if (phase === 'closed') return <WithStrip><ClosedScreen /></WithStrip>;
   if (phase === 'setup')
     return (
@@ -110,7 +118,6 @@ export function App() {
         />
       </WithStrip>
     );
-  if (phase === 'connect' && connecting) return <WithStrip><LoadingScreen /></WithStrip>;
   if (phase !== 'ready') return <WithStrip><ConnectScreen error={error} onRetry={connect} /></WithStrip>;
   return <Shell />;
 }
@@ -647,17 +654,19 @@ function RemoteFoot({ onOpen }: { onOpen: () => void }) {
 function LoadingScreen() {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setSlow(true), 1500);
+    const t = setTimeout(() => setSlow(true), 3500);
     return () => clearTimeout(t);
   }, []);
   return (
     <main className="connect loading-screen" aria-busy="true">
       <div className="loading-mark">
-        <Mark size={56} />
+        <Mark size={64} />
       </div>
+      <h1 className="loading-name">Nightjar</h1>
       <p className={`loading-text ${slow ? 'in' : ''}`} role="status">
         {onThisComputer ? 'Starting Nightjar…' : 'Connecting to your computer…'}
       </p>
+      <span className="signature loading-sig" aria-hidden>coded by lunice</span>
     </main>
   );
 }
