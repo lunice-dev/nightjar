@@ -32,6 +32,7 @@ export function FullPlayer({
   const art = cover ?? (track ? generatedCover(track.dir) : '');
   const tint = useArtColour(cover);
   const [details, setDetails] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [drag, setDrag] = useState(0);
   const startY = useRef<number | null>(null);
   const current = useRef<HTMLLIElement>(null);
@@ -82,9 +83,7 @@ export function FullPlayer({
         <span className="fp-from">
           Playing from <strong>{track.album ?? 'your music'}</strong>
         </span>
-        <button className={`fp-icon ${details ? 'on' : ''}`} onClick={() => setDetails((d) => !d)} aria-label="Sound quality details" aria-pressed={details}>
-          <span className="fp-i">i</span>
-        </button>
+        <span className="fp-icon" aria-hidden />
       </div>
 
       <div className="fp-body">
@@ -145,24 +144,40 @@ export function FullPlayer({
             </button>
           </div>
 
+          <div className="fp-options">
+            <button
+              className={`fp-pill ${dataSaver ? 'on' : ''}`}
+              role="switch"
+              aria-checked={dataSaver}
+              onClick={() => p.setDataSaver(!dataSaver)}
+              title="Lossless files come as smaller AAC copies made by your computer (about 1 MB a minute)"
+            >
+              <span className="fp-switch" aria-hidden />
+              Use less data
+            </button>
+            <button className={`fp-pill ${details ? 'on' : ''}`} onClick={() => setDetails((d) => !d)} aria-pressed={details}>
+              {details ? 'Show the queue' : 'Sound quality'}
+            </button>
+          </div>
+
           {details ? (
-            <div className="fp-details">
-              {quality}
-              <label className="toggle">
-                <input type="checkbox" checked={dataSaver} onChange={(e) => p.setDataSaver(e.target.checked)} />
-                Use less data (smaller AAC copies made by your computer)
-              </label>
-            </div>
+            <div className="fp-details">{quality}</div>
           ) : (
             <div className="fp-queue" ref={queueRef}>
               <div className="fp-queue-head">
                 <strong>Up next</strong>
                 {shuffle && <span className="dim">Shuffled</span>}
                 {repeat !== 'off' && <span className="dim">{repeat === 'one' ? 'Repeating this track' : 'Repeating the queue'}</span>}
+                <span className="fp-gap" />
+                {queue.length > 1 && (
+                  <button className={`fp-edit ${editing ? 'on' : ''}`} onClick={() => setEditing((e) => !e)} aria-pressed={editing}>
+                    {editing ? 'Done' : 'Edit'}
+                  </button>
+                )}
               </div>
-              <ol>
+              <ol className={editing ? 'editing' : undefined}>
                 {played.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="played" onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                  <QueueRow key={q.qid} q={q} state="played" editing={editing} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
                 ))}
                 <li ref={current} className="fp-row now" aria-current="true">
                   <span className="fp-row-n">
@@ -177,9 +192,10 @@ export function FullPlayer({
                     <span>{track.artist}</span>
                   </span>
                   <span className="fp-row-d">{fmtTime(track.seconds)}</span>
+                  {editing && <span className="fp-row-x-space" aria-hidden />}
                 </li>
                 {upNext.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="next" onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                  <QueueRow key={q.qid} q={q} state="next" editing={editing} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
                 ))}
                 {upNext.length === 0 && <li className="fp-row empty">Nothing after this{repeat === 'all' ? ': the queue starts again' : ''}.</li>}
               </ol>
@@ -191,10 +207,10 @@ export function FullPlayer({
   );
 }
 
-function QueueRow({ q, state, onPlay, onRemove }: { q: QueueItem; state: 'played' | 'next'; onPlay: () => void; onRemove: () => void }) {
+function QueueRow({ q, state, editing, onPlay, onRemove }: { q: QueueItem; state: 'played' | 'next'; editing: boolean; onPlay: () => void; onRemove: () => void }) {
   return (
     <li className={`fp-row ${state}`}>
-      <button className="fp-row-main" onClick={onPlay}>
+      <button className="fp-row-main" onClick={editing ? undefined : onPlay} tabIndex={editing ? -1 : 0}>
         <span className="fp-row-n">{q.no || ''}</span>
         <span className="fp-row-t">
           <strong>{q.title}</strong>
@@ -202,9 +218,11 @@ function QueueRow({ q, state, onPlay, onRemove }: { q: QueueItem; state: 'played
         </span>
         <span className="fp-row-d">{fmtTime(q.seconds)}</span>
       </button>
-      <button className="fp-row-x" onClick={onRemove} aria-label={`Remove ${q.title} from the queue`} title="Remove from the queue">
-        <Icon name="close" size={14} />
-      </button>
+      {editing && (
+        <button className="fp-row-x" onClick={onRemove} aria-label={`Remove ${q.title} from the queue`} title="Remove from the queue">
+          <span aria-hidden>−</span>
+        </button>
+      )}
     </li>
   );
 }

@@ -60,6 +60,7 @@ export function Player() {
     setDuration(track?.seconds || 0);
   }, [track?.path]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadedPath = useRef('');
   // Load the current track: the original file, or the computer's AAC copy when asked for (or needed).
   useEffect(() => {
     const el = audio.current;
@@ -74,7 +75,13 @@ export function Player() {
         usePlayer.getState().stop();
         return;
       }
-      if (el.src !== url) el.src = url;
+      if (el.src !== url) {
+        // The same track as another kind of copy ("Use less data" switched): carry on from the same moment.
+        const resumeAt = loadedPath.current === track.path && el.currentTime > 1 ? el.currentTime : 0;
+        el.src = url;
+        if (resumeAt) el.addEventListener('loadedmetadata', () => (el.currentTime = resumeAt), { once: true });
+      }
+      loadedPath.current = track.path;
       if (audioCtl.wantPlay) el.play().catch(() => setWaiting(false));
     });
     return () => {
