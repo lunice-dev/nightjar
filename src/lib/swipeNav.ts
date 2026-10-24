@@ -3,15 +3,11 @@ import { usePlayer } from './player';
 
 /**
  * Swipe sideways to move between the tabs, like flipping pages: right to left goes to the next tab
- * (Search → Downloads…), left to right to the one before. The page follows your finger and, underneath,
- * the name of the tab you're heading to; let go past a third of the way (or with a quick flick) to go
+ * (Search → Downloads…), left to right to the one before. The page follows your finger and
+ * the next tab slides in after it; let go past a third of the way (or with a quick flick) to go
  * there. The order is the tabs you see: the bar at the bottom on a phone, the top bar on bigger screens.
  * A two-finger sideways swipe on a trackpad does the same on the computer.
  */
-const LABEL: Record<string, string> = {
-  search: 'Search', wishlist: 'Wishlist', downloads: 'Downloads', library: 'Library', uploads: 'Uploads',
-  messages: 'Messages', rooms: 'Rooms', people: 'People', settings: 'Settings',
-};
 const ALL: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'settings'];
 const PHONE: Route[] = ['search', 'downloads', 'messages', 'people'];
 
@@ -27,23 +23,6 @@ function neighbourTab(dir: -1 | 1): Route | null {
 /** The page that moves. */
 const target = () => document.querySelector('.main') as HTMLElement | null;
 
-let under: HTMLDivElement | null = null;
-function showUnder(dir: -1 | 1, text: string, el: HTMLElement) {
-  if (!under) {
-    under = document.createElement('div');
-    under.className = 'swipe-under';
-    document.body.appendChild(under);
-  }
-  const r = el.getBoundingClientRect();
-  Object.assign(under.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: getComputedStyle(el).borderRadius });
-  under.dataset.dir = dir === -1 ? 'back' : 'forward';
-  under.innerHTML = `<span><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${dir === -1 ? 'M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20v-2Z' : 'M4 11h12.2l-5.6-5.6L12 4l8 8-8 8-1.4-1.4 5.6-5.6H4v-2Z'}"/></svg>${text}</span>`;
-  under.style.display = 'grid';
-}
-const hideUnder = () => {
-  if (under) under.style.display = 'none';
-};
-
 let active: { dir: -1 | 1; to: Route; el: HTMLElement; startX: number; startY: number; t: number; dx: number } | null = null;
 
 function begin(dir: -1 | 1, x: number, y: number) {
@@ -51,7 +30,6 @@ function begin(dir: -1 | 1, x: number, y: number) {
   const el = target();
   if (!to || !el) return false;
   active = { dir, to, el, startX: x, startY: y, t: performance.now(), dx: 0 };
-  showUnder(dir, LABEL[to], el);
   el.classList.add('swiping');
   return true;
 }
@@ -62,42 +40,50 @@ function move(dx: number) {
   const d = active.dir === -1 ? Math.max(0, dx) : Math.min(0, dx);
   active.dx = d;
   active.el.style.transform = `translateX(${d}px)`;
-  if (under) under.style.opacity = String(Math.min(1, Math.abs(d) / 120));
 }
 
 function end(cancel = false) {
   if (!active) return;
-  const { el, dx, dir, t, to: target_ } = active;
+  const { el, dx, dir, t, to } = active;
   active = null;
   const w = el.getBoundingClientRect().width;
-  const fast = Math.abs(dx) / Math.max(1, performance.now() - t) > 0.6 && Math.abs(dx) > 40;
+  const fast = Math.abs(dx) / Math.max(1, performance.now() - t) > 0.5 && Math.abs(dx) > 30;
   const go = !cancel && (Math.abs(dx) > w / 3 || fast);
-  el.classList.remove('swiping');
-  el.style.transition = 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1)';
-  el.style.transform = go ? `translateX(${dir === -1 ? w : -w}px)` : 'translateX(0)';
-  const done = () => {
-    el.style.transition = '';
-    hideUnder();
-    el.style.transform = '';
-    if (go && target_) {
-      useStore.getState().go(target_);
-      // The new tab slides in from the side it came from, so it doesn't just pop.
-      requestAnimationFrame(() => {
-        const next = target();
-        if (!next) return;
-        next.style.transition = 'none';
-        next.style.transform = `translateX(${dir === -1 ? -60 : 60}px)`;
-        next.style.opacity = '0.5';
-        requestAnimationFrame(() => {
-          next.style.transition = 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s ease-out';
-          next.style.transform = '';
-          next.style.opacity = '';
-          setTimeout(() => (next.style.transition = ''), 280);
-        });
-      });
-    }
-  };
-  setTimeout(done, 230);
+  const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+  if (!go) {
+    // Not far enough: spring back.
+    el.style.transition = `transform 0.25s ${ease}`;
+    el.style.transform = 'translateX(0)';
+    setTimeout(() => {
+      el.style.transition = '';
+      el.style.transform = '';
+      el.classList.remove('swiping');
+    }, 260);
+    return;
+  }
+  // Far enough: the page carries on out, and the next tab comes in from the other side, like turning a page.
+  const out = dir === -1 ? w : -w;
+  const left = Math.abs(out - dx) / w; // how much of the way is still to go
+  const ms = Math.round(140 + 120 * left);
+  el.style.transition = `transform ${ms}ms ${ease}`;
+  el.style.transform = `translateX(${out}px)`;
+  setTimeout(() => {
+    useStore.getState().go(to);
+    requestAnimationFrame(() => {
+      const next = target();
+      if (!next) return;
+      next.style.transition = 'none';
+      next.style.transform = `translateX(${-out}px)`;
+      next.getBoundingClientRect(); // start from there
+      next.style.transition = `transform 0.3s ${ease}`;
+      next.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        next.style.transition = '';
+        next.style.transform = '';
+        next.classList.remove('swiping');
+      }, 320);
+    });
+  }, ms);
 }
 
 /** Things you drag sideways yourself: a swipe that starts on them is theirs. */

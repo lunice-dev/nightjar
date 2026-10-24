@@ -1556,10 +1556,6 @@ html.in-app, html.in-app body { overflow: hidden; }
 .edge-arrow.ready { background: #f4f1ea; color: #141312; }
 .loading-screen .mark-bird, .full-player .mark-bird { fill: #efe9dd; }
 
-/* swiping back and forward: what's underneath the page you move */
-.swipe-under { position: fixed; z-index: 0; display: none; align-items: center; padding: 0 28px; background: var(--canvas); color: var(--ink-2); pointer-events: none; }
-.swipe-under[data-dir='back'] { justify-items: start; }
-.swipe-under[data-dir='forward'] { justify-items: end; }
-.swipe-under span { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; }
-.main.swiping, .full-player.swiping { position: relative; z-index: 1; box-shadow: -12px 0 30px rgb(0 0 0 / 0.18); will-change: transform; }
-.full-player.swiping { animation: none; transition: none; }
+/* swiping between tabs: only the page moves, on the graphics card */
+.main.swiping { will-change: transform; backface-visibility: hidden; }
+.shell { overflow: hidden; }
