@@ -30,6 +30,20 @@ import { Player } from './components/Player';
 import { FolderBrowserHost } from './components/FolderBrowser';
 import { PlaylistPicker } from './components/Playlists';
 import { useStore, type Route } from './store';
+import { neighbourTab } from './lib/swipeNav';
+
+const PANES: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'browse', 'settings', 'about'];
+
+/** The window's width, kept up to date (the tab order differs on a phone). */
+function useWidth() {
+  const [w, setW] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const on = () => setW(window.innerWidth);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return w;
+}
 import type { IconName } from './components/Icon';
 
 const NAV: { route: Route; label: string; short?: string; icon: IconName; primary?: boolean }[] = [
@@ -232,6 +246,10 @@ function Shell() {
   const me = useStore((s) => s.me);
   const [theme, setTheme] = useTheme();
 
+  // The open tab, plus the tabs either side kept ready (out of sight), so swiping shows the real page at once.
+  const width = useWidth();
+  const mounted = new Set<Route>([route, neighbourTab(-1, route, width), neighbourTab(1, route, width)].filter((r): r is Route => !!r));
+
   const [q, setQ] = useState('');
   const input = useRef<HTMLInputElement>(null);
 
@@ -331,37 +349,41 @@ function Shell() {
 
       <UpdateBanner />
       <div className="main">
-        {route === 'search' && tabs.length > 0 && (
-          <div className="search-tabs" role="tablist" aria-label="Your searches">
-            {tabs.map((t) => {
-              const live = t.search.state === 'InProgress' || t.search.state === 'Requested';
-              const current = activeTab === t.search.id;
-              return (
-                <span key={t.search.id} className={`search-tab ${current ? 'on' : ''}`}>
-                  <button role="tab" aria-selected={current} onClick={() => selectTab(t.search.id)}>
-                    {live && <span className="live-dot" aria-label="Searching" />}
-                    {t.search.searchText}
-                    <span className="n">{t.responses.length}</span>
-                  </button>
-                  <button className="search-tab-close" aria-label={`Close search for ${t.search.searchText}`} onClick={() => closeTab(t.search.id)}>
-                    <Icon name="close" size={12} />
-                  </button>
-                </span>
-              );
-            })}
+        {PANES.filter((r) => mounted.has(r)).map((r) => (
+          <div key={r} className="tab-pane" data-route={r} aria-hidden={r !== route} {...(r !== route ? ({ inert: '' } as object) : {})}>
+            {r === 'search' && tabs.length > 0 && (
+              <div className="search-tabs" role="tablist" aria-label="Your searches">
+                {tabs.map((t) => {
+                  const live = t.search.state === 'InProgress' || t.search.state === 'Requested';
+                  const current = activeTab === t.search.id;
+                  return (
+                    <span key={t.search.id} className={`search-tab ${current ? 'on' : ''}`}>
+                      <button role="tab" aria-selected={current} onClick={() => selectTab(t.search.id)}>
+                        {live && <span className="live-dot" aria-label="Searching" />}
+                        {t.search.searchText}
+                        <span className="n">{t.responses.length}</span>
+                      </button>
+                      <button className="search-tab-close" aria-label={`Close search for ${t.search.searchText}`} onClick={() => closeTab(t.search.id)}>
+                        <Icon name="close" size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {r === 'search' && <SearchScreen />}
+            {r === 'downloads' && <TransfersScreen key="d" direction="download" />}
+            {r === 'uploads' && <TransfersScreen key="u" direction="upload" />}
+            {r === 'messages' && <MessagesScreen />}
+            {r === 'rooms' && <RoomsScreen />}
+            {r === 'browse' && <BrowseScreen />}
+            {r === 'wishlist' && <WishlistScreen />}
+            {r === 'library' && <LibraryScreen />}
+            {r === 'people' && <PeopleScreen />}
+            {r === 'settings' && <SettingsScreen />}
+            {r === 'about' && <AboutScreen />}
           </div>
-        )}
-        {route === 'search' && <SearchScreen />}
-        {route === 'downloads' && <TransfersScreen key="d" direction="download" />}
-        {route === 'uploads' && <TransfersScreen key="u" direction="upload" />}
-        {route === 'messages' && <MessagesScreen />}
-        {route === 'rooms' && <RoomsScreen />}
-        {route === 'browse' && <BrowseScreen />}
-        {route === 'wishlist' && <WishlistScreen />}
-        {route === 'library' && <LibraryScreen />}
-        {route === 'people' && <PeopleScreen />}
-        {route === 'settings' && <SettingsScreen />}
-        {route === 'about' && <AboutScreen />}
+        ))}
       </div>
       <Player />
 

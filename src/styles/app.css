@@ -1559,3 +1559,10 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* swiping between tabs: only the page moves, on the graphics card */
 .main.swiping { will-change: transform; backface-visibility: hidden; }
 .shell { overflow: hidden; }
+
+/* Each tab in its own pane; the tabs either side stay ready but out of sight until a swipe brings them in. */
+.main { position: relative; }
+.tab-pane { position: absolute; inset: 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--paper); }
+.tab-pane[aria-hidden='true']:not(.peek) { visibility: hidden; pointer-events: none; }
+.tab-pane.peek { pointer-events: none; }
+.tab-pane.swiping { will-change: transform; backface-visibility: hidden; }

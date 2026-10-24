@@ -11,11 +11,15 @@ import { usePlayer } from './player';
 const ALL: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'settings'];
 const PHONE: Route[] = ['search', 'downloads', 'messages', 'people'];
 
+/** The tabs in the order you see them: the bottom bar on a phone, the top bar on bigger screens. */
+export const tabOrder = (width = window.innerWidth): Route[] => (width < 700 ? PHONE : ALL);
+/** Pages that sit under a tab: Browse under People, About under Settings. */
+export const tabOf = (r: Route): Route => (r === 'browse' ? 'people' : r === 'about' ? 'settings' : r);
+
 /** The tab next to the one open, in the order on screen; null at either end. */
-function neighbourTab(dir: -1 | 1): Route | null {
-  const order = window.innerWidth < 700 ? PHONE : ALL;
-  const r = useStore.getState().route;
-  const here = order.indexOf(r === 'browse' ? 'people' : r === 'about' ? 'settings' : r);
+export function neighbourTab(dir: -1 | 1, route = useStore.getState().route, width = window.innerWidth): Route | null {
+  const order = tabOrder(width);
+  const here = order.indexOf(tabOf(route));
   if (here < 0) return null;
   return order[here + dir] ?? null;
 }
@@ -23,14 +27,23 @@ function neighbourTab(dir: -1 | 1): Route | null {
 /** The page that moves. */
 const target = () => document.querySelector('.main') as HTMLElement | null;
 
-let active: { dir: -1 | 1; to: Route; el: HTMLElement; startX: number; startY: number; t: number; dx: number } | null = null;
+let active: { dir: -1 | 1; to: Route; el: HTMLElement; next: HTMLElement | null; startX: number; startY: number; t: number; dx: number } | null = null;
+
+/** Each tab lives in its own pane inside the page area; the tabs either side are kept ready, out of sight. */
+const pane = (r: Route) => document.querySelector(`.tab-pane[data-route="${r}"]`) as HTMLElement | null;
 
 function begin(dir: -1 | 1, x: number, y: number) {
   const to = neighbourTab(dir);
-  const el = target();
+  const route = useStore.getState().route;
+  const el = pane(route) ?? target();
   if (!to || !el) return false;
-  active = { dir, to, el, startX: x, startY: y, t: performance.now(), dx: 0 };
+  const next = pane(to);
+  active = { dir, to, el, next, startX: x, startY: y, t: performance.now(), dx: 0 };
   el.classList.add('swiping');
+  if (next) {
+    next.classList.add('swiping', 'peek');
+    next.style.transform = `translateX(${dir === -1 ? -el.offsetWidth : el.offsetWidth}px)`;
+  }
   return true;
 }
 
@@ -40,48 +53,65 @@ function move(dx: number) {
   const d = active.dir === -1 ? Math.max(0, dx) : Math.min(0, dx);
   active.dx = d;
   active.el.style.transform = `translateX(${d}px)`;
+  // The real next tab comes in right beside it, following the finger too.
+  if (active.next) active.next.style.transform = `translateX(${d + (active.dir === -1 ? -1 : 1) * active.el.offsetWidth}px)`;
 }
 
 function end(cancel = false) {
   if (!active) return;
-  const { el, dx, dir, t, to } = active;
+  const { el, next, dx, dir, t, to } = active;
   active = null;
   const w = el.getBoundingClientRect().width;
   const fast = Math.abs(dx) / Math.max(1, performance.now() - t) > 0.5 && Math.abs(dx) > 30;
   const go = !cancel && (Math.abs(dx) > w / 3 || fast);
   const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
-  if (!go) {
-    // Not far enough: spring back.
-    el.style.transition = `transform 0.25s ${ease}`;
-    el.style.transform = 'translateX(0)';
+  const side = dir === -1 ? -w : w; // where the next tab waits
+  const out = -side; // where this one goes
+  const ms = Math.round(go ? 160 + 140 * (Math.abs(out - dx) / w) : 240);
+  const tidy = (n: HTMLElement | null) => {
+    if (!n) return;
+    n.style.transition = '';
+    n.style.transform = '';
+    n.classList.remove('swiping', 'peek');
+  };
+
+  if (next) {
+    // Both pages finish the move together.
+    for (const n of [el, next]) n.style.transition = `transform ${ms}ms ${ease}`;
+    el.style.transform = go ? `translateX(${out}px)` : 'translateX(0)';
+    next.style.transform = go ? 'translateX(0)' : `translateX(${side}px)`;
     setTimeout(() => {
-      el.style.transition = '';
-      el.style.transform = '';
-      el.classList.remove('swiping');
-    }, 260);
+      if (go) useStore.getState().go(to);
+      requestAnimationFrame(() => {
+        tidy(el);
+        tidy(next);
+      });
+    }, ms);
     return;
   }
-  // Far enough: a picture of this page carries on out while the next tab slides in right behind it, both
-  // at once, so there's never a gap between them.
-  const out = dir === -1 ? w : -w;
-  const ms = Math.round(160 + 140 * (Math.abs(out - dx) / w));
-  const ghost = snapshot(el, dx);
 
-  useStore.getState().go(to);
-  el.style.transition = 'none';
-  el.style.transform = `translateX(${dx - out}px)`; // just beside the picture, on the other side
-  requestAnimationFrame(() => {
-    el.getBoundingClientRect();
-    const move = `transform ${ms}ms ${ease}`;
-    el.style.transition = move;
-    ghost.style.transition = move;
+  // No ready page for that tab (rare): a picture of this page slides out while the tab slides in.
+  if (!go) {
+    el.style.transition = `transform ${ms}ms ${ease}`;
     el.style.transform = 'translateX(0)';
+    setTimeout(() => tidy(el), ms + 20);
+    return;
+  }
+  const ghost = snapshot(el, dx);
+  useStore.getState().go(to);
+  requestAnimationFrame(() => {
+    const now = pane(to) ?? target();
+    if (!now) return ghost.remove();
+    now.style.transition = 'none';
+    now.style.transform = `translateX(${dx + side}px)`;
+    now.getBoundingClientRect();
+    now.style.transition = ghost.style.transition = `transform ${ms}ms ${ease}`;
+    now.style.transform = 'translateX(0)';
     ghost.style.transform = `translateX(${out}px)`;
     setTimeout(() => {
       ghost.remove();
-      el.style.transition = '';
-      el.style.transform = '';
-      el.classList.remove('swiping');
+      tidy(now);
+      tidy(el);
     }, ms + 20);
   });
 }
