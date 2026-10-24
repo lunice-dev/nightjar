@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { fmtTime, streamChoice, usePlayer } from '../lib/player';
+import { fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
+import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { generatedCover, onlineCover } from '../lib/covers';
 
@@ -157,6 +158,7 @@ export function Player() {
         <button className="player-text" onClick={() => setOpen((o) => !o)}>
           <strong>{track.title}</strong>
           <span>
+            <QualityChip />
             {[track.artist, track.album].filter(Boolean).join(' · ')}
             {waiting && playing ? ' · loading…' : ''}
           </span>
@@ -201,7 +203,7 @@ export function Player() {
               Use less data
             </label>
           </div>
-          {converted && <p className="hint-text small">This device couldn’t play the original file, so your computer sends an AAC copy.</p>}
+          <QualityInfo />
           <ol>
             {queue.map((t, i) => (
               <li key={t.path} aria-current={i === index ? 'true' : undefined}>
@@ -215,6 +217,58 @@ export function Player() {
           </ol>
         </div>
       )}
+    </div>
+  );
+}
+
+/** What is being sent right now: the original file, or an AAC copy made by the computer (and why). */
+function sending(t: QueueItem, dataSaver: boolean, converted: boolean) {
+  const kbps = streamChoice(t, dataSaver, converted);
+  if (!kbps) return { label: t.format === 'mp3' ? 'the original MP3' : `the original ${t.format.toUpperCase()} file`, aac: 0 };
+  return { label: `an AAC copy at ${kbps} kbit/s`, aac: kbps };
+}
+
+/** A short tag next to the track: what's coming from the computer. */
+function QualityChip() {
+  const { queue, index, dataSaver, converted } = usePlayer();
+  const t = queue[index];
+  if (!t) return null;
+  const s = sending(t, dataSaver, converted);
+  const src = sourceQuality(t);
+  return <span className={`pq-chip ${s.aac ? 'aac' : src.lossless ? 'lossless' : ''}`}>{s.aac ? `AAC ${s.aac}` : src.short}</span>;
+}
+
+/**
+ * The whole chain, from the file on the computer to your ears, so you know where the quality goes:
+ * the file itself, what Nightjar sends, what the phone can do, and what Bluetooth headphones receive.
+ */
+function QualityInfo() {
+  const { queue, index, dataSaver, converted } = usePlayer();
+  const t = queue[index];
+  if (!t) return null;
+  const src = sourceQuality(t);
+  const s = sending(t, dataSaver, converted);
+  const ios = isIos();
+  const above48 = t.rate > 48000;
+  return (
+    <div className="pq">
+      <dl>
+        <dt>The file</dt>
+        <dd>{src.long}</dd>
+        <dt>Sent to this {ios ? 'phone' : 'device'}</dt>
+        <dd>
+          {s.label}
+          {converted && !dataSaver ? ' (this device couldn’t play the original)' : dataSaver && s.aac ? ' (Use less data is on)' : src.lossless && !s.aac ? ', bit for bit' : ''}
+        </dd>
+        {ios && (
+          <>
+            <dt>iPhone</dt>
+            <dd>{above48 && !s.aac ? `Plays up to 48 kHz by itself, so this ${t.rate / 1000} kHz file is converted down. Full hi-res needs a USB DAC (an adapter with its own converter).` : 'Plays this as it comes.'}</dd>
+            <dt>AirPods / Bluetooth</dt>
+            <dd>Bluetooth headphones get AAC at about 256 kbit/s, whatever the source: lossless ends at the phone. Wired headphones (or AirPods Max with the USB-C cable) keep it.</dd>
+          </>
+        )}
+      </dl>
     </div>
   );
 }

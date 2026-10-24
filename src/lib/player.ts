@@ -116,3 +116,21 @@ export const fmtTime = (s: number) => {
   const r = Math.floor(s % 60);
   return `${m}:${String(r).padStart(2, '0')}`;
 };
+
+/** What the file on the computer is, in words: "FLAC · 24-bit / 96 kHz · lossless, hi-res". */
+export function sourceQuality(t: Track) {
+  const fmt = t.format.toUpperCase();
+  const lossless = ['flac', 'wav', 'aif', 'aiff', 'alac'].includes(t.format) || (t.format === 'm4a' && t.bits > 0);
+  const khz = t.rate ? `${+(t.rate / 1000).toFixed(1)} kHz` : '';
+  if (!lossless) {
+    const kbps = t.kbps ? `${t.kbps} kbit/s` : '';
+    return { lossless, short: [fmt, t.kbps ? `${t.kbps}` : ''].filter(Boolean).join(' '), long: [fmt, kbps, khz, 'lossy'].filter(Boolean).join(' · ') };
+  }
+  const hires = t.bits > 16 || t.rate > 48000;
+  const depth = t.bits ? `${t.bits}-bit` : '';
+  return {
+    lossless,
+    short: `${fmt} ${t.bits || ''}${t.bits && t.rate ? '/' : ''}${t.rate ? +(t.rate / 1000).toFixed(1) : ''}`.trim(),
+    long: [fmt, [depth, khz].filter(Boolean).join(' / '), hires ? 'lossless, hi-res' : 'lossless'].filter(Boolean).join(' · '),
+  };
+}

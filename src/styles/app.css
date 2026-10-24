@@ -1252,3 +1252,13 @@ html.in-app, html.in-app body { overflow: hidden; }
   .pulse-tile { padding: 16px; }
   .pulse-big { font-size: 26px; }
 }
+
+/* what the player is really sending */
+.pq-chip { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 650; line-height: 17px; background: var(--sunken); color: var(--ink-2); vertical-align: 1px; }
+.pq-chip.lossless { background: color-mix(in srgb, var(--t-lossless) 18%, transparent); color: var(--t-lossless); }
+.pq-chip.aac { background: color-mix(in srgb, var(--t-mid) 18%, transparent); color: var(--t-mid); }
+.pq { margin: 2px 0 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--paper); font-size: 13px; }
+.pq dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; }
+.pq dt { color: var(--ink-3); font-weight: 600; white-space: nowrap; }
+.pq dd { margin: 0; color: var(--ink-2); }
+@media (max-width: 480px) { .pq dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } .pq dd { margin-bottom: 6px; } }
