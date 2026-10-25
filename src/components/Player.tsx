@@ -5,6 +5,7 @@ import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { FullPlayer } from './FullPlayer';
 import { useScrub } from '../lib/scrub';
+import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
 
 /**
@@ -207,8 +208,15 @@ export function Player() {
     />
   );
 
-  const scrub = useScrub(time, (t) => {
+  const scrub = useScrub(time, duration, (t) => {
     if (audio.current) audio.current.currentTime = t;
+  });
+  useSeekKeys(!!track);
+  const back = useHoldToScan(-1, () => usePlayer.getState().prev());
+  // On the last track, next stays usable for fast-forwarding; a tap there does nothing (unless the queue repeats).
+  const ahead = useHoldToScan(1, () => {
+    const s = usePlayer.getState();
+    if (s.index + 1 < s.queue.length || s.repeat === 'all') s.next();
   });
 
   // The same tree with or without a track, so the <audio> element is never replaced.
@@ -240,13 +248,19 @@ export function Player() {
           </span>
         </button>
         <div className="player-controls">
-          <button className="player-btn hide-narrow" onClick={() => p.prev()} aria-label="Previous track">
+          <button className={`player-btn scan hide-narrow ${back.scanning ? 'on' : ''}`} {...back.props} aria-label="Previous track" title="Previous track (hold to rewind)">
             <Icon name="prev" size={20} />
           </button>
           <button className="player-btn main" onClick={() => p.toggle()} aria-label={playing ? 'Pause' : 'Play'}>
             <Icon name={playing ? 'pause' : 'play'} size={22} />
           </button>
-          <button className="player-btn" onClick={() => p.next()} disabled={index + 1 >= queue.length && usePlayer.getState().repeat !== 'all'} aria-label="Next track">
+          <button
+            className={`player-btn scan ${ahead.scanning ? 'on' : ''}`}
+            {...ahead.props}
+            disabled={index + 1 >= queue.length && usePlayer.getState().repeat !== 'all' && duration <= 0}
+            aria-label="Next track"
+            title="Next track (hold to fast-forward)"
+          >
             <Icon name="next" size={20} />
           </button>
         </div>
@@ -256,17 +270,25 @@ export function Player() {
         <button className="player-btn close" onClick={() => p.stop()} aria-label="Stop and close the player">
           <Icon name="close" size={16} />
         </button>
-        <input
-          className="player-seek"
-          type="range"
-          min={0}
-          max={duration || 0}
-          step={1}
-          value={Math.min(scrub.shown, duration || 0)}
-          aria-label="Position"
-          style={{ ['--p' as string]: `${progress}%` }}
-          {...scrub.props}
-        />
+        <div className="player-seek-wrap" {...scrub.wrap}>
+          {scrub.drag && (
+            <span className="seek-bubble" style={{ left: `${progress}%` }}>
+              {fmtTime(scrub.shown)}
+              {scrub.drag.label && <small>{scrub.drag.label}</small>}
+            </span>
+          )}
+          <input
+            className="player-seek"
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={1}
+            value={Math.min(scrub.shown, duration || 0)}
+            aria-label="Position"
+            style={{ ['--p' as string]: `${progress}%` }}
+            {...scrub.props}
+          />
+        </div>
       </div>
     </div>
       {expanded && <FullPlayer cover={cover} time={time} duration={duration} waiting={waiting} quality={<QualityInfo />} chip={<QualityChip />} />}

@@ -7,6 +7,7 @@ import { WindowControls } from './WindowControls';
 import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 import { useScrub } from '../lib/scrub';
+import { LONG_TRACK, seekBy, useDoubleTapSeek, useHoldToScan } from '../lib/seek';
 
 /**
  * The large player, over the whole app: big album art, the time bar, the buttons and what plays
@@ -75,9 +76,15 @@ export function FullPlayer({
     return () => window.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const scrub = useScrub(time, (t) => {
+  const scrub = useScrub(time, duration, (t) => {
     if (audioCtl.el) audioCtl.el.currentTime = t;
   });
+  const back = useHoldToScan(-1, () => p.prev());
+  const ahead = useHoldToScan(1, () => {
+    const s = usePlayer.getState();
+    if (s.index + 1 < s.queue.length || s.repeat === 'all') s.next();
+  });
+  const tap = useDoubleTapSeek();
   const shown = scrub.shown;
   const remaining = Math.max(0, duration - shown);
   const progress = duration > 0 ? Math.min(100, (shown / duration) * 100) : 0;
@@ -137,7 +144,15 @@ export function FullPlayer({
       ) : (
       <div className="fp-body">
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <img className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
+          <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
+            <img className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
+            {tap.shown && (
+              <span className={`fp-jump-flash ${tap.shown.side > 0 ? 'right' : 'left'}`} aria-live="polite">
+                {tap.shown.side > 0 ? '+' : '−'}
+                {tap.shown.total} s
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="fp-side">
@@ -151,35 +166,54 @@ export function FullPlayer({
           </div>
 
           <div className="fp-time">
-            <input
-              className="fp-seek"
-              type="range"
-              min={0}
-              max={duration || 0}
-              step={0.5}
-              value={Math.min(shown, duration || 0)}
-              aria-label="Position"
-              style={{ ['--p' as string]: `${progress}%` }}
-              {...scrub.props}
-            />
+            <div className="fp-seek-wrap" {...scrub.wrap}>
+              {scrub.drag?.label && <span className="seek-bubble fp">{scrub.drag.label}</span>}
+              <input
+                className="fp-seek"
+                type="range"
+                min={0}
+                max={duration || 0}
+                step={0.5}
+                value={Math.min(shown, duration || 0)}
+                aria-label="Position"
+                style={{ ['--p' as string]: `${progress}%` }}
+                {...scrub.props}
+              />
+            </div>
             <div className="fp-times">
               <span>{fmtTime(shown)}</span>
               <span>{waiting && playing ? 'loading…' : ''}</span>
               <span>−{fmtTime(remaining)}</span>
             </div>
+            {duration >= LONG_TRACK && (
+              <div className="fp-jumps">
+                <button className="fp-pill" onClick={() => seekBy(-15)} aria-label="Back 15 seconds">
+                  −15 s
+                </button>
+                <button className="fp-pill" onClick={() => seekBy(30)} aria-label="Forward 30 seconds">
+                  +30 s
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="fp-controls">
             <button className={`fp-icon small ${shuffle ? 'on' : ''}`} onClick={() => p.setShuffle(!shuffle)} aria-label="Shuffle" aria-pressed={shuffle} title="Shuffle">
               <ShuffleGlyph />
             </button>
-            <button className="fp-icon big" onClick={() => p.prev()} aria-label="Previous track">
+            <button className={`fp-icon big scan ${back.scanning ? 'on' : ''}`} {...back.props} aria-label="Previous track" title="Previous track (hold to rewind)">
               <Icon name="prev" size={30} />
             </button>
             <button className="fp-play" onClick={() => p.toggle()} aria-label={playing ? 'Pause' : 'Play'}>
               <Icon name={playing ? 'pause' : 'play'} size={34} />
             </button>
-            <button className="fp-icon big" onClick={() => p.next()} disabled={index + 1 >= queue.length && repeat !== 'all'} aria-label="Next track">
+            <button
+              className={`fp-icon big scan ${ahead.scanning ? 'on' : ''}`}
+              {...ahead.props}
+              disabled={index + 1 >= queue.length && repeat !== 'all' && duration <= 0}
+              aria-label="Next track"
+              title="Next track (hold to fast-forward)"
+            >
               <Icon name="next" size={30} />
             </button>
             <button
