@@ -70,6 +70,10 @@ namespace Nightjar
                 AppDomain.CurrentDomain.UnhandledException += (s, e) => Crash(e.ExceptionObject as Exception);
 
                 Log.Write("Starting Nightjar " + Application.ProductVersion + (Background ? " in the background" : ""));
+                // A new Nightjar.exe can be put in place while the old one runs (the running one is renamed *.old);
+                // the old copy goes once nothing runs it any more.
+                foreach (var old in Directory.GetFiles(Paths.Root, "*.old"))
+                    try { File.Delete(old); } catch { }
                 var app = new AppContext(show);
                 Application.Run(app);
                 Log.Write("Stopped");
