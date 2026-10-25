@@ -9,6 +9,17 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
 /** What changed in each version, newest first. Keep entries short and in the user's words. */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8.1',
+    date: '25 Oct 2026',
+    title: 'Updating from your phone',
+    items: [
+      'Installing an update from your phone or another computer finishes by itself: the page waits for Nightjar to restart on your computer, then reloads',
+      'A page left open while Nightjar was updated elsewhere offers “Reload to use it”',
+      'About shows the right version number',
+      'The bottom bar credits the engine Nightjar runs on, as slskd’s own interface does: Engine: slskd, its version and licence',
+    ],
+  },
+  {
     version: '0.8',
     date: '25 Oct 2026',
     title: 'Nightjar on your phone, anywhere',
