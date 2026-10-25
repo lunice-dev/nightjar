@@ -349,26 +349,50 @@ namespace Nightjar
         {
             Directory.CreateDirectory(Cache);
             var work = target + ".part.m4a";
-            string wav = null;
+            string pcm = null;
+            // What the reader reads from: a RawSourceWaveStream doesn't close it, so it is closed here.
+            Stream inner = null;
             try
             {
-                var input = source;
+                WaveStream reader;
                 if (Path.GetExtension(source).Equals(".flac", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!File.Exists(FlacExe)) throw new FileNotFoundException("The FLAC decoder is missing; install Nightjar again.");
-                    wav = target + ".wav";
-                    var psi = new ProcessStartInfo(FlacExe, "-d -s -f -o \"" + wav + "\" \"" + source + "\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
+                    var info = FlacInfo(source) ?? throw new InvalidDataException("Nightjar can make phone copies of 16- and 24-bit mono or stereo FLAC only.");
+                    pcm = target + ".pcm";
+                    // Raw samples through standard output, as playing does. Written to a file, flac.exe deletes it
+                    // again when the FLAC ends in junk (an old ID3v1 tag, common), though every sample was there.
+                    var psi = new ProcessStartInfo(FlacExe, "-d -c -s --force-raw-format --endian=little --sign=signed \"" + source + "\"")
+                    {
+                        UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                    };
+                    string err;
                     using (var p = Process.Start(psi))
                     {
-                        var err = p.StandardError.ReadToEnd();
+                        var errTask = p.StandardError.ReadToEndAsync();
+                        using (var file = File.Create(pcm)) p.StandardOutput.BaseStream.CopyTo(file);
                         p.WaitForExit();
-                        // flac.exe still writes the audio when only the checksum is off; anything else is a real failure.
-                        if (!File.Exists(wav)) throw new Exception("The FLAC decoder couldn't read this file. " + err.Trim());
+                        err = errTask.Result;
                     }
-                    input = wav;
+                    // Short means damaged before the end of the music (a junk tag after it costs nothing).
+                    long expected = info.samples * info.channels * (info.bits / 8);
+                    if (new FileInfo(pcm).Length < expected * 0.98) throw new Exception("The FLAC decoder couldn't read this file. " + err.Trim());
+                    inner = File.OpenRead(pcm);
+                    reader = new RawSourceWaveStream(inner, new WaveFormat(info.rate, info.bits, info.channels));
+                }
+                else
+                {
+                    reader = Path.GetExtension(source).StartsWith(".aif", StringComparison.OrdinalIgnoreCase) ? (WaveStream)new AiffFileReader(source) : new WaveFileReader(source);
+                    // A 24-bit or multichannel WAV says "extensible"; Windows' resampler takes it as the plain PCM it is.
+                    if (reader.WaveFormat.Encoding == WaveFormatEncoding.Extensible && reader.WaveFormat.BitsPerSample != 32)
+                    {
+                        var wf = reader.WaveFormat;
+                        inner = reader;
+                        reader = new RawSourceWaveStream(inner, new WaveFormat(wf.SampleRate, wf.BitsPerSample, wf.Channels));
+                    }
                 }
                 MediaFoundationApi.Startup();
-                using (WaveStream reader = Path.GetExtension(input).StartsWith(".aif", StringComparison.OrdinalIgnoreCase) ? (WaveStream)new AiffFileReader(input) : new WaveFileReader(input))
+                using (reader)
                 {
                     var f = reader.WaveFormat;
                     // Windows' AAC encoder takes 16-bit 44.1 or 48 kHz, mono or stereo.
@@ -397,7 +421,8 @@ namespace Nightjar
             }
             finally
             {
-                try { if (wav != null) File.Delete(wav); } catch { }
+                try { inner?.Dispose(); } catch { }
+                try { if (pcm != null) File.Delete(pcm); } catch { }
                 try { if (File.Exists(work)) File.Delete(work); } catch { }
             }
         }

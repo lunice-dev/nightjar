@@ -143,6 +143,25 @@ if ($honest) {
     Expect "An honest 320 kbps MP3 passes" $honest "MP3 320 kbps"
     Expect "A 320 kbps MP3 re-encoded from a 128 kbps one is caught" (Album "mp3-upconverted" 44100 16 16000 -mp3 -kbps 320) "Upconverted"
 }
+# "Use less data": the AAC copies a phone gets. 25 Oct: every 24/96 track failed ("Input must be PCM or IEEE float"),
+# and so did FLACs ending in an old ID3v1 tag, which flac.exe decodes whole but then deletes the file it wrote.
+Helper "/library" "POST" @{ root = $Work } | Out-Null   # Nightjar only streams from music folders
+$key = (Helper "/img-key").key
+function LessData($file) { Call "http://127.0.0.1:5031/stream?path=$([uri]::EscapeDataString($file))&k=$key&aac=128" "GET" $null @{ Origin = $LocalOrigin } }
+function IsM4a($r) { $r.status -eq 200 -and $r.length -gt 10000 -and $r.text.Substring(4, 4) -eq "ftyp" }
+$hires = (Get-ChildItem (Join-Path $Work "true-hires") -File | Select-Object -First 1).FullName
+$r = LessData $hires
+Check "Use less data: a 24/96 track gets an AAC copy" (IsM4a $r) "status $($r.status), $($r.length) bytes"
+$tagged = Join-Path $Work "id3v1\01 Track.flac"
+New-Item -ItemType Directory -Force (Split-Path $tagged) | Out-Null
+Copy-Item (Get-ChildItem (Join-Path $Work "lossless") -File | Select-Object -First 1).FullName $tagged
+$tail = New-Object byte[] 128
+[Text.Encoding]::ASCII.GetBytes("TAGOld tagger title").CopyTo($tail, 0)
+$fsT = [IO.File]::Open($tagged, "Append"); $fsT.Write($tail, 0, 128); $fsT.Close()
+$r = LessData $tagged
+Check "Use less data: a FLAC with an old ID3v1 tag at the end gets an AAC copy" (IsM4a $r) "status $($r.status), $($r.length) bytes"
+$left = @(Get-ChildItem (Join-Path $Data "stream-cache") -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ne ".m4a" })
+Check "Use less data: no decoded leftovers in the cache" ($left.Count -eq 0) (($left | ForEach-Object { $_.Name }) -join ", ")
 SaveLogs "quality"
 }
 catch {
