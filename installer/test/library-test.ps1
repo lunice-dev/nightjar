@@ -215,7 +215,7 @@ Check "Organiser: library otherwise as expected" ((Test-Path "$Lib\FLAC\Radiohea
 SaveLogs "library-organiser"
 }
 catch {
-    Check "Test ran to the end" $false "$($_.Exception.Message) at line $($_.InvocationInfo.ScriptLineNumber)"
+    Check "Test ran to the end" $false "$($_.Exception.Message) at $(Split-Path -Leaf $_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)"
     SaveLogs "library-stopped"
 }
 finally { StopNightjar }

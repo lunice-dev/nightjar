@@ -118,7 +118,7 @@ SaveLogs "5-updater"
 }
 catch {
     # Something the test didn't expect (a step that never finished, a helper that stopped answering).
-    Check "Test ran to the end" $false "$($_.Exception.Message) at line $($_.InvocationInfo.ScriptLineNumber)"
+    Check "Test ran to the end" $false "$($_.Exception.Message) at $(Split-Path -Leaf $_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)"
     SaveLogs "stopped"
 }
 finally { StopNightjar }

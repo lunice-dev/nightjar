@@ -49,8 +49,9 @@ Check "Made-up token: refused" ((Phone "/library" "made-up-token").status -eq 40
 $prefsBefore = (Helper "/prefs").prefs
 try { $big = Phone "/prefs" $null "POST" ("{""x"":""" + ("a" * 2000000) + """}"); $bigStatus = $big.status } catch { $bigStatus = "closed" }
 Check "No token: a large upload is refused without being read" (($bigStatus -eq 401 -or $bigStatus -eq "closed") -and (Helper "/prefs").prefs -eq $prefsBefore) "status $bigStatus"
-$huge = Call "$R/pair" "POST" ("{""secret"":""" + ("a" * 10000) + """}")
-Check "Pairing: an oversized request is refused" ($huge.status -eq 413) "status $($huge.status)"
+# Nightjar answers 413 and closes at once, often before the request is even sent: either counts as refused.
+try { $hugeStatus = (Call "$R/pair" "POST" ("{""secret"":""" + ("a" * 10000) + """}")).status } catch { $hugeStatus = "closed" }
+Check "Pairing: an oversized request is refused" (($hugeStatus -eq 413 -or $hugeStatus -eq "closed") -and (Phone "/ping").status -eq 200) "status $hugeStatus"
 
 # --- pairing --------------------------------------------------------------------------------
 $p = Pair $enginePassword
@@ -129,7 +130,7 @@ Check "Lockout: while locked, even the right code is refused" ($r.status -eq 429
 SaveLogs "remote"
 }
 catch {
-    Check "Test ran to the end" $false "$($_.Exception.Message) at line $($_.InvocationInfo.ScriptLineNumber)"
+    Check "Test ran to the end" $false "$($_.Exception.Message) at $(Split-Path -Leaf $_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)"
     SaveLogs "remote-stopped"
 }
 finally { StopNightjar }
