@@ -22,9 +22,9 @@ openssl dgst -sha256 -sign "$KEY" -out "$SIG" "$EXE"
 rm -f "$KEY"
 # The signature must check out against the public key built into Nightjar (catches a wrong secret).
 openssl dgst -sha256 -verify installer/nightjar-update-key.pub.pem -signature "$SIG" "$EXE"
-NOTES=$(node -e "
-const s=require('fs').readFileSync('src/screens/AboutScreen.tsx','utf8');
-const m=s.match(/version: '${VERSION%.0}'[\s\S]*?items: \[([\s\S]*?)\n    \],/);
-console.log(m?m[1].split('\n').map(l=>l.trim().replace(/^'|',?$/g,'').replace(/\\\\\\\\/g,'\\\\')).filter(Boolean).map(l=>'- '+l).join('\n'):'');
-")
+NOTES=$(node installer/release-notes.mjs "$VERSION")
+if [ -z "$NOTES" ]; then
+  echo "No changelog entry for $VERSION in src/screens/AboutScreen.tsx: add one before releasing." >&2
+  exit 1
+fi
 gh release create "v$VERSION" "$EXE" "$SUM" "$SIG" --repo "$REPO" --title "Nightjar $VERSION" --notes "$NOTES"
