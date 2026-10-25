@@ -43,16 +43,114 @@ const savedAt = (v: string | null) => {
     return -1;
   }
 };
+type Saved = { state?: Record<string, unknown>; version?: number };
+type Item = Record<string, unknown>;
+
+/**
+ * The lists every open device adds to. Each device saves its whole copy, so without merging, the phone saving after
+ * the computer would drop the albums the computer started (their plans: one album then shows as one row per person,
+ * and nothing moves its tracks any more). Same id on both: the copy that has seen more (batches, notes) wins.
+ */
+const MERGED: Record<string, { id: (x: Item) => string; more?: (x: Item) => number; order: (x: Item) => number; max: number }> = {
+  plans: {
+    id: (p) => String(p.id),
+    more: (p) => ((p.batches as unknown[])?.length ?? 0) * 1000 + ((p.notes as unknown[])?.length ?? 0) + (p.finishedAt ? 1 : 0),
+    order: (p) => Number(p.createdAt) || 0,
+    max: 100,
+  },
+  sent: { id: (s) => String(s.id), order: (s) => Number(s.at) || 0, max: 5000 },
+};
+// Lists you can remove things from (finished albums, fakes, checks, activity) aren't merged: a removal would come back
+// from the other copy. Only lists that are added to and never pruned by hand are.
+
+/** This device's saved copy with what only the other copy has added to the shared lists. */
+export function mergeShared(mine: string, theirs: string | null): string {
+  if (!theirs) return mine;
+  let a: Saved;
+  let b: Saved;
+  try {
+    a = JSON.parse(mine);
+    b = JSON.parse(theirs);
+  } catch {
+    return mine;
+  }
+  if (!a.state || !b.state || a.version !== b.version) return mine;
+  let changed = false;
+  for (const [field, rule] of Object.entries(MERGED)) {
+    const ours = a.state[field];
+    const other = b.state[field];
+    if (!Array.isArray(ours) || !Array.isArray(other)) continue;
+    const byId = new Map<string, Item>(ours.map((x: Item) => [rule.id(x), x]));
+    let added = false;
+    for (const x of other as Item[]) {
+      const id = rule.id(x);
+      const had = byId.get(id);
+      if (!had || (rule.more && rule.more(x) > rule.more(had))) {
+        byId.set(id, x);
+        added = true;
+      }
+    }
+    if (!added) continue;
+    a.state[field] = [...byId.values()].sort((x, y) => rule.order(y) - rule.order(x)).slice(0, rule.max);
+    changed = true;
+  }
+  // Albums moved into the library on the other device: their downloads follow them here too.
+  const ma = (a.state.moves ?? {}) as Record<string, string>;
+  const mb = (b.state.moves ?? {}) as Record<string, string>;
+  const fresh = Object.keys(mb).filter((k) => !(k in ma));
+  if (fresh.length) {
+    a.state.moves = { ...ma, ...Object.fromEntries(fresh.map((k) => [k, mb[k]])) };
+    changed = true;
+  }
+  return changed ? JSON.stringify(a) : mine;
+}
+
+async function fetchShared(base: string) {
+  const res = await fetch(`${base}/prefs`, { signal: AbortSignal.timeout(2500) });
+  if (!res.ok) throw new Error(String(res.status));
+  return ((await res.json()) as { prefs?: string | null }).prefs ?? null;
+}
+
 function push(v: string) {
   const base = sharedAt;
   if (!base) return;
   clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => {
+  pushTimer = setTimeout(async () => {
+    // Fold in what another device saved meanwhile, so neither copy loses the other's albums.
+    const remote = await fetchShared(base).catch(() => null);
+    const merged = mergeShared(v, remote);
+    if (merged !== v) adopt(merged);
     // Plain ASCII (non-ASCII as \u escapes, still the same JSON), so the
     // launcher's small helper can count characters as bytes.
-    const ascii = v.replace(/[\u007f-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
+    const ascii = merged.replace(/[\u007f-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
     fetch(`${base}/prefs`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ascii }).catch(() => undefined);
   }, 1500);
+}
+
+/** Takes another device's additions into this page's state (the shared lists only). */
+function adopt(merged: string) {
+  try {
+    const s = (JSON.parse(merged) as Saved).state ?? {};
+    const patch: Record<string, unknown> = {};
+    for (const field of [...Object.keys(MERGED), 'moves']) if (field in s) patch[field] = s[field];
+    usePrefs.setState(patch as Partial<Prefs>);
+  } catch {
+    // keep this device's copy
+  }
+}
+
+/**
+ * Picks up what other devices added while this one sat idle (a download started from the phone), so this device's
+ * download manager and list know those albums too. Called every so often; saving merges as well.
+ */
+export async function pullShared() {
+  const base = sharedAt;
+  if (!base) return;
+  const remote = await fetchShared(base).catch(() => null);
+  const local = localGet('ssk-lite.prefs');
+  if (!remote || !local) return;
+  const merged = mergeShared(local, remote);
+  if (merged !== local) adopt(merged);
 }
 
 const safeStorage: StateStorage = {
@@ -264,6 +362,8 @@ interface Prefs {
   saveCheck(dir: string, check: SavedCheck | null): void;
   /** An album moved into the library: its check and history follow it. */
   albumMoved(from: string, to: string): void;
+  /** Albums moved out of their download folder (Put in library, Tidy library): old folder, lower case → new folder. */
+  moves?: Record<string, string>;
   /** Fake copies, newest first: who sent them gets pushed down in search results. */
   fakes: FakeCopy[];
   recordFake(fake: FakeCopy): void;
@@ -352,7 +452,15 @@ export const usePrefs = create<Prefs>()(
             checks[to.toLowerCase()] = c;
           }
           const moved = (d?: string) => !!d && d.toLowerCase() === from.toLowerCase();
+          // Where downloaded files went: a move of a move follows on.
+          const moves: Record<string, string> = {};
+          for (const [k, v] of Object.entries(s.moves ?? {})) moves[k] = moved(v) ? to : v;
+          moves[from.toLowerCase()] = to;
+          // A move back (Undo) stays as "where it was", not deleted, so another device's copy can't bring the move back.
+          const keys = Object.keys(moves);
+          if (keys.length > 1000) keys.slice(0, keys.length - 1000).forEach((k) => delete moves[k]);
           return {
+            moves,
             checks,
             finished: s.finished.map((a) => (moved(a.dir) ? { ...a, dir: to } : a)),
             fakes: s.fakes.map((f) => (moved(f.dir) ? { ...f, dir: to } : f)),

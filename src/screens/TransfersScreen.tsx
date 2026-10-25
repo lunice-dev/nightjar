@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
-import { failureReason } from '../lib/smart';
+import { changedSize, failureReason } from '../lib/smart';
 import { usePrefs, type ActivityEvent } from '../prefs';
 import { useStore } from '../store';
 import { useLocalFiles, groupCoverDir } from '../lib/useLocal';
@@ -475,7 +475,17 @@ function stateLine(g: DownloadGroup, direction: Direction, ahead?: string) {
   }
 }
 
-function TransferRow({ g, direction, local, ahead }: { g: DownloadGroup; direction: Direction; local: LocalFiles; ahead?: string }) {
+function TransferRow({
+  g,
+  direction,
+  local,
+  ahead,
+}: {
+  g: DownloadGroup;
+  direction: Direction;
+  local: LocalFiles & { moved: Set<string> };
+  ahead?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const backend = useStore((s) => s.backend);
@@ -537,7 +547,8 @@ function TransferRow({ g, direction, local, ahead }: { g: DownloadGroup; directi
     const byUser = new Map<string, Transfer[]>();
     failed.forEach((f) => byUser.set(f.username, [...(byUser.get(f.username) ?? []), f]));
     for (const [user, files] of byUser) {
-      const list = files.map((f) => ({ filename: f.filename, size: f.size }));
+      // A file that changed since the search is asked for at its new size, or it would fail the same way again.
+      const list = files.map((f) => ({ filename: f.filename, size: changedSize(f) ?? f.size }));
       if (g.plan && backend) await requeue(user, list);
       else enqueue(user, list, g.title);
     }
@@ -605,7 +616,8 @@ function TransferRow({ g, direction, local, ahead }: { g: DownloadGroup; directi
   };
 
   const albumDir = movedTo ?? (finishedEntry?.dir && savedDir && finishedEntry.dir.toLowerCase() !== savedDir.toLowerCase() ? finishedEntry.dir : savedDir);
-  const inLibrary = !!movedTo || (!!albumDir && !!savedDir && albumDir.toLowerCase() !== savedDir.toLowerCase());
+  const inLibrary =
+    !!movedTo || g.files.some((f) => local.moved.has(f.id)) || (!!albumDir && !!savedDir && albumDir.toLowerCase() !== savedDir.toLowerCase());
   const quality = useQualityCheck(albumDir);
 
   const barClass = g.phase === 'failed' ? 'bar failed' : g.phase === 'queued' && pct === 0 ? 'bar queued' : 'bar';

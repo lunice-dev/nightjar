@@ -1,7 +1,7 @@
 import { uuid } from './uuid';
 import { useEffect, useRef } from 'react';
 import type { SearchResponse } from '../api/types';
-import { isIgnored, usePrefs, type NotifyPrefs, type WishItem } from '../prefs';
+import { isIgnored, pullShared, usePrefs, type NotifyPrefs, type WishItem } from '../prefs';
 import { useStore } from '../store';
 import { rescanSoon } from './shareVersion';
 import { tierRank, toFolders, type FolderResult } from './quality';
@@ -234,11 +234,17 @@ function useDownloadManager() {
   }, []);
   useEffect(() => {
     let busy = false;
+    let pulled = 0;
     const id = uuid();
     const t = setInterval(async () => {
       if (busy) return;
       busy = true;
       try {
+        // Albums started on another device: their plans, so they show as one album and get managed here too.
+        if (Date.now() - pulled > 30_000) {
+          pulled = Date.now();
+          await pullShared();
+        }
         const backend = useStore.getState().backend;
         if (!backend || !(await backend.files.lease(id))) return;
         // Whose album is it really? Before anything else moves tracks around.

@@ -16,6 +16,8 @@ export function failureReason(t: Pick<Transfer, 'state' | 'exception'>): string 
   if (!s.startsWith('Completed') || s === 'Completed, Succeeded' || s === 'Completed, Cancelled') return null;
   const e = (t.exception ?? '').toLowerCase();
   if (e.includes('file not shared')) return 'They no longer share this file';
+  // Their file is no longer the one their search result listed (re-tagged or replaced since): it won't arrive as listed.
+  if (e.includes('does not match expected size')) return 'Their copy changed since the search';
   if (e.includes('too many files') || e.includes('too many megabytes') || (e.includes('queue') && e.includes('limit')))
     return 'They limit how much one person can queue';
   if (e.includes('banned') || e.includes('blocked')) return 'They have blocked you';
@@ -28,6 +30,12 @@ export function failureReason(t: Pick<Transfer, 'state' | 'exception'>): string 
   if (s === 'Completed, Rejected') return t.exception ? `They refused: ${t.exception.replace(/\.$/, '')}` : 'They refused the download';
   if (t.exception) return t.exception.replace(/^.*?:\s*(?=[A-Z])/, '').slice(0, 120);
   return 'The download failed';
+}
+
+/** The size the other person's file really has, when it failed for not being the size their search listed. */
+export function changedSize(t: Pick<Transfer, 'exception'>): number | undefined {
+  const m = t.exception?.match(/remote size of (\d+) does not match/i);
+  return m ? Number(m[1]) : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -469,11 +477,11 @@ export async function manageDownloads() {
       }
     });
 
-    // Someone who refuses one track (not shared, blocked, queue limit, gone) will refuse the rest too.
+    // Someone who refuses one track (not shared, blocked, queue limit, gone, changed their copy) will refuse the rest too.
     const refusers = new Set(
       needy
         .map(({ i }) => live.find(({ k }) => plan.tracks.indexOf(k) === i)!)
-        .filter(({ t }) => t && /no longer share|blocked|limit how much|went offline|refused/i.test(failureReason(t) ?? ''))
+        .filter(({ t }) => t && /no longer share|blocked|limit how much|went offline|refused|copy changed/i.test(failureReason(t) ?? ''))
         .map(({ k }) => k.username),
     );
     live.forEach(({ k, t }) => {

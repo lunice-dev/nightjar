@@ -281,7 +281,7 @@ export const useStore = create<State>((set, get) => ({
     const load = async (d: Direction) => {
       try {
         const list = await backend.transfers(d);
-        set(d === 'download' ? { downloads: list } : { uploads: list });
+        set(d === 'download' ? { downloads: list, queuedKeys: stillQueued(get().queuedKeys, list) } : { uploads: list });
       } catch {
         /* transient; the next poll will retry */
       }
@@ -296,3 +296,25 @@ export const useStore = create<State>((set, get) => ({
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));
+
+/** When each queued mark was first seen: a new one may not be in the engine's list yet. */
+const markedAt = new Map<string, number>();
+
+/**
+ * The "Queued" marks that still have a download behind them. Deleting a download (or cancelling it) takes it out of
+ * the list, and its search rows offer Download again. Marks younger than a minute stay while the engine catches up.
+ */
+function stillQueued(keys: Set<string>, users: TransferUser[]): Set<string> {
+  const now = Date.now();
+  const listed = new Set<string>();
+  for (const u of users)
+    for (const d of u.directories)
+      for (const f of d.files) if (f.state !== 'Completed, Cancelled') listed.add(`${u.username}\u0000${f.filename}`);
+  const next = new Set<string>();
+  for (const k of keys) {
+    if (!markedAt.has(k)) markedAt.set(k, now);
+    if (listed.has(k) || now - markedAt.get(k)! < 60_000) next.add(k);
+    else markedAt.delete(k);
+  }
+  return next.size === keys.size ? keys : next;
+}

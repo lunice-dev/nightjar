@@ -368,7 +368,7 @@ export function toReleases(folders: FolderResult[], query = ''): Release[] {
 // Formatting helpers
 
 export function bytes(n: number) {
-  if (n < 1024) return `${n} B`;
+  if (n < 1024) return `${Math.round(n)} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let v = n / 1024;
   let i = 0;
@@ -379,7 +379,8 @@ export function bytes(n: number) {
   return `${v >= 100 ? v.toFixed(0) : v.toFixed(1)} ${units[i]}`;
 }
 
-export const speed = (bps: number) => (bps > 0 ? `${bytes(bps)}/s` : '—');
+/** Measured speeds are fractions (bytes over seconds); anything under 1 KB/s is a trickle, not worth digits. */
+export const speed = (bps: number) => (bps >= 1024 ? `${bytes(bps)}/s` : bps > 0 ? 'under 1 KB/s' : '—');
 
 export function duration(seconds: number) {
   if (!seconds) return '';
