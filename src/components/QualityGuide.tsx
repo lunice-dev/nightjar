@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TIER_LABEL, type Tier } from '../lib/quality';
+import { Icon } from './Icon';
 
 /**
  * What the quality words mean, for anyone wondering: the labels in Search and Library (what the files say about
- * themselves) and the results of Check quality (what their sound shows). Opens in place from a small link.
+ * themselves) and the results of Check quality (what their sound shows).
  */
 const LABELS: [Tier, string][] = [
   ['hires', 'Lossless files above CD quality: 24-bit, or more than 48 kHz. Usually genuine, but some are CD audio in a bigger file; Check quality tells.'],
@@ -34,8 +35,19 @@ const CHECKS: { mark: '✓' | '⚠' | '✕'; name: string; text: string }[] = [
   { mark: '✕', name: 'Corrupt / Unreadable', text: 'Damaged or cut short: part of the music is missing. Download it again from someone else.' },
 ];
 
-export function QualityGuide({ first = 'labels' }: { first?: 'labels' | 'checks' }) {
+/**
+ * One button per page (Search, Downloads, Library) that opens the guide over the page. `first` puts the part that
+ * page is about on top; `button` draws it like the page's other header buttons instead of a text link.
+ */
+export function QualityGuide({ first = 'labels', button = false }: { first?: 'labels' | 'checks'; button?: boolean }) {
+  const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const d = dialog.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    else if (!open && d.open) d.close();
+  }, [open]);
   const labels = (
     <section key="labels">
       <h3>Labels in Search and Library</h3>
@@ -71,11 +83,30 @@ export function QualityGuide({ first = 'labels' }: { first?: 'labels' | 'checks'
     </section>
   );
   return (
-    <div className="quality-guide">
-      <button className="link" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        {open ? 'Hide what the labels mean' : 'What do these labels mean?'}
+    <>
+      <button className={button ? 'btn quiet small' : 'link guide-link'} onClick={() => setOpen(true)} aria-haspopup="dialog">
+        What do the labels mean?
       </button>
-      {open && <div className="quality-guide-body">{first === 'labels' ? [labels, checks] : [checks, labels]}</div>}
-    </div>
+      <dialog
+        ref={dialog}
+        className="quality-guide"
+        aria-label="What the quality labels mean"
+        onClose={() => setOpen(false)}
+        // A click on the dimmed backdrop (the dialog element itself, outside its content) closes it.
+        onClick={(e) => e.target === e.currentTarget && setOpen(false)}
+      >
+        {open && (
+          <div className="quality-guide-body">
+            <div className="quality-guide-top">
+              <h2>What the labels mean</h2>
+              <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+            {first === 'labels' ? [labels, checks] : [checks, labels]}
+          </div>
+        )}
+      </dialog>
+    </>
   );
 }

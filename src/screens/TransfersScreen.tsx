@@ -8,6 +8,7 @@ import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
 import { changedSize, failureReason } from '../lib/smart';
+import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
 import { useStore } from '../store';
 import { useLocalFiles, groupCoverDir } from '../lib/useLocal';
@@ -93,6 +94,7 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
             <p className="page-sub">{summary.length ? summary.join(', ') : 'Nothing yet'}</p>
           </div>
           <div className="head-actions">
+            {direction === 'download' && <QualityGuide first="checks" button />}
             <SpeedLimit direction={direction} label={copy.limitLabel} />
             {finished.length > 0 && (
               <button className="btn quiet small" onClick={clear}>

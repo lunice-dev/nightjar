@@ -1008,9 +1008,13 @@ button.pulse-tile:hover { background: color-mix(in srgb, var(--surface) 80%, var
 .check { margin-top: 8px; }
 .check-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 13px; }
 .check-chip { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; }
-/* What the labels mean: opens in place under the filters, and under a check's result. */
-.quality-guide { margin-top: 8px; font-size: 13px; }
-.quality-guide-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px 28px; margin-top: 10px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
+/* What the labels mean: one button per page, the guide opens over the page. */
+.guide-link { display: inline-block; margin-top: 8px; font-size: 13px; }
+.quality-guide { width: min(860px, calc(100vw - 32px)); max-height: min(88vh, 900px); padding: 0; border: 1px solid var(--rule-strong); border-radius: var(--r-xl); background: var(--surface); color: var(--ink); font-size: 13px; box-shadow: var(--shadow-pop); overflow: auto; }
+.quality-guide::backdrop { background: rgb(0 0 0 / 0.5); }
+.quality-guide-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px 28px; padding: 16px 20px 22px; }
+.quality-guide-top { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; position: sticky; top: -16px; margin: -16px -20px 0; padding: 14px 14px 10px 20px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+.quality-guide-top h2 { margin: 0; font-size: 17px; }
 .quality-guide h3 { margin: 0 0 2px; font-size: 14px; }
 .quality-guide section > p { margin: 0 0 10px; }
 .quality-guide dl { margin: 0; display: grid; gap: 8px; }

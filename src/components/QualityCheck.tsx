@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { usePrefs } from '../prefs';
 import { checkNote, runCheck, useCheckAll, verdictText } from '../lib/check';
 import { useStore } from '../store';
-import { QualityGuide } from './QualityGuide';
 
 /** Severity to a tone: green, amber or red. */
 const tone = (sev: number) => (sev < 0 ? 'none' : sev >= 7 ? 'bad' : sev >= 3 ? 'warn' : 'ok');
@@ -84,7 +83,6 @@ export function CheckResult({ check, onFindAnother }: { check: ReturnType<typeof
           </tbody>
         </table>
       )}
-      <QualityGuide first="checks" />
     </div>
   );
 }

@@ -35,7 +35,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Downloads follow albums you put in your library, so they keep playing',
       'Clearer reason when someone’s copy changed since your search',
       'Check quality says “Probably hi-res” when the sound can’t confirm hi-res',
-      '“What do these labels mean?” explains the quality labels in Search and Check quality',
+      'A “What do the labels mean?” button in Search, Downloads and Library explains the quality labels',
       'Fixed download speeds sometimes shown with long, odd numbers',
     ],
   },

@@ -7,6 +7,7 @@ import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
 import { useCheckAll, verdictText } from '../lib/check';
+import { QualityGuide } from '../components/QualityGuide';
 import { useFilesAvailable } from '../lib/files';
 import { placeOf, useLibraryReview, type AlbumEdit } from '../lib/libraryReview';
 import { bytes } from '../lib/quality';
@@ -70,6 +71,7 @@ export function LibraryScreen() {
             <div className="lib-head-actions">
               {view === 'albums' ? (
                 <>
+                  <QualityGuide first="checks" button />
                   <button className="btn quiet small" disabled={!!scanning} onClick={() => load(true)} title="Look through the library folder again">
                     <Icon name="retry" size={16} /> Look again
                   </button>
