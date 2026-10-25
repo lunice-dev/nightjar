@@ -31,7 +31,7 @@ import {
 import { bestStart, sameFiles, smartDownload } from '../lib/smart';
 import { usePrefs } from '../prefs';
 import { fakeCounts } from '../lib/fakes';
-import { checkRelease, identityOf, mismatchText, useIdentity, type CopyCheck } from '../lib/identity';
+import { checkRelease, checkReleaseSoon, identityOf, mismatchText, useIdentity, type CopyCheck } from '../lib/identity';
 import { defaultFilters, useStore, type Filters } from '../store';
 
 export function SearchScreen() {
@@ -712,9 +712,7 @@ export const ReleaseRow = memo(function ReleaseRow({
   have?: LibAlbum[];
 }) {
   const checks = useIdentity((s) => s.checks);
-  useEffect(() => {
-    void checkRelease(release);
-  }, [release]);
+  useEffect(() => checkReleaseSoon(release), [release]);
   const r = shownCopy(release, checks);
   const better = betterThanYours(release, have);
   const others = release.sources.length - 1;

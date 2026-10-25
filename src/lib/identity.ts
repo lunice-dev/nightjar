@@ -50,25 +50,90 @@ export function titleOf(path: string, artist = '', album = '') {
 /** A title that says something: not "track 01" or just a number. */
 const telling = (t: string) => /\p{L}{2}/u.test(t) && !/^(track|piste|faixa|pista|titel|title|audio|untitled)\s*\d*$/.test(t);
 
-function sameTitle(a: string, b: string) {
-  if (a === b) return true;
-  const [short, long] = a.length < b.length ? [a, b] : [b, a];
-  if (short.length >= 5 && short.length >= long.length * 0.4 && long.includes(short)) return true;
-  const x = new Set(a.split(' ')), y = new Set(b.split(' '));
-  let both = 0;
-  x.forEach((w) => y.has(w) && both++);
-  return both / (x.size + y.size - both) >= 0.6;
+/** A title with its words, prepared once (comparing is the hot part). */
+interface Title {
+  t: string;
+  words: Set<string>;
+}
+const prepared = new Map<string, Title>();
+function prep(t: string): Title {
+  let p = prepared.get(t);
+  if (!p) {
+    if (prepared.size > 20_000) prepared.clear();
+    p = { t, words: new Set(t.split(' ')) };
+    prepared.set(t, p);
+  }
+  return p;
 }
 
-/** How many of `titles` appear in `reference`. */
-function overlap(titles: string[], reference: string[]) {
+function sameTitle(a: Title, b: Title) {
+  if (a.t === b.t) return true;
+  const [short, long] = a.t.length < b.t.length ? [a.t, b.t] : [b.t, a.t];
+  if (short.length >= 5 && short.length >= long.length * 0.4 && long.includes(short)) return true;
+  let both = 0;
+  a.words.forEach((w) => b.words.has(w) && both++);
+  return both / (a.words.size + b.words.size - both) >= 0.6;
+}
+
+/** How many of `titles` appear in `reference` (exact names first, then near ones). */
+function overlap(titles: Title[], reference: Title[], exact = new Set(reference.map((r) => r.t))) {
   let matched = 0;
-  for (const t of titles) if (reference.some((r) => sameTitle(t, r))) matched++;
+  for (const t of titles) if (exact.has(t.t) || reference.some((r) => sameTitle(t, r))) matched++;
   return { matched, of: titles.length };
 }
 
-const titlesOf = (r: Pick<FolderResult, 'audio' | 'parent' | 'title'>) =>
-  [...new Set(r.audio.map((f) => titleOf(f.filename, r.parent, r.title)))].filter(telling);
+const titleCache = new WeakMap<object, Title[]>();
+function titlesOf(r: Pick<FolderResult, 'audio' | 'parent' | 'title'>) {
+  let got = titleCache.get(r);
+  if (!got) {
+    got = [...new Set(r.audio.map((f) => titleOf(f.filename, r.parent, r.title)))].filter(telling).map(prep);
+    titleCache.set(r, got);
+  }
+  return got;
+}
+
+/**
+ * Copies with exactly the same track names, together: most copies of an album are the same rip, so the
+ * comparisons run between a handful of groups instead of between every pair of copies.
+ */
+interface Group {
+  titles: Title[];
+  exact: Set<string>;
+  users: Set<string>;
+}
+const MAX_GROUPS = 40;
+function groupsOf(release: Release) {
+  const bySig = new Map<string, Group>();
+  const ofCopy = new Map<string, Group | null>();
+  for (const s of release.sources) {
+    const titles = titlesOf(s);
+    if (titles.length < MIN_TITLES) {
+      ofCopy.set(s.key, null);
+      continue;
+    }
+    const sig = titles.map((t) => t.t).sort().join('\u0001');
+    let g = bySig.get(sig);
+    if (!g) {
+      if (bySig.size >= MAX_GROUPS) {
+        ofCopy.set(s.key, null); // a very mixed release: leave the rest unjudged
+        continue;
+      }
+      g = { titles, exact: new Set(titles.map((t) => t.t)), users: new Set() };
+      bySig.set(sig, g);
+    }
+    g.users.add(s.username);
+    ofCopy.set(s.key, g);
+  }
+  const groups = [...bySig.values()];
+  // How much of group a is in group b, once per pair.
+  const share = new Map<Group, Map<Group, number>>();
+  for (const a of groups) {
+    const row = new Map<Group, number>();
+    for (const b of groups) row.set(b, a === b ? 1 : overlap(a.titles, b.titles, b.exact).matched / a.titles.length);
+    share.set(a, row);
+  }
+  return { groups, ofCopy, share: (a: Group, b: Group) => share.get(a)!.get(b)! };
+}
 
 /** Folders an auto-tagger couldn't identify ("slskd\failed_imports" and the like). */
 export const unidentifiedFolder = (folder: string) => /(^|[\\/])(failed[ _-]?imports?|unmatched|unidentified|untagged|unknown album)([\\/]|$)/i.test(folder);
@@ -145,24 +210,30 @@ function save(results: Record<string, CopyCheck>) {
   useIdentity.setState((s) => ({ checks: { ...s.checks, ...results } }));
 }
 
-/** Compares with the other people's copies of the release: right away, no internet needed. */
+/** Compares with the other people's copies of the release: no internet needed. */
 function byOthers(release: Release): Record<string, CopyCheck> {
-  const copies = release.sources.map((s) => ({ s, titles: titlesOf(s) }));
+  const { groups, ofCopy, share } = groupsOf(release);
+  // Groups that other people agree on: two or more people have them, or two groups that match each other.
+  const agreed = groups.filter((h) => h.users.size >= 2 || groups.some((k) => k !== h && share(h, k) >= SAME && [...k.users].some((u) => !h.users.has(u))));
   const out: Record<string, CopyCheck> = {};
-  for (const { s, titles } of copies) {
+  for (const s of release.sources) {
     const base = { unidentified: unidentifiedFolder(s.folder) || undefined };
-    if (titles.length < MIN_TITLES) {
+    const g = ofCopy.get(s.key);
+    if (!g) {
       out[s.key] = { kind: 'unknown', ...base };
       continue;
     }
-    const others = copies.filter((o) => o.s.username !== s.username && o.titles.length >= MIN_TITLES);
-    const supporters = others.filter((o) => overlap(titles, o.titles).matched / titles.length >= SAME);
-    // The others agree among themselves (at least two people), and this one shares almost nothing with them.
-    const agreeing = others.filter((o) => others.some((p) => p !== o && p.s.username !== o.s.username && overlap(o.titles, p.titles).matched / o.titles.length >= SAME));
-    if (supporters.length === 0 && new Set(agreeing.map((o) => o.s.username)).size >= 2) {
-      const best = agreeing.reduce((m, o) => Math.max(m, overlap(titles, o.titles).matched), 0);
-      out[s.key] = best / titles.length < TOO_FEW ? { kind: 'mismatch', matched: best, of: titles.length, against: 'others', ...base } : { kind: 'ok', ...base };
-    } else out[s.key] = { kind: supporters.length ? 'ok' : 'unknown', ...base };
+    const others = (h: Group) => [...h.users].filter((u) => u !== s.username);
+    const supported = others(g).length > 0 || groups.some((h) => h !== g && share(g, h) >= SAME && others(h).length > 0);
+    if (supported) {
+      out[s.key] = { kind: 'ok', ...base };
+      continue;
+    }
+    const voters = new Set(agreed.filter((h) => h !== g).flatMap(others));
+    if (voters.size >= 2) {
+      const best = agreed.filter((h) => h !== g).reduce((m, h) => Math.max(m, Math.round(share(g, h) * g.titles.length)), 0);
+      out[s.key] = best / g.titles.length < TOO_FEW ? { kind: 'mismatch', matched: best, of: g.titles.length, against: 'others', ...base } : { kind: 'ok', ...base };
+    } else out[s.key] = { kind: 'unknown', ...base };
   }
   return out;
 }
@@ -170,7 +241,7 @@ function byOthers(release: Release): Record<string, CopyCheck> {
 const checked = new Map<string, Promise<void>>();
 
 /**
- * Judges every copy of a release: first against the other copies (instant), then against the album's track list on
+ * Judges every copy of a release: first against the other copies, then against the album's track list on
  * MusicBrainz when it knows the album. A copy that MusicBrainz disagrees with but two other people's copies back up
  * isn't flagged (MusicBrainz may have matched another album of the same name).
  */
@@ -178,29 +249,53 @@ export function checkRelease(release: Release, urgent = false): Promise<void> {
   const key = release.key + '|' + release.sources.length;
   const had = checked.get(key);
   if (had && !urgent) return had;
+  if (checked.size > 2000) checked.clear();
   save(byOthers(release));
   const job = (async () => {
     const r = release.best;
     if (!r.title) return;
-    const reference = await albumTitles(r.parent, r.title, urgent).catch(() => null);
-    if (!reference || reference.length < MIN_TITLES) return;
-    const copies = release.sources.map((s) => ({ s, titles: titlesOf(s) }));
+    const names = await albumTitles(r.parent, r.title, urgent).catch(() => null);
+    if (!names || names.length < MIN_TITLES) return;
+    const reference = names.map(prep);
+    const exact = new Set(names);
+    const { groups, ofCopy, share } = groupsOf(release);
+    const vsAlbum = new Map(groups.map((g) => [g, overlap(g.titles, reference, exact).matched]));
     const out: Record<string, CopyCheck> = {};
-    for (const { s, titles } of copies) {
+    for (const s of release.sources) {
+      const g = ofCopy.get(s.key);
+      if (!g) continue;
       const unidentified = unidentifiedFolder(s.folder) || undefined;
-      if (titles.length < MIN_TITLES) continue;
-      const { matched, of } = overlap(titles, reference);
+      const matched = vsAlbum.get(g)!;
+      const of = g.titles.length;
       if (matched / of >= TOO_FEW) {
         out[s.key] = { kind: 'ok', matched, of, against: 'musicbrainz', unidentified };
         continue;
       }
-      const backers = new Set(copies.filter((o) => o.s.username !== s.username && o.titles.length >= MIN_TITLES && overlap(titles, o.titles).matched / titles.length >= SAME).map((o) => o.s.username));
+      const backers = new Set(groups.filter((h) => share(g, h) >= SAME).flatMap((h) => [...h.users].filter((u) => u !== s.username)));
       out[s.key] = backers.size >= 2 ? { kind: 'unknown', unidentified } : { kind: 'mismatch', matched, of, against: 'musicbrainz', unidentified };
     }
     save(out);
   })();
   checked.set(key, job);
   return job;
+}
+
+const waiting = new Map<string, ReturnType<typeof setTimeout>>();
+
+/**
+ * For the search list: judges a release once its copies stop arriving (a search adds copies every second or so;
+ * judging each time would keep a phone busy), and never while a row is being drawn.
+ */
+export function checkReleaseSoon(release: Release) {
+  const t = waiting.get(release.key);
+  if (t) clearTimeout(t);
+  waiting.set(
+    release.key,
+    setTimeout(() => {
+      waiting.delete(release.key);
+      void checkRelease(release);
+    }, 1200),
+  );
 }
 
 /** Words for a copy's warning: what was compared, and how many names matched. */
