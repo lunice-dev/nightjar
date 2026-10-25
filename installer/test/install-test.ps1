@@ -38,7 +38,13 @@ Check "Clean install: all program files are there" ($missing.Count -eq 0) ($miss
 Check "Clean install: Windows lists version $Version" ((Installed) -eq $Version) "listed: $(Installed)"
 Check "Clean install: Start menu shortcut" (Test-Path (Join-Path ([Environment]::GetFolderPath("Programs")) "Nightjar.lnk"))
 
+# Started as from a PowerShell 7 window, whose module path Windows PowerShell can't use: Nightjar's check of
+# Tailscale's signature runs Windows PowerShell and must still work (it failed this way on 25 Oct).
+$pwshModules = "C:\Program Files\PowerShell\7\Modules"
+$savedPath = $env:PSModulePath
+if (Test-Path $pwshModules) { $env:PSModulePath = "$pwshModules;$savedPath" }
 StartNightjar
+$env:PSModulePath = $savedPath
 Check "First start: helper answers" ([bool](WaitFor 60 { (Helper "/ping").ok }))
 Check "First start: engine up and signed in" (EngineReady)
 # nightjar.json only appears once a setting is changed; the engine's config is written on the first start.

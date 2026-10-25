@@ -12,6 +12,20 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
 /** What changed in each version, newest first. Keep entries short and in the user's words. */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8.2',
+    date: '25 Oct 2026',
+    title: 'Fake albums stopped sooner',
+    items: [
+      'A fake album is paused within seconds of starting: the first track’s tags are read as soon as they arrive, even when a big cover picture comes after them',
+      'A paused album waits under Needs attention until you choose Delete it or Keep downloading, with no Retry button that would fetch the rest unasked',
+      'Big searches no longer freeze slower phones while Nightjar compares the copies’ track names',
+      'Uploads say when an album only waits behind the same person’s other album: “Waiting for its turn: … is getting … first”. Nightjar sends one file at a time to each person, so this happens even with upload slots free',
+      'After an update, the page reloads only once Nightjar is really back, instead of showing an empty page',
+      'Remote access setup works when Nightjar was started from a PowerShell 7 window',
+      'Fewer passing errors when Nightjar read the profile picture twice at the same moment',
+    ],
+  },
+  {
     version: '0.8.1',
     date: '25 Oct 2026',
     title: 'Updating from your phone',

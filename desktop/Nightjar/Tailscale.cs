@@ -265,6 +265,9 @@ namespace Nightjar
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
             };
+            // Started from a PowerShell 7 window, Nightjar inherits a module path Windows PowerShell can't load
+            // (Get-AuthenticodeSignature then doesn't exist): without it, Windows PowerShell finds its own.
+            psi.EnvironmentVariables.Remove("PSModulePath");
             try
             {
                 using (var p = Process.Start(psi))
