@@ -31,6 +31,7 @@ import {
 import { bestStart, sameFiles, smartDownload } from '../lib/smart';
 import { usePrefs } from '../prefs';
 import { fakeCounts } from '../lib/fakes';
+import { checkRelease, identityOf, mismatchText, useIdentity, type CopyCheck } from '../lib/identity';
 import { defaultFilters, useStore, type Filters } from '../store';
 
 export function SearchScreen() {
@@ -589,13 +590,36 @@ function Results({ id }: { id: string }) {
  * What Download will do for this album: several people sending at once (fast), or a copy only one person
  * has. Download picks the group of identical copies that sends fastest together.
  */
-/** "Sent a fake copy before": Check quality caught this person's files claiming more than they are. */
+/** "Sent a fake copy before": an album you got from this person wasn't what it claimed. */
 function FakeNote({ n }: { n: number }) {
   return (
-    <span className="fake-note" title="Check quality found that an album you got from them wasn’t what it claimed (for example a FLAC made from an MP3). Their copies are ranked lower.">
+    <span className="fake-note" title="An album you got from them wasn’t what it claimed: Check quality found a FLAC made from an MP3, or the files’ tags showed another album under that name. Their copies are ranked lower.">
       ⚠ sent {n === 1 ? 'a fake copy' : `${n} fake copies`} before
     </span>
   );
+}
+
+/** "Tracks don't match this album" (the files are another album), or a mild note about an unidentified folder. */
+function IdentityNote({ c, r }: { c?: CopyCheck; r: FolderResult }) {
+  if (c?.kind === 'mismatch')
+    return (
+      <span className="fake-note" title={mismatchText(c, r.parent, r.title)}>
+        ⚠ tracks don’t match this album
+      </span>
+    );
+  if (c?.unidentified)
+    return (
+      <span className="muted" title="It sits in a folder like “failed_imports”: the tool its owner uses to tag music couldn’t tell which album it is. The track names may still be right; check them before downloading.">
+        ⓘ its owner couldn’t identify it
+      </span>
+    );
+  return null;
+}
+
+/** The copy a row shows: the best one, unless its tracks aren't this album and another copy's are. */
+function shownCopy(release: Release, checks: Record<string, CopyCheck>) {
+  if (checks[release.best.key]?.kind !== 'mismatch') return release.best;
+  return release.sources.find((s) => checks[s.key]?.kind !== 'mismatch') ?? release.best;
 }
 
 function TeamChip({ release }: { release: Release }) {
@@ -656,7 +680,12 @@ function DownloadButton({ r, release, quiet, auto }: { r: FolderResult; release:
       onClick={async () => {
         setAsking(true);
         try {
-          await smartDownload(release, auto ? bestStart(release) : r);
+          // Is it really this album? Compare its track names first (a few seconds at most).
+          await Promise.race([checkRelease(release, true), new Promise((ok) => setTimeout(ok, 6000))]);
+          const target = auto ? bestStart(release) : r;
+          const c = identityOf(target.key);
+          if (c?.kind === 'mismatch' && !window.confirm(`${mismatchText(c, target.parent, target.title)}\n\nDownload it anyway?`)) return;
+          await smartDownload(release, target);
         } finally {
           setAsking(false);
         }
@@ -682,7 +711,11 @@ export const ReleaseRow = memo(function ReleaseRow({
   /** Copies of this album already in your library. */
   have?: LibAlbum[];
 }) {
-  const r = release.best;
+  const checks = useIdentity((s) => s.checks);
+  useEffect(() => {
+    void checkRelease(release);
+  }, [release]);
+  const r = shownCopy(release, checks);
   const better = betterThanYours(release, have);
   const others = release.sources.length - 1;
   const openProfile = useStore((s) => s.openProfile);
@@ -719,6 +752,7 @@ export const ReleaseRow = memo(function ReleaseRow({
             {r.username}
           </button>
           {r.fakes ? <FakeNote n={r.fakes} /> : null}
+          <IdentityNote c={checks[r.key]} r={r} />
           {r.partial ? (
             <span className="fake-note" title="Other people share more of this album. This copy sits below every complete one.">
               ⚠ only {r.partial.have} of {r.partial.of} tracks
@@ -772,6 +806,7 @@ export const ReleaseRow = memo(function ReleaseRow({
                       <td>
                         <button className="user-link" onClick={() => openProfile(s.username)}>{s.username}</button>
                         {s.fakes ? <FakeNote n={s.fakes} /> : null}
+                        <IdentityNote c={checks[s.key]} r={s} />
                         {s.partial ? <span className="fake-note"> only {s.partial.have} of {s.partial.of} tracks</span> : null}
                       </td>
                       <td><span className="tier-cell">{s.format}</span></td>

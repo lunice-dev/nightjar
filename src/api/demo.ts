@@ -160,6 +160,21 @@ function buildResponses(query: string): SearchResponse[] {
       byUser.set(user, resp);
     }
   }
+  // Someone shares a folder named after the first album that holds another one (an auto-tagger's failed import):
+  // Nightjar should warn before downloading it.
+  const a = albums[0];
+  const other = CATALOG.find((x) => x.artist !== a.artist) ?? CATALOG[0];
+  const bait = `music\\slskd\\failed_imports\\${a.artist} - ${a.title} (${a.year})`;
+  byUser.set('flux_7714', {
+    username: 'flux_7714',
+    files: filesFor(r, bait, other, PROFILES[2]),
+    lockedFiles: [],
+    fileCount: other.tracks.length,
+    lockedFileCount: 0,
+    hasFreeUploadSlot: true,
+    queueLength: 0,
+    uploadSpeed: 12_000_000,
+  });
   return [...byUser.values()];
 }
 
@@ -374,6 +389,7 @@ export class DemoBackend implements Backend {
     },
     lease: async () => true,
     trashDownload: async (what) => what.folders.length + what.files.length + what.partials.length,
+    peekTags: async () => null,
   };
 
   async transfers(direction: Direction): Promise<TransferUser[]> {

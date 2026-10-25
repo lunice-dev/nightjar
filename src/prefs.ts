@@ -174,6 +174,19 @@ export interface DownloadPlan {
   finishedAt?: number;
   /** How many tracks the album has, judged from every copy search found (for "only 2 of 17 tracks"). */
   expected?: number;
+  /**
+   * What the first track's tags said while it arrived. "mismatch": they name another album, so the rest was paused
+   * (`paused`) until you decide; "kept": you said to download it anyway.
+   */
+  identity?: {
+    state: 'ok' | 'mismatch' | 'kept';
+    artist?: string;
+    album?: string;
+    /** Whose files they were. */
+    user?: string;
+    paused?: { username: string; filename: string; size: number; dest?: string }[];
+    at: number;
+  };
 }
 
 /** Something another person did with your share. */

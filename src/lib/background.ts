@@ -9,6 +9,7 @@ import { groupDownloads } from './transfers';
 import { groupCoverDir, useLocalFiles } from './useLocal';
 import { parseActivity, uploadsActivity } from './activity';
 import { manageDownloads } from './smart';
+import { watchIdentity } from './identityWatch';
 
 declare const __DEMO__: boolean;
 
@@ -240,6 +241,8 @@ function useDownloadManager() {
       try {
         const backend = useStore.getState().backend;
         if (!backend || !(await backend.files.lease(id))) return;
+        // Whose album is it really? Before anything else moves tracks around.
+        await watchIdentity((title, body) => notify('downloads', title, body, () => useStore.getState().go('downloads'))).catch(() => undefined);
         await manageDownloads();
       } finally {
         busy = false;

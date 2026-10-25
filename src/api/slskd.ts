@@ -718,6 +718,16 @@ export class SlskdBackend implements Backend {
         return null;
       }
     },
+    peekTags: async (user, file, destination) => {
+      try {
+        const res = await fetch(`${HELPER}/peek-tags?user=${enc(user)}&file=${enc(file)}&dest=${enc(destination)}`, { signal: AbortSignal.timeout(15_000) });
+        if (!res.ok) return null;
+        const r = (await res.json()) as { found: boolean; artist?: string; albumArtist?: string; album?: string; title?: string };
+        return r.found ? { artist: r.artist ?? undefined, albumArtist: r.albumArtist ?? undefined, album: r.album ?? undefined, title: r.title ?? undefined } : null;
+      } catch {
+        return null;
+      }
+    },
     pickImage: async () => {
       if (asDevice) throw new ApiError('Choose a new picture on the computer Nightjar runs on.', 403);
       const res = await fetch(`${HELPER}/pick-image`);

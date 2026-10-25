@@ -6,6 +6,8 @@
  *     and album (works on a phone too, and before anything has downloaded);
  *  3. a generated cover, so the layout never has holes.
  */
+import { mbFetch } from './musicbrainz';
+
 declare const __DEMO__: boolean;
 const isDemo = typeof __DEMO__ !== 'undefined' && __DEMO__;
 
@@ -20,7 +22,6 @@ let cache: Cache = (() => {
   }
 })();
 const pending = new Map<string, Promise<string | null>>();
-let chain: Promise<unknown> = Promise.resolve();
 
 function save() {
   try {
@@ -40,38 +41,40 @@ const clean = (s: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-/** Cover Art Archive address for an album, or null. One MusicBrainz request a second, as they ask. */
-export function onlineCover(artist: string | undefined, album: string | undefined): Promise<string | null> {
+/**
+ * The MusicBrainz release group (the album, whatever its editions) for an artist and album, or null when there's
+ * no confident match. Remembered on this device.
+ */
+export function releaseGroupId(artist: string | undefined, album: string | undefined, urgent = false): Promise<string | null> {
   if (isDemo || !album) return Promise.resolve(null);
   const a = clean(artist ?? '');
   const t = clean(album);
   if (!t) return Promise.resolve(null);
   const key = `${a.toLowerCase()}|${t.toLowerCase()}`;
-  const url = (id: string) => (id ? `https://coverartarchive.org/release-group/${id}/front-500` : null);
-  if (key in cache) return Promise.resolve(url(cache[key]));
+  if (key in cache) return Promise.resolve(cache[key] || null);
+  const q = a ? `releasegroup:"${t}" AND artist:"${a}"` : `releasegroup:"${t}"`;
+  const url = `https://musicbrainz.org/ws/2/release-group/?query=${encodeURIComponent(q)}&fmt=json&limit=1`;
   const had = pending.get(key);
-  if (had) return had;
-  const job = (chain = chain.then(async () => {
-    try {
-      const q = a ? `releasegroup:"${t}" AND artist:"${a}"` : `releasegroup:"${t}"`;
-      const res = await fetch(`https://musicbrainz.org/ws/2/release-group/?query=${encodeURIComponent(q)}&fmt=json&limit=1`, {
-        signal: AbortSignal.timeout(8000),
-      });
-      if (res.status === 503) return null; // busy: try again another time
-      const j = (await res.json()) as { 'release-groups'?: { id: string; score: number }[] };
-      const hit = j['release-groups']?.[0];
-      cache[key] = hit && hit.score >= 90 ? hit.id : '';
-      save();
-      return url(cache[key]);
-    } catch {
-      return null;
-    } finally {
-      await new Promise((r) => setTimeout(r, 1100));
-    }
-  }) as Promise<string | null>);
+  if (had) {
+    if (urgent) void mbFetch(url, true); // already waiting: move it to the front
+    return had;
+  }
+  const job = mbFetch<{ 'release-groups'?: { id: string; score: number }[] }>(url, urgent).then((j) => {
+    if (!j) return null; // no answer: ask again another time
+    const hit = j['release-groups']?.[0];
+    cache[key] = hit && hit.score >= 90 ? hit.id : '';
+    save();
+    return cache[key] || null;
+  });
   pending.set(key, job);
   job.finally(() => pending.delete(key));
   return job;
+}
+
+/** Cover Art Archive address for an album, or null. */
+export async function onlineCover(artist: string | undefined, album: string | undefined): Promise<string | null> {
+  const id = await releaseGroupId(artist, album);
+  return id ? `https://coverartarchive.org/release-group/${id}/front-500` : null;
 }
 
 // ---------------------------------------------------------------------------

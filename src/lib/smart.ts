@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { AUDIO_EXT, basename, expectedTracks, extOf, type FolderResult, type Release } from './quality';
 import { phaseOf } from './transfers';
 import { uuid } from './uuid';
+import { isMismatch } from './identity';
 
 // ---------------------------------------------------------------------------
 // Why a download didn't happen, in plain words. The remote client sends a
@@ -143,8 +144,11 @@ export function sameFiles(release: Release, r: FolderResult) {
 }
 
 export function bestStart(release: Release): FolderResult {
-  const best = release.best;
-  const pool = release.sources.filter((s) => s.tier === best.tier && s.audio.length === best.audio.length);
+  // Copies whose track names aren't this album's are left out while any other copy exists.
+  const trusted = release.sources.filter((s) => !isMismatch(s.key));
+  const candidates = trusted.length ? trusted : release.sources;
+  const best = isMismatch(release.best.key) && trusted.length ? trusted[0] : release.best;
+  const pool = candidates.filter((s) => s.tier === best.tier && s.audio.length === best.audio.length);
   const groups = new Map<string, FolderResult[]>();
   for (const s of pool) {
     const sig = s.audio.map((f) => f.size).sort((a, b) => a - b).join(',');
@@ -389,6 +393,8 @@ export async function manageDownloads() {
 
   for (const plan of plans) {
     if (plan.finishedAt) continue;
+    // Paused because its files are another album: nothing moves until you decide (Downloads).
+    if (plan.identity?.state === 'mismatch') continue;
     const mine = transfers.filter((t) => t.batchId && plan.batches.includes(t.batchId));
     if (mine.length === 0) {
       // Cleared from the list, or not created yet; give up on it after a day.

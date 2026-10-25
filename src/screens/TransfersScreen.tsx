@@ -21,6 +21,7 @@ import { useFilesAvailable } from '../lib/files';
 import type { RecentMove, WaitingAlbum } from '../api/library';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
 import { blockAndStop, setBlocked, useBlocked } from '../lib/blocking';
+import { keepDownloading } from '../lib/identityWatch';
 
 const COPY = {
   download: {
@@ -713,6 +714,36 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           </button>
         </div>
       )}
+      {direction === 'download' && g.plan?.identity?.state === 'mismatch' && (
+        <div className="confirm wrong-album" role="alert">
+          <span>
+            <b>This isn’t {g.plan.artist ? `${g.plan.artist} – ` : ''}{g.plan.title}.</b> The files’ own tags say{' '}
+            <b>{[g.plan.identity.artist, g.plan.identity.album].filter(Boolean).join(' – ')}</b>. Nightjar paused it
+            {g.plan.identity.user ? ` and will rank ${g.plan.identity.user}’s copies last in searches` : ''}.
+          </span>
+          <button
+            className="btn small danger"
+            onClick={async () => {
+              const paused = g.plan?.identity?.paused ?? [];
+              const removed = await backend?.files.trashDownload({
+                ...leftovers,
+                partials: [...leftovers.partials, ...paused.map((p) => ({ user: p.username, file: p.filename }))],
+              });
+              if (removed == null) toast('Couldn’t reach the Nightjar app to delete files.', 'error');
+              else toast(`Moved ${g.title} to the Recycle Bin`, 'info');
+              if (g.plan) usePrefs.getState().updatePlan(g.plan.id, { finishedAt: Date.now() });
+              usePrefs.getState().forgetFinished(g.key);
+              rescanSoon(3000);
+              await removeFromList(g.files);
+            }}
+          >
+            Delete it
+          </button>
+          <button className="btn quiet small" onClick={() => g.plan && keepDownloading(g.plan)}>
+            Keep downloading
+          </button>
+        </div>
+      )}
       <div
         className={barClass}
         role="progressbar"
@@ -775,7 +806,7 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           ))}
         </ul>
       )}
-      {missing.length > 0 && unfinished.length === 0 && (
+      {missing.length > 0 && unfinished.length === 0 && g.plan?.identity?.state !== 'mismatch' && (
         <p className="incomplete-line">
           <b>Incomplete:</b> {audioDone} of {planTracks.length} tracks arrived.{' '}
           <button className="link" onClick={getMissing}>

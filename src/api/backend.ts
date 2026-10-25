@@ -133,6 +133,8 @@ export interface FileAccess {
    * cancelled or failed tracks. Resolves to how many items went, or null when the helper isn't reachable.
    */
   trashDownload(what: { folders: string[]; files: string[]; partials: { user: string; file: string }[] }): Promise<number | null>;
+  /** The tags of a track being downloaded, from the part that has arrived (null: not readable yet). */
+  peekTags(user: string, file: string, destination: string): Promise<TrackTags | null>;
   /** Lets the person choose a picture; resolves to its path, or null. */
   pickImage(): Promise<string | null>;
   /** A data: URL preview of a local picture, or null. */
@@ -190,4 +192,12 @@ export interface PortCheck {
   /** null when the test itself failed. */
   open: boolean | null;
   ip?: string;
+}
+
+/** What a music file's tags say. */
+export interface TrackTags {
+  artist?: string;
+  albumArtist?: string;
+  album?: string;
+  title?: string;
 }

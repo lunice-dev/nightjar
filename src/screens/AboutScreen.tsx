@@ -22,6 +22,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Playlists, kept on your computer for all your devices: on the search page, with rename, drag to reorder, remove, and a cover (a mosaic, one of its albums, or your own picture). Tracks Tidy moved are found again',
       'Playlists are backed up on their own (Settings → Playlist backups, to go back to an earlier copy); a damaged playlists file is fixed from the newest copy',
       'Something not working? Make a report from Settings or About, also from your phone, which can send it straight from the share sheet. It now says what remote access is doing',
+      'Fake albums: a folder named after one album that holds another is caught before you download (its track names are compared with the real album on MusicBrainz, or with other people’s copies), and while it downloads (the first track’s tags are read as it arrives; the rest pauses and you choose). The person who shared it goes last in searches',
       'Safer: updates install only when signed by Nightjar’s own release key; only the computer changes the library folder; Delete only ever removes album folders',
       'Your home Wi-Fi can stay open to phones without Tailscale (search, downloads, chat), with the remote password',
       'Uploads and Activity show when things happened, grouped by day; block someone straight from Uploads',

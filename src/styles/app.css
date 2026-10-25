@@ -1579,3 +1579,7 @@ html.in-app, html.in-app body { overflow: hidden; }
   margin-left: calc(-1 * var(--fp-px-l)); margin-right: calc(-1 * var(--fp-px-r));
   padding-left: calc(var(--fp-px-l) + 4px); padding-right: calc(var(--fp-px-r) + 4px);
 }
+
+/* "This isn't the album": a paused download whose files are another album. */
+.confirm.wrong-album { background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.sources td .user-link + .fake-note, .sources td .user-link + .muted { margin-left: 8px; }

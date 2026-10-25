@@ -392,6 +392,79 @@ namespace Nightjar
             return null;
         }
 
+        /// <summary>
+        /// The tags of a track being downloaded, read from the part that has arrived: a FLAC or MP3 keeps them at the
+        /// start, so a second of downloading is enough to see whose album it really is. Looks in the album's folder
+        /// in Downloads (finished tracks) and in slskd's incomplete folder (incomplete\&lt;user&gt;\…\&lt;file&gt;).
+        /// </summary>
+        static object PeekTags(string user, string remote, string dest)
+        {
+            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(remote)) return new { found = false };
+            var name = Sanitize(remote.Split('\\', '/').Last());
+            var candidates = new List<string>();
+            try
+            {
+                var dl = Config.DownloadDir();
+                if (!string.IsNullOrEmpty(dl) && !string.IsNullOrEmpty(dest))
+                {
+                    var albumDir = InsideDownloads(Path.Combine(dl, dest));
+                    if (albumDir != null && Directory.Exists(albumDir))
+                        candidates.AddRange(Directory.EnumerateFiles(albumDir, "*", SearchOption.AllDirectories).Where(f => string.Equals(Path.GetFileName(f), name, StringComparison.OrdinalIgnoreCase)));
+                }
+                var incomplete = Config.IncompleteDir();
+                if (!string.IsNullOrEmpty(incomplete))
+                {
+                    // slskd keeps the other person's folders: incomplete\<user>\<their path>. Old parts of other albums
+                    // may sit there under the same file name, so the track's own folder must match too.
+                    var userDir = Path.Combine(incomplete, Sanitize(user));
+                    var segments = remote.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries).Select(Sanitize).ToArray();
+                    var exact = Path.Combine(new[] { userDir }.Concat(segments).ToArray());
+                    if (File.Exists(exact)) candidates.Add(exact);
+                    else if (Directory.Exists(userDir) && segments.Length >= 2)
+                    {
+                        var parent = segments[segments.Length - 2];
+                        candidates.AddRange(Directory.EnumerateFiles(userDir, "*", SearchOption.AllDirectories)
+                            .Where(f => string.Equals(Path.GetFileName(f), name, StringComparison.OrdinalIgnoreCase) && string.Equals(Path.GetFileName(Path.GetDirectoryName(f)), parent, StringComparison.OrdinalIgnoreCase)));
+                    }
+                }
+            }
+            catch (Exception e) { return new { found = false, error = e.Message }; }
+            foreach (var file in candidates.Where(f => InsideDownloads(f) != null))
+            {
+                try
+                {
+                    byte[] head;
+                    using (var s = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    {
+                        head = new byte[(int)Math.Min(s.Length, 16L * 1024 * 1024)];
+                        int got = 0, n;
+                        while (got < head.Length && (n = s.Read(head, got, head.Length - got)) > 0) got += n;
+                        if (got < head.Length) Array.Resize(ref head, got);
+                    }
+                    if (head.Length < 4096) continue;
+                    using (var ms = new MemoryStream(head))
+                    using (var t = TagLib.File.Create(new MemoryFile(file, ms), TagLib.ReadStyle.None))
+                    {
+                        var tag = t.Tag;
+                        return new { found = true, artist = tag.FirstPerformer, albumArtist = tag.FirstAlbumArtist, album = tag.Album, title = tag.Title };
+                    }
+                }
+                catch { /* not enough of it yet, or not a format TagLib reads: try the next, or again later */ }
+            }
+            return new { found = false };
+        }
+
+        /// <summary>A file's first bytes, for TagLib (which otherwise opens the file itself, and slskd is still writing it).</summary>
+        sealed class MemoryFile : TagLib.File.IFileAbstraction
+        {
+            readonly Stream stream;
+            public MemoryFile(string name, Stream stream) { Name = name; this.stream = stream; }
+            public string Name { get; }
+            public Stream ReadStream => stream;
+            public Stream WriteStream => stream;
+            public void CloseStream(Stream s) { }
+        }
+
         static void ToRecycleBin(string path)
         {
             if (File.Exists(path)) Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(path, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
@@ -828,6 +901,9 @@ namespace Nightjar
                         stream.Write(bytes, 0, bytes.Length);
                         return;
                     }
+                case "/peek-tags":
+                    Reply(stream, 200, origin, PeekTags(req.Q("user"), req.Q("file"), req.Q("dest")));
+                    return;
                 case "/reveal":
                     {
                         var p = req.Q("path") ?? "";
