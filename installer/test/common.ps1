@@ -54,6 +54,9 @@ function Call($url, $method = "GET", $body = $null, $headers = @{}, $range = $nu
     $req.Method = $method
     $req.Timeout = 30000
     $req.AllowAutoRedirect = $false
+    # A new connection each time: Nightjar's helper closes every one after answering, and a reused one it has just
+    # closed fails now and then before the request even reaches it.
+    $req.KeepAlive = $false
     foreach ($k in $headers.Keys) { $req.Headers[$k] = $headers[$k] }
     if ($range) { $req.AddRange([long]$range[0], [long]$range[1]) }
     if ($null -ne $body) {
