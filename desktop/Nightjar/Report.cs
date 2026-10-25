@@ -20,7 +20,7 @@ namespace Nightjar
             return Directory.Exists(downloads) ? downloads : Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
         }
 
-        static readonly Regex FileName = new Regex(@"^Nightjar report \d{4}-\d{2}-\d{2} \d{4}\.zip$");
+        static readonly Regex FileName = new Regex(@"^Nightjar report \d{4}-\d{2}-\d{2} \d{4,6}( \(\d{1,3}\))?\.zip$");
 
         /// <summary>A report made earlier, by name (so a phone can fetch the one it just asked for); null for anything else.</summary>
         public static string Find(string name)
@@ -32,11 +32,17 @@ namespace Nightjar
 
         public static object Make(string note)
         {
-            var path = Path.Combine(Folder(), "Nightjar report " + DateTime.Now.ToString("yyyy-MM-dd HHmm") + ".zip");
+            // A name of its own, even for two reports in the same second: an earlier report is never touched.
+            var stem = Path.Combine(Folder(), "Nightjar report " + DateTime.Now.ToString("yyyy-MM-dd HHmmss"));
+            var path = stem + ".zip";
+            for (int n = 2; File.Exists(path) && n < 1000; n++) path = stem + " (" + n + ").zip";
+            bool created = false;
             try
             {
-                using (var zip = ZipFile.Open(path, ZipArchiveMode.Create))
+                using (var file = new FileStream(path, FileMode.CreateNew))
+                using (var zip = new ZipArchive(file, ZipArchiveMode.Create))
                 {
+                    created = true;
                     Text(zip, "about.txt", About(note));
                     if (Directory.Exists(Paths.Logs))
                     {
@@ -56,7 +62,7 @@ namespace Nightjar
             }
             catch (Exception e)
             {
-                try { File.Delete(path); } catch { }
+                if (created) try { File.Delete(path); } catch { }
                 return new { ok = false, error = "Couldn't make the report: " + e.Message };
             }
         }

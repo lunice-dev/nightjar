@@ -168,6 +168,7 @@ namespace Nightjar
                 {
                     job.step = "download";
                     var name = await LatestMsi().ConfigureAwait(false);
+                    if (!Regex.IsMatch(name, @"^tailscale-setup-[0-9.]+-amd64\.msi$")) throw new Exception("Tailscale's package site named an unexpected file (" + name + ").");
                     var dir = Path.Combine(Paths.Data, "tmp");
                     Directory.CreateDirectory(dir);
                     msi = Path.Combine(dir, name);
@@ -190,15 +191,21 @@ namespace Nightjar
                         }
                     }
                     job.step = "check";
-                    var signer = Signer(msi);
-                    if (signer == null || !signer.Contains("Tailscale"))
-                        throw new Exception("The downloaded installer isn't signed by Tailscale" + (signer == null ? "" : " (signed by " + signer + ")") + ", so Nightjar didn't run it.");
-                    job.step = "install";
-                    Log.Write("Installing Tailscale from " + name);
-                    var p = Process.Start(new ProcessStartInfo("msiexec.exe", "/i \"" + msi + "\" /passive /norestart") { Verb = "runas", UseShellExecute = true });
-                    p.WaitForExit();
-                    if (p.ExitCode != 0 && p.ExitCode != 3010 && p.ExitCode != 1641)
-                        throw new Exception(p.ExitCode == 1602 ? "The installation was cancelled." : "The installer stopped with code " + p.ExitCode + ".");
+                    // Held open from the check to the end of the install: nothing can swap the file in between
+                    // (it runs with administrator rights). msiexec can still read it.
+                    using (new FileStream(msi, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        var signer = Signer(msi);
+                        if (!IsTailscaleSigner(signer))
+                            throw new Exception("The downloaded installer isn't signed by Tailscale" + (signer == null ? "" : " (signed by " + signer + ")") + ", so Nightjar didn't run it.");
+                        job.step = "install";
+                        Log.Write("Installing Tailscale from " + name);
+                        var p = Process.Start(new ProcessStartInfo("msiexec.exe", "/i \"" + msi + "\" /passive /norestart") { Verb = "runas", UseShellExecute = true });
+                        p.WaitForExit();
+                        if (p.ExitCode == 1619) Log.Write("Tailscale installer couldn't open the package while Nightjar held it (1619)");
+                        if (p.ExitCode != 0 && p.ExitCode != 3010 && p.ExitCode != 1641)
+                            throw new Exception(p.ExitCode == 1602 ? "The installation was cancelled." : "The installer stopped with code " + p.ExitCode + ".");
+                    }
                     // The service takes a moment to start.
                     for (int i = 0; i < 30 && Exe == null; i++) await Task.Delay(1000).ConfigureAwait(false);
                     job.step = "done";
@@ -240,6 +247,13 @@ namespace Nightjar
             if (!hit.Success) throw new Exception("Couldn't find the Tailscale installer on pkgs.tailscale.com.");
             return hit.Value;
         }
+
+        /// <summary>
+        /// The signer is Tailscale itself: the certificate's name (CN) or organisation (O) is exactly "Tailscale Inc.",
+        /// the same name Tailscale's own updater checks. A name merely containing "Tailscale" isn't enough.
+        /// </summary>
+        internal static bool IsTailscaleSigner(string subject) =>
+            subject != null && Regex.IsMatch(subject, @"(^|,)\s*(CN|O)=""?Tailscale Inc\.""?\s*(,|$)");
 
         /// <summary>Who signed a file, when Windows says the signature is valid; otherwise null.</summary>
         static string Signer(string file)

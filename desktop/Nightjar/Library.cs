@@ -598,6 +598,47 @@ namespace Nightjar
                 .OrderByDescending(b => b.at).Take(10).ToList();
 
         /// <summary>Sends one copy of an album to the Recycle Bin, after the person chose it.</summary>
+        /// <summary>What an album folder may hold besides music: art, rip logs and cue sheets, players' and Windows' leftovers.</summary>
+        static readonly HashSet<string> AlbumExtras = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tif", ".tiff",
+            ".cue", ".log", ".txt", ".nfo", ".m3u", ".m3u8", ".sfv", ".md5", ".ffp", ".accurip", ".pdf", ".ini", ".db", ".url", ".json", ".xml",
+        };
+
+        /// <summary>
+        /// Null when the folder is an album (music, with only art, logs and the like beside it, in at most a few
+        /// disc or scan folders); otherwise why Nightjar won't delete it. Keeps "Delete" from ever taking anything else.
+        /// </summary>
+        internal static string NotAnAlbum(string dir)
+        {
+            int audio = 0, files = 0;
+            string Walk(string d, int depth)
+            {
+                if (depth > 3) return "This folder has too many folders inside it to be an album, so Nightjar won't delete it. Delete it in Explorer if you're sure.";
+                foreach (var f in Directory.EnumerateFiles(d))
+                {
+                    if (++files > 3000) return "This folder has too many files to be an album, so Nightjar won't delete it. Delete it in Explorer if you're sure.";
+                    var ext = Path.GetExtension(f);
+                    if (Media.IsAudio(f)) audio++;
+                    else if (!AlbumExtras.Contains(ext))
+                        return "This folder has more than music in it (" + Path.GetFileName(f) + "), so Nightjar won't delete it. Delete it in Explorer if you're sure.";
+                }
+                foreach (var sub in Directory.EnumerateDirectories(d))
+                {
+                    var r = Walk(sub, depth + 1);
+                    if (r != null) return r;
+                }
+                return null;
+            }
+            try
+            {
+                var why = Walk(dir, 0);
+                if (why != null) return why;
+            }
+            catch (Exception e) { return "Nightjar couldn't look inside that folder (" + e.Message + "), so it didn't delete it."; }
+            return audio == 0 ? "There's no music in this folder, so Nightjar won't delete it." : null;
+        }
+
         public static object Recycle(string dir)
         {
             lock (Organizer.Gate)
@@ -605,6 +646,8 @@ namespace Nightjar
                 var root = AppSettings.LibraryRoot;
                 if (string.IsNullOrEmpty(dir) || !Organizer.Under(dir, root) || !Directory.Exists(dir)) return new { ok = false, error = "That album isn't in your library folder any more." };
                 if (SamePath(Parent(dir), root)) return new { ok = false, error = "Nightjar doesn't delete whole format folders." };
+                var why = NotAnAlbum(dir);
+                if (why != null) return new { ok = false, error = why };
                 Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(dir, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
                 TidyUp(Parent(dir), root);
                 last = null;

@@ -88,7 +88,7 @@ namespace Nightjar
                     var tag = r.TryGetValue("tag_name", out var t) ? t as string : null;
                     var assets = (r.TryGetValue("assets", out var a) ? a as System.Collections.IEnumerable : null)?.OfType<Dictionary<string, object>>().ToList() ?? new List<Dictionary<string, object>>();
                     var setup = assets.FirstOrDefault(x => Regex.IsMatch(x["name"] as string ?? "", @"^Nightjar-Setup-.*\.exe$", RegexOptions.IgnoreCase));
-                    var sum = assets.FirstOrDefault(x => (x["name"] as string ?? "").EndsWith(".sha256", StringComparison.OrdinalIgnoreCase));
+                    var sum = setup == null ? null : assets.FirstOrDefault(x => string.Equals(x["name"] as string, (setup["name"] as string) + ".sha256", StringComparison.OrdinalIgnoreCase));
                     lock (Gate)
                     {
                         state.latest = Regex.Match(tag ?? "", @"\d+(\.\d+){0,3}").Value;
@@ -147,14 +147,14 @@ namespace Nightjar
                             }
                         }
                         if (state.size > 0 && new FileInfo(file).Length != state.size) throw new IOException("the download is incomplete");
-                        if (sha256Url != null)
-                        {
-                            var expected = Regex.Match(await c.GetStringAsync(sha256Url), "[0-9a-fA-F]{64}").Value.ToLowerInvariant();
-                            string actual;
-                            using (var h = SHA256.Create())
-                            using (var s = File.OpenRead(file)) actual = BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").ToLowerInvariant();
-                            if (expected.Length == 64 && expected != actual) throw new IOException("the download doesn't match its checksum");
-                        }
+                        // No checksum, or one that can't be read, means no install: never run an installer that wasn't checked.
+                        if (sha256Url == null) throw new IOException("the release has no checksum to check it against");
+                        var expected = Regex.Match(await c.GetStringAsync(sha256Url), "[0-9a-fA-F]{64}").Value.ToLowerInvariant();
+                        if (expected.Length != 64) throw new IOException("the release's checksum couldn't be read");
+                        string actual;
+                        using (var h = SHA256.Create())
+                        using (var s = File.OpenRead(file)) actual = BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").ToLowerInvariant();
+                        if (expected != actual) throw new IOException("the download doesn't match its checksum");
                     }
                     Log.Write("Installing update " + version);
                     lock (Gate) { state.ready = true; state.downloading = false; }

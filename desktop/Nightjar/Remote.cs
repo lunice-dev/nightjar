@@ -32,19 +32,11 @@ namespace Nightjar
             public string mediaKey { get; set; }
         }
 
-        static List<Device> Load()
-        {
-            try { return Json.Deserialize<List<Device>>(System.IO.File.ReadAllText(File)) ?? new List<Device>(); }
-            catch { return new List<Device>(); }
-        }
+        // A damaged devices.json is kept aside (never silently saved over) and devices sign in again. No older copy is
+        // kept: it would bring back devices you removed.
+        static List<Device> Load() => SafeFile.Load(File, t => Json.Deserialize<List<Device>>(t), () => new List<Device>(), backup: false);
 
-        static void Save(List<Device> list)
-        {
-            Directory.CreateDirectory(Paths.Data);
-            var tmp = File + ".tmp";
-            System.IO.File.WriteAllText(tmp, Json.Serialize(list), new UTF8Encoding(false));
-            if (System.IO.File.Exists(File)) System.IO.File.Replace(tmp, File, null); else System.IO.File.Move(tmp, File);
-        }
+        static void Save(List<Device> list) => SafeFile.Write(File, Json.Serialize(list), backup: false);
 
         static string RandomText(int bytes)
         {
@@ -229,6 +221,7 @@ namespace Nightjar
         {
             if (string.IsNullOrEmpty(password) || password.Length < 8) return "Use at least 8 characters.";
             if (password.Length > 200) return "That's too long.";
+            if (Regex.IsMatch(password, @"[\x00-\x1f\x7f]")) return "Use letters, numbers and symbols only (no line breaks or tabs).";
             if (Config.WebLogin().user == null) return "The engine's login is turned off in its config file (data\\slskd.yml).";
             if (!Config.SetWebPassword(password)) return "Couldn't write the engine's config file.";
             AppSettings.Set("remotePasswordSet", true);

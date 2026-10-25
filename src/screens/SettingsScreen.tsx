@@ -614,11 +614,18 @@ function LibrarySection() {
           <span className="path">{info.root ?? 'Not chosen yet'}</span>
           {info.root && !info.exists && <span className="error">This folder doesn’t exist any more.</span>}
         </div>
-        <button className="btn quiet small" onClick={choose}>
-          {info.root ? 'Change' : 'Choose'}
-        </button>
+        {onThisComputer && (
+          <button className="btn quiet small" onClick={choose}>
+            {info.root ? 'Change' : 'Choose'}
+          </button>
+        )}
       </div>
-      {!info.root && music && (
+      {!onThisComputer && (
+        <p className="hint-text">
+          {info.root ? 'To change it' : 'To choose it'}, use Nightjar on the computer: the library folder decides which folders your other devices can reach.
+        </p>
+      )}
+      {onThisComputer && !info.root && music && (
         <button
           className="btn small"
           onClick={async () => {

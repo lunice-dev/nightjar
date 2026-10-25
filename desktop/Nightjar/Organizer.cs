@@ -15,32 +15,31 @@ namespace Nightjar
         static string File => Path.Combine(Paths.Data, "nightjar.json");
         static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
 
-        static Dictionary<string, object> Read()
+        static readonly object Gate = new object();
+
+        // A damaged nightjar.json is never read as empty and then saved over (that would forget the library folder): see SafeFile.
+        static Dictionary<string, object> Read() => SafeFile.Load(File, t => Json.Deserialize<Dictionary<string, object>>(t), () => new Dictionary<string, object>());
+
+        static void Change(Action<Dictionary<string, object>> change)
         {
-            try { return Json.Deserialize<Dictionary<string, object>>(System.IO.File.ReadAllText(File)) ?? new Dictionary<string, object>(); }
-            catch { return new Dictionary<string, object>(); }
+            lock (Gate)
+            {
+                var d = Read();
+                change(d);
+                SafeFile.Write(File, Json.Serialize(d));
+            }
         }
 
         /// <summary>Group folders found in the library ("JP City Pop"): artists inside them are matched there too.</summary>
         public static string[] Groups
         {
             get => Read().TryGetValue("groups", out var v) && v is System.Collections.IEnumerable e ? e.OfType<string>().ToArray() : new string[0];
-            set
-            {
-                var d = Read();
-                d["groups"] = value;
-                System.IO.File.WriteAllText(File, Json.Serialize(d), new UTF8Encoding(false));
-            }
+            set => Change(d => d["groups"] = value);
         }
 
         public static object Get(string key) => Read().TryGetValue(key, out var v) ? v : null;
 
-        public static void Set(string key, object value)
-        {
-            var d = Read();
-            if (value == null) d.Remove(key); else d[key] = value;
-            System.IO.File.WriteAllText(File, Json.Serialize(d), new UTF8Encoding(false));
-        }
+        public static void Set(string key, object value) => Change(d => { if (value == null) d.Remove(key); else d[key] = value; });
 
         /// <summary>Where updates come from ("owner/repo" on GitHub), when not the built-in one.</summary>
         public static string UpdateRepo => Read().TryGetValue("updateRepo", out var v) ? v as string : null;
@@ -48,12 +47,7 @@ namespace Nightjar
         public static string LibraryRoot
         {
             get => Read().TryGetValue("libraryRoot", out var v) ? v as string : null;
-            set
-            {
-                var d = Read();
-                d["libraryRoot"] = value;
-                System.IO.File.WriteAllText(File, Json.Serialize(d), new UTF8Encoding(false));
-            }
+            set => Change(d => d["libraryRoot"] = value);
         }
     }
 

@@ -157,11 +157,25 @@ namespace Nightjar
             public Dictionary<string, string> Query = new Dictionary<string, string>();
             public Dictionary<string, string> Headers = new Dictionary<string, string>();
             public byte[] Body = new byte[0];
+            /// <summary>What Content-Length announced; the body itself is read only once the sender is known (see ReadBody).</summary>
+            public int Length;
             public string Q(string k) => Query.TryGetValue(k, out var v) ? v : null;
         }
 
+        /// <summary>
+        /// At most this many requests from other devices are worked on at once (a phone scrolling covers asks for many).
+        /// The rest wait their turn for a few seconds and are then closed, so nobody on the network can wear the
+        /// helper out. This computer's own window isn't limited.
+        /// </summary>
+        static readonly SemaphoreSlim RemoteSlots = new SemaphoreSlim(96, 96);
+
         async Task Serve(TcpClient client, bool remote, bool viaLan = false)
         {
+            if (remote && !await RemoteSlots.WaitAsync(8000).ConfigureAwait(false))
+            {
+                try { client.Close(); } catch { }
+                return;
+            }
             using (client)
             {
                 try
@@ -182,6 +196,10 @@ namespace Nightjar
                 catch (Exception e)
                 {
                     Log.Write("Helper error: " + e.Message);
+                }
+                finally
+                {
+                    if (remote) RemoteSlots.Release();
                 }
             }
         }
@@ -220,19 +238,28 @@ namespace Nightjar
                 req.Headers[name] = value;
                 if (name == "content-length") int.TryParse(value, out length);
             }
-            if (length > 0)
-            {
-                if (length > 32 * 1024 * 1024) return null;
-                req.Body = new byte[length];
-                int read = 0;
-                while (read < length)
-                {
-                    var n = stream.Read(req.Body, read, length - read);
-                    if (n <= 0) break;
-                    read += n;
-                }
-            }
+            if (length < 0 || length > 32 * 1024 * 1024) return null;
+            req.Length = length;
             return req;
+        }
+
+        /// <summary>
+        /// Reads the body, at most <paramref name="max"/> bytes. Called only after the sender is known (this computer's
+        /// window or a signed-in device), so nobody else can make Nightjar hold large requests in memory.
+        /// </summary>
+        static bool ReadBody(Request req, NetworkStream stream, int max)
+        {
+            if (req.Length <= 0) return true;
+            if (req.Length > max) return false;
+            req.Body = new byte[req.Length];
+            int read = 0;
+            while (read < req.Length)
+            {
+                var n = stream.Read(req.Body, read, req.Length - read);
+                if (n <= 0) return false;
+                read += n;
+            }
+            return true;
         }
 
         static void Reply(Stream stream, int code, string origin, object body)
@@ -450,6 +477,7 @@ namespace Nightjar
                 if (req.Path == "/ping") { Reply(stream, 200, origin, new { ok = true, host = "Nightjar" }); return; }
                 if (req.Path == "/pair" && req.Method == "POST")
                 {
+                    if (!ReadBody(req, stream, 4096)) { Reply(stream, 413, origin, new { error = "too large" }); return; }
                     var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
                     string V(string key) => body.TryGetValue(key, out var v) ? v as string : null;
                     var (token, id, error, wait) = Remote.Pair(V("secret"), V("name"));
@@ -459,7 +487,12 @@ namespace Nightjar
                 device = Remote.Check(req.Headers.TryGetValue("x-nightjar-device", out var t) ? t : null);
                 if (device == null) { Reply(stream, 401, origin, new { error = "signin" }); return; }
                 if (ThisComputerOnly.Contains(req.Path)) { Reply(stream, 403, origin, new { error = "Only possible on the computer Nightjar runs on." }); return; }
+                // The library folder decides which folders other devices may reach, so only this computer changes it.
+                if (req.Path == "/library" && req.Method == "POST") { Reply(stream, 403, origin, new { ok = false, error = "Change the library folder on the computer Nightjar runs on." }); return; }
             }
+
+            // Only now, with the sender known: pictures for playlist covers may be large, everything else is small.
+            if (!ReadBody(req, stream, req.Path == "/playlist/cover" ? 32 * 1024 * 1024 : 16 * 1024 * 1024)) { Reply(stream, 413, origin, new { error = "That's too large." }); return; }
 
             switch (req.Path)
             {
