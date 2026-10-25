@@ -1,6 +1,7 @@
 import type { Transfer, TransferUser } from '../api/types';
 import type { DownloadPlan } from '../prefs';
 import { AUDIO_EXT, basename, extOf, parseRelease, splitFolder } from './quality';
+import { sourceRates } from './rates';
 
 export type Phase = 'active' | 'queued' | 'done' | 'failed' | 'cancelled';
 
@@ -24,7 +25,10 @@ export interface DownloadGroup {
   files: Transfer[];
   size: number;
   transferred: number;
+  /** Bytes per second arriving now, all sources together: the sum of `sources`. */
   speed: number;
+  /** Each person sending part of it and how fast, fastest first. */
+  sources: { username: string; speed: number }[];
   phase: Phase;
   counts: Record<Phase, number>;
   placeInQueue?: number;
@@ -96,6 +100,16 @@ export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []
     }
     const phase: Phase = counts.active ? 'active' : counts.queued ? 'queued' : counts.failed ? 'failed' : counts.done ? 'done' : 'cancelled';
     const usernames = [...new Set(files.filter((f) => phaseOf(f.state) !== 'cancelled').map((f) => f.username))];
+    // What really arrived over the last seconds; slskd's per-file averages until there's enough history.
+    const measured = sourceRates(
+      key,
+      files.map((f) => ({ id: f.id, username: f.username, bytes: phaseOf(f.state) === 'done' ? f.size : f.bytesTransferred })),
+    );
+    const slskdSpeed = (u: string) => files.filter((f) => f.username === u && phaseOf(f.state) === 'active').reduce((n, f) => n + f.averageSpeed, 0);
+    const sources = (usernames.length ? usernames : [b.username])
+      .map((u) => ({ username: u, speed: phase === 'active' ? (measured ? (measured.get(u) ?? 0) : slskdSpeed(u)) : 0 }))
+      .sort((x, y) => y.speed - x.speed);
+    if (measured && phase === 'active') speed = sources.reduce((n, s) => n + s.speed, 0);
     let title: string;
     let parent: string;
     if (b.plan) {
@@ -116,6 +130,7 @@ export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []
       size,
       transferred,
       speed,
+      sources,
       phase,
       counts,
       placeInQueue: place,

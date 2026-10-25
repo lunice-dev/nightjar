@@ -612,6 +612,12 @@ function TransferRow({ g, direction, local, ahead }: { g: DownloadGroup; directi
   const finished = unfinished.length === 0;
   // While the banner asks about a wrong album, its two buttons are the only way on: Retry would fetch the rest unasked.
   const asking = direction === 'download' && wrongAlbum(g);
+  // Several people sending one album: how much each adds to the total (names stay in place as speeds change).
+  const bySource = direction === 'download' && g.phase === 'active' && g.sources.length > 1;
+  const speedOf = (u: string) => {
+    const s = g.sources.find((x) => x.username === u)?.speed ?? 0;
+    return s > 0 ? speed(s) : 'waiting';
+  };
   // Finished albums you moved or deleted outside Nightjar: say so instead of offering buttons that can't work.
   const [gone, setGone] = useState(false);
   useEffect(() => {
@@ -794,6 +800,7 @@ function TransferRow({ g, direction, local, ahead }: { g: DownloadGroup; directi
               <button className="user-link" onClick={() => openProfile(u)}>
                 {u}
               </button>
+              {bySource && <span className="source-speed"> {speedOf(u)}</span>}
             </span>
           ))}
         </span>

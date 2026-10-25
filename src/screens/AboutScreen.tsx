@@ -12,6 +12,15 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
 /** What changed in each version, newest first. Keep entries short and in the user's words. */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8.4',
+    date: '25 Oct 2026',
+    title: 'Every source’s speed',
+    items: [
+      'An album coming from several people shows how fast each one is sending it: “from sonata_k 610 KB/s and dustgroove 3.1 MB/s”',
+      'The download speed holds steady: it is what really arrived over the last few seconds, so it no longer jumps each time a track starts or ends',
+    ],
+  },
+  {
     version: '0.8.3',
     date: '25 Oct 2026',
     title: 'Use less data, for every album',
