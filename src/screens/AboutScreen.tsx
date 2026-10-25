@@ -12,6 +12,15 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
 /** What changed in each version, newest first. Keep entries short and in the user's words. */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8.3',
+    date: '25 Oct 2026',
+    title: 'Use less data, for every album',
+    items: [
+      '“Use less data” no longer skips hi-res tracks: 24-bit albums get their smaller copies like the rest',
+      'Nor albums whose files end in an old ID3v1 tag (left by older taggers), which skipped track after track',
+    ],
+  },
+  {
     version: '0.8.2',
     date: '25 Oct 2026',
     title: 'Fake albums stopped sooner',
