@@ -61,6 +61,9 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
     .filter((g) => ended(g) && !wrongAlbum(g))
     .sort((a, b) => (b.endedAt || b.time) - (a.endedAt || a.time));
   const finished = [...failedGroups, ...done];
+  // slskd sends one file at a time to each person: a waiting upload may only be waiting behind their other album.
+  const aheadOf = (g: DownloadGroup) =>
+    direction === 'upload' && g.phase === 'queued' ? active.find((a) => a.username === g.username)?.title : undefined;
   const totalSpeed = active.reduce((s, g) => s + g.speed, 0);
   const where = useStore((s) => s.local);
   // Albums still arriving aren't offered for the library yet, and finished ones already have their own row above.
@@ -139,7 +142,7 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
                           ))}
                         </div>
                       ))
-                    : list.map((g) => <TransferRow key={g.key} g={g} direction={direction} local={local} />)}
+                    : list.map((g) => <TransferRow key={g.key} g={g} direction={direction} local={local} ahead={aheadOf(g)} />)}
                 </section>
               ) : null,
             )}
@@ -446,13 +449,15 @@ function useNow(ms = 30_000) {
 /** Paused because its files are another album: waiting for Delete it or Keep downloading. */
 const wrongAlbum = (g: DownloadGroup) => g.plan?.identity?.state === 'mismatch';
 
-function stateLine(g: DownloadGroup, direction: Direction) {
+/** `ahead`: the album going to the same person first, which this upload waits behind (not a lack of slots). */
+function stateLine(g: DownloadGroup, direction: Direction, ahead?: string) {
   if (direction === 'download' && wrongAlbum(g)) return 'Paused: waiting for your choice';
   const n = g.files.length;
   switch (g.phase) {
     case 'active':
       return `${g.counts.done} of ${n - g.counts.cancelled} files, ${g.speed > 0 ? speed(g.speed) : 'connecting…'}`;
     case 'queued':
+      if (direction === 'upload' && ahead) return `Waiting for its turn: ${g.username} is getting ${ahead} first`;
       if (direction === 'upload') return g.placeInQueue ? `Waiting for a free upload slot, #${g.placeInQueue} in line` : 'Waiting for a free upload slot';
       if (g.usernames.length > 1) return g.placeInQueue ? `Waiting in ${g.usernames.length} queues, best position ${g.placeInQueue}` : 'Waiting to start';
       return g.placeInQueue ? `Waiting in ${g.username}'s queue, position ${g.placeInQueue}` : 'Waiting to start';
@@ -470,7 +475,7 @@ function stateLine(g: DownloadGroup, direction: Direction) {
   }
 }
 
-function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Direction; local: LocalFiles }) {
+function TransferRow({ g, direction, local, ahead }: { g: DownloadGroup; direction: Direction; local: LocalFiles; ahead?: string }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const backend = useStore((s) => s.backend);
@@ -775,7 +780,7 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
           </time>
         )}
         <span className={g.phase === 'failed' || (direction === 'download' && wrongAlbum(g)) ? 'state-failed' : g.phase === 'done' ? 'state-done' : ''}>
-          {stateLine(g, direction)}
+          {stateLine(g, direction, ahead)}
         </span>
         <span>
           {bytes(g.transferred)} of {bytes(g.size)}
