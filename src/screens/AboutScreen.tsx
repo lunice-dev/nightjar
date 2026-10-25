@@ -2,7 +2,9 @@ import { ReportProblem } from '../components/ReportProblem';
 import { UpdateSection } from '../components/Updates';
 import { Mark } from '../components/Mark';
 
-export const VERSION = '0.7';
+declare const __APP_VERSION__: string;
+/** This page's version (package.json at build time), e.g. "0.8.0". */
+export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
 
 /** What changed in each version, newest first. Keep entries short and in the user's words. */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [

@@ -20,8 +20,19 @@ export interface UpdateState {
 }
 
 /** What the Nightjar app knows about updates, shared by the banner and About. */
-export const useUpdates = create<{ state: UpdateState | null; dismissed: string | null; load(check?: boolean): Promise<void>; install(): Promise<void> }>((set, get) => ({
+export const useUpdates = create<{
+  state: UpdateState | null;
+  dismissed: string | null;
+  /** The app's version when this page first asked: a different one later means it was updated meanwhile. */
+  first: string | null;
+  /** This page is waiting for Nightjar to open again after installing an update. */
+  restarting: boolean;
+  load(check?: boolean): Promise<void>;
+  install(): Promise<void>;
+}>((set, get) => ({
   state: null,
+  first: null,
+  restarting: false,
   dismissed: (() => {
     try {
       return localStorage.getItem('nightjar-update-dismissed');
@@ -32,7 +43,10 @@ export const useUpdates = create<{ state: UpdateState | null; dismissed: string 
   async load(check) {
     try {
       const res = await fetch(`${HELPER}/update${check ? '?check=1' : ''}`, { signal: AbortSignal.timeout(check ? 30_000 : 5000) });
-      if (res.ok) set({ state: (await res.json()) as UpdateState });
+      if (res.ok) {
+        const state = (await res.json()) as UpdateState;
+        set((s) => ({ state, first: s.first ?? state.current }));
+      }
     } catch {
       /* the app isn't here (phone, sample data) */
     }
@@ -43,6 +57,7 @@ export const useUpdates = create<{ state: UpdateState | null; dismissed: string 
     } catch {
       /* the progress shows what happens */
     }
+    const from = get().state?.current;
     // Follow the download until Nightjar closes for the installer.
     for (let i = 0; i < 600; i++) {
       await new Promise((r) => setTimeout(r, 1000));
@@ -50,6 +65,23 @@ export const useUpdates = create<{ state: UpdateState | null; dismissed: string 
       const s = get().state;
       if (!s?.downloading) break;
     }
+    if (!get().state?.ready) return;
+    // Nightjar closes, installs and opens again. On a phone or another computer this page stays open meanwhile:
+    // wait until the new version answers, then load the new page by itself.
+    set({ restarting: true });
+    for (let i = 0; i < 300; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        const res = await fetch(`${HELPER}/update`, { signal: AbortSignal.timeout(4000) });
+        if (res.ok && ((await res.json()) as UpdateState).current !== from) {
+          location.reload();
+          return;
+        }
+      } catch {
+        /* still closed: the installer is running */
+      }
+    }
+    set({ restarting: false });
   },
 }));
 
@@ -63,19 +95,45 @@ function usePollUpdates() {
     polling = true;
     void load();
     const t = setInterval(() => void load(), 10 * 60_000);
+    // Coming back to the app (a phone unlocked, a tab shown again): look straight away.
+    const onShow = () => document.visibilityState === 'visible' && void load();
+    document.addEventListener('visibilitychange', onShow);
     return () => {
       clearInterval(t);
+      document.removeEventListener('visibilitychange', onShow);
       polling = false;
     };
   }, [canFiles, load]);
 }
 
 function Progress({ s }: { s: UpdateState }) {
+  const restarting = useUpdates((u) => u.restarting);
   const pct = s.size ? Math.round((s.received / s.size) * 100) : 0;
   return (
     <span className="hint-text" style={{ margin: 0 }}>
-      <span className="spinner" aria-hidden /> {s.ready ? 'Installing… Nightjar closes and opens again by itself.' : `Downloading ${pct}%…`}
+      <span className="spinner" aria-hidden />{' '}
+      {restarting
+        ? 'Installing… Nightjar restarts on your computer; this page reloads by itself when it’s back.'
+        : s.ready
+          ? 'Installing… Nightjar closes and opens again by itself.'
+          : `Downloading ${pct}%…`}
     </span>
+  );
+}
+
+/** Nightjar was updated while this page stayed open (on a phone, say): offer the new page. */
+function UpdatedBanner() {
+  const { state: s, first, restarting } = useUpdates();
+  if (!s || !first || restarting || s.current === first) return null;
+  return (
+    <div className="update-banner" role="status">
+      <span>
+        <b>Nightjar {s.current.replace(/\+.*$/, '')}</b> is installed.
+      </span>
+      <button className="btn small" onClick={() => location.reload()}>
+        Reload to use it
+      </button>
+    </div>
   );
 }
 
@@ -84,6 +142,8 @@ export function UpdateBanner() {
   usePollUpdates();
   const { state: s, dismissed, install } = useUpdates();
   const [hidden, setHidden] = useState(false);
+  const restarting = useUpdates((u) => u.restarting);
+  if (s && !restarting && useUpdates.getState().first && s.current !== useUpdates.getState().first) return <UpdatedBanner />;
   if (!s?.available || !s.latest || hidden || dismissed === s.latest) return null;
   return (
     <div className="update-banner" role="status">
