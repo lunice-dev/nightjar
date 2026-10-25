@@ -35,6 +35,7 @@ namespace Nightjar
         static readonly State state = new State { current = Current() };
         static readonly object Gate = new object();
         static string sha256Url;
+        static string signatureUrl;
         static Action quit;
         static System.Threading.Timer timer;
 
@@ -97,6 +98,8 @@ namespace Nightjar
                         state.url = setup?["browser_download_url"] as string;
                         state.size = setup != null && setup.TryGetValue("size", out var sz) ? Convert.ToInt64(sz) : 0;
                         sha256Url = sum?["browser_download_url"] as string;
+                        var sig = setup == null ? null : assets.FirstOrDefault(x => string.Equals(x["name"] as string, (setup["name"] as string) + ".sig", StringComparison.OrdinalIgnoreCase));
+                        signatureUrl = sig?["browser_download_url"] as string;
                         state.available = state.url != null && V(state.latest) > V(state.current);
                         state.error = null;
                         state.checkedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -155,6 +158,11 @@ namespace Nightjar
                         using (var h = SHA256.Create())
                         using (var s = File.OpenRead(file)) actual = BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").ToLowerInvariant();
                         if (expected != actual) throw new IOException("the download doesn't match its checksum");
+                        // The signature proves Nightjar's own release build made it: a checksum alone only proves it
+                        // arrived intact from wherever the release came from.
+                        if (signatureUrl == null) throw new IOException("the release isn't signed");
+                        var signature = await c.GetByteArrayAsync(signatureUrl);
+                        if (!UpdateSignature.Valid(file, signature)) throw new IOException("the installer's signature isn't Nightjar's");
                     }
                     Log.Write("Installing update " + version);
                     lock (Gate) { state.ready = true; state.downloading = false; }
@@ -171,6 +179,36 @@ namespace Nightjar
                 }
             });
             return new { ok = true };
+        }
+    }
+
+    /// <summary>
+    /// Checks an installer against Nightjar's release signing key. The private half lives only in the GitHub
+    /// repository's secrets (NIGHTJAR_SIGNING_KEY), where the release workflow signs each installer; this is the
+    /// public half (installer/nightjar-update-key.pub.pem). RSA 3072, SHA-256, PKCS#1 v1.5 (openssl dgst -sha256 -sign).
+    /// </summary>
+    static class UpdateSignature
+    {
+        const string Modulus = "qKcYtKuz3/k8deQfXKqf34QLYWBo67LFxIjKrOGgfsyX/suMoaOeaaxM13f8pCfgaI+Jz+L+b5CQjdOyrbtC0bA1IuaFWc7PXtQ9QrjCt7ZeUbAqQKCwJyx9EbhmIvwdr8k5cwca8DT+O3i8XtPS4Kr0SeyTXV0RWkUbjiI16cpdsqFBaZCnaAKt2SE2JaH7lPEXKkib9jqR/schmBI3ae0FLuKDMYuuLtt68hqEs5mqehhK+8r+l8W42AblDWrGNZkphMO8aKlq1ucnk+Zc16EApfNvCx6jn4F5dKv55FUQopURfWQiH6HcLHerEVjLrTvVak7TbmQfof4xh/7p/zq1hdmqEbKz1W0baGfFeVjzeb5srmwCILxfLcRo2M+JPH9D1eHpP3dCUWUVuYoISEUF+YKQE2n7qXiAfEPs2ereo53yO2cYRtYRCNMxvNM7Fqe35CyL+MbdM/Q+diebTlbBZF4FYZHKzA49+njxxlt+ZsXjEuqcJjZctc5HZtiP";
+        const string Exponent = "AQAB";
+
+        public static bool Valid(string file, byte[] signature)
+        {
+            if (signature == null || signature.Length != 384) return false;
+            try
+            {
+                using (var rsa = new RSACng())
+                using (var s = File.OpenRead(file))
+                {
+                    rsa.ImportParameters(new RSAParameters { Modulus = Convert.FromBase64String(Modulus), Exponent = Convert.FromBase64String(Exponent) });
+                    return rsa.VerifyData(s, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Write("Update signature check failed: " + e.Message);
+                return false;
+            }
         }
     }
 }

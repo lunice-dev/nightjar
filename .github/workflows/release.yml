@@ -39,3 +39,4 @@ jobs:
         run: bash installer/release.sh "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NIGHTJAR_SIGNING_KEY: ${{ secrets.NIGHTJAR_SIGNING_KEY }}
