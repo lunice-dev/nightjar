@@ -1333,7 +1333,8 @@ html.in-app, html.in-app body { overflow: hidden; }
   background:
     radial-gradient(120% 70% at 25% 0%, color-mix(in srgb, var(--fp-tint) 100%, #fff 10%), transparent 70%),
     linear-gradient(180deg, var(--fp-tint) 0%, color-mix(in srgb, var(--fp-tint) 30%, #070707) 100%);
-  padding: 4px max(16px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  --fp-px-l: max(16px, env(safe-area-inset-left, 0px)); --fp-px-r: max(16px, env(safe-area-inset-right, 0px));
+  padding: 4px var(--fp-px-r) max(10px, env(safe-area-inset-bottom, 0px)) var(--fp-px-l);
   animation: fp-up 0.46s var(--fp-ease); transition: transform 0.36s var(--fp-ease), background 0.6s ease;
   will-change: transform;
 }
@@ -1363,7 +1364,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 
 .fp-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 14px 4px 8px; scrollbar-width: none; }
 .fp-art-col { display: grid; place-items: center; width: 100%; padding-top: 2vh; }
-.fp-art { width: min(86vw, 46vh, 520px); aspect-ratio: 1; object-fit: cover; border-radius: 12px; box-shadow: 0 18px 50px rgb(0 0 0 / 0.45); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.fp-art { width: min(86vw, 46vh, 520px); aspect-ratio: 1; object-fit: cover; border-radius: 12px; box-shadow: 0 22px 44px -10px rgb(0 0 0 / 0.5); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .fp-art.paused { transform: scale(0.88); }
 .fp-side { width: min(100%, 560px); display: flex; flex-direction: column; gap: 16px; }
 .fp-chip .pq-chip.aac { background: color-mix(in srgb, var(--t-mid) 45%, transparent); }
@@ -1415,7 +1416,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 
 /* Wide screens (the PC, an iPad held sideways): art on the left, the rest on the right. */
 @media (min-aspect-ratio: 1/1) and (min-width: 700px) {
-  .full-player { padding-left: max(28px, env(safe-area-inset-left, 0px)); padding-right: max(28px, env(safe-area-inset-right, 0px)); }
+  .full-player { --fp-px-l: max(28px, env(safe-area-inset-left, 0px)); --fp-px-r: max(28px, env(safe-area-inset-right, 0px)); }
   .fp-body { flex-direction: row; align-items: stretch; gap: clamp(28px, 5vw, 72px); overflow: hidden; padding: 8px 0 4px; }
   .fp-art-col { flex: 1 1 50%; padding: 0; }
   .fp-art { width: min(100%, 76vh, 640px); }
@@ -1571,3 +1572,10 @@ html.in-app, html.in-app body { overflow: hidden; }
 .plb-list { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--rule); }
 .plb-list li { border-bottom: 1px solid var(--rule); }
 .plb-list .setup-folder { margin: 0; padding: 10px 0; border: 0; background: none; }
+
+/* The art's shadow must never be cut off: the scrolling part of the player reaches the drawer's own edges
+   (and keeps its content where it was with padding), so the only edge that clips is the drawer's. */
+.fp-body {
+  margin-left: calc(-1 * var(--fp-px-l)); margin-right: calc(-1 * var(--fp-px-r));
+  padding-left: calc(var(--fp-px-l) + 4px); padding-right: calc(var(--fp-px-r) + 4px);
+}
