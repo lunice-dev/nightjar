@@ -47,6 +47,7 @@ function Helper($path, $method = "GET", $body = $null) {
 }
 
 # Any request, answered with its status instead of throwing: @{ status; json; text; length }.
+# Status -1: the connection closed before an answer could be read.
 # $range = @(from, to) asks for part of a file, as a phone's player does.
 function Call($url, $method = "GET", $body = $null, $headers = @{}, $range = $null) {
     $req = [Net.HttpWebRequest]::Create($url)
@@ -61,8 +62,10 @@ function Call($url, $method = "GET", $body = $null, $headers = @{}, $range = $nu
         $req.ContentLength = $bytes.Length
         try { $s = $req.GetRequestStream(); $s.Write($bytes, 0, $bytes.Length); $s.Close() } catch { }
     }
+    $resp = $null
     try { $resp = $req.GetResponse() }
-    catch [Net.WebException] { $resp = $_.Exception.Response; if ($null -eq $resp) { throw } }
+    catch { $inner = $_.Exception.InnerException; if ($inner -is [Net.WebException]) { $resp = $inner.Response } elseif ($_.Exception -is [Net.WebException]) { $resp = $_.Exception.Response } }
+    if ($null -eq $resp) { return [pscustomobject]@{ status = -1; json = $null; text = ""; length = 0 } }
     $ms = New-Object IO.MemoryStream
     try { $resp.GetResponseStream().CopyTo($ms) } catch { }
     $status = [int]$resp.StatusCode

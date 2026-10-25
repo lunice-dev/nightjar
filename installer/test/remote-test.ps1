@@ -28,6 +28,10 @@ function Pair($secret, $name = "Test phone") { Call "$R/pair" "POST" @{ secret =
 
 function NewCode { (Helper "/remote/code").code }
 
+# Nightjar refuses before reading what was sent, then closes: the answer (401, 403, 413) often can't be read
+# before the connection goes, which shows here as status -1. Either way nothing was done.
+function Refused($r) { @(401, 403, 413, -1) -contains $r.status }
+
 Say "Testing remote access of Nightjar $Version"
 try {
 FreshNightjar
@@ -47,11 +51,10 @@ Check "No token: refused under /nj too (the Tailscale address)" ((Phone "/nj/lib
 Check "No token: settings are refused" ((Phone "/prefs").status -eq 401)
 Check "Made-up token: refused" ((Phone "/library" "made-up-token").status -eq 401)
 $prefsBefore = (Helper "/prefs").prefs
-try { $big = Phone "/prefs" $null "POST" ("{""x"":""" + ("a" * 2000000) + """}"); $bigStatus = $big.status } catch { $bigStatus = "closed" }
-Check "No token: a large upload is refused without being read" (($bigStatus -eq 401 -or $bigStatus -eq "closed") -and (Helper "/prefs").prefs -eq $prefsBefore) "status $bigStatus"
-# Nightjar answers 413 and closes at once, often before the request is even sent: either counts as refused.
-try { $hugeStatus = (Call "$R/pair" "POST" ("{""secret"":""" + ("a" * 10000) + """}")).status } catch { $hugeStatus = "closed" }
-Check "Pairing: an oversized request is refused" (($hugeStatus -eq 413 -or $hugeStatus -eq "closed") -and (Phone "/ping").status -eq 200) "status $hugeStatus"
+$big = Phone "/prefs" $null "POST" ("{""x"":""" + ("a" * 2000000) + """}")
+Check "No token: a large upload is refused without being read" ((Refused $big) -and (Helper "/prefs").prefs -eq $prefsBefore) "status $($big.status)"
+$huge = Call "$R/pair" "POST" ("{""secret"":""" + ("a" * 10000) + """}")
+Check "Pairing: an oversized request is refused" ((Refused $huge) -and (Phone "/ping").status -eq 200) "status $($huge.status)"
 
 # --- pairing --------------------------------------------------------------------------------
 $p = Pair $enginePassword
@@ -66,12 +69,12 @@ $devices = Get-Content (Join-Path $Data "devices.json") -Raw
 Check "Devices file keeps only a hash of the token" ($devices -notmatch [regex]::Escape($t1) -and $devices -match "Test phone")
 
 # --- what a signed-in phone may and may not do ----------------------------------------------
-$lib = Phone "/library" $t1
-Check "Phone: sees the library" ($lib.status -eq 200 -and $lib.json.root -eq $Lib) "status $($lib.status)"
+$seen = Phone "/library" $t1
+Check "Phone: sees the library" ($seen.status -eq 200 -and $seen.json.root -eq $Lib) "status $($seen.status), root $($seen.json.root)"
 $set = Phone "/library" $t1 "POST" @{ root = "C:\" }
-Check "Phone: can't change the library folder" ($set.status -eq 403 -and (Helper "/library").root -eq $Lib) "status $($set.status)"
+Check "Phone: can't change the library folder" ((Refused $set) -and (Helper "/library").root -eq $Lib) "status $($set.status)"
 $pcOnly = "/quit", "/show", "/remote/code", "/remote/lan", "/tailscale/install", "/tailscale/login", "/tailscale/serve", "/tailscale/test", "/reveal", "/pick-folder", "/pick-image", "/image", "/upnp", "/firewall"
-$let = @($pcOnly | Where-Object { (Phone $_ $t1 "POST" @{}).status -ne 403 })
+$let = @($pcOnly | Where-Object { -not (Refused (Phone $_ $t1 "POST" @{})) })
 Check "Phone: everything only the PC may do is refused" ($let.Count -eq 0) "allowed: $($let -join ', ')"
 Check "Phone: Quit from the phone didn't stop Nightjar" ((Helper "/ping").ok -and (Running "Nightjar"))
 
@@ -125,8 +128,8 @@ $right = NewCode
 $lockedAfter = $null
 for ($i = 1; $i -le 8 -and -not $lockedAfter; $i++) { if ((Pair "WRONG$i").status -eq 429) { $lockedAfter = $i } }
 Check "Lockout: pairing locks after a few wrong tries" ($lockedAfter -and $lockedAfter -le 6) "locked at try $lockedAfter"
-$r = Pair $right
-Check "Lockout: while locked, even the right code is refused" ($r.status -eq 429 -and $r.json.wait -gt 0) "status $($r.status), wait $($r.json.wait) s"
+$locked = Pair $right
+Check "Lockout: while locked, even the right code is refused" ($locked.status -eq 429 -and $locked.json.wait -gt 0) "status $($locked.status), wait $($locked.json.wait) s"
 SaveLogs "remote"
 }
 catch {
