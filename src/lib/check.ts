@@ -5,6 +5,18 @@ import { useStore } from '../store';
 import { noteCheck } from './fakes';
 
 /**
+ * A verdict as shown. Checks before 0.8.4 called an unconfirmable hi-res track or album just "Hi-res", the same
+ * word Search and Library use for any 24-bit file; it reads "Probably hi-res" now.
+ */
+export const verdictText = (verdict: string) => (verdict === 'Hi-res' ? 'Probably hi-res' : verdict);
+
+/** An album's note as shown (see verdictText). */
+export const checkNote = (c: Pick<SavedCheck, 'verdict' | 'note'>) =>
+  c.verdict === 'Hi-res' && c.note === 'Every track looks genuine.'
+    ? 'Every track looks genuine, but most have too little high sound to confirm hi-res.'
+    : c.note;
+
+/**
  * Checks one album's files with the Nightjar app and keeps the verdict with the album.
  * Returns an error message, or null when the check finished.
  */

@@ -9,6 +9,7 @@ import { rescanAndWait, scanOnce, useShareVersion } from '../lib/shareVersion';
 import { Icon } from '../components/Icon';
 import { Pulse } from '../components/Pulse';
 import { Cover } from '../components/Cover';
+import { QualityGuide } from '../components/QualityGuide';
 import { groupCoverDir, useLocalFiles } from '../lib/useLocal';
 import { groupDownloads } from '../lib/transfers';
 import { localShareDir } from '../lib/covers';
@@ -539,6 +540,7 @@ function Results({ id }: { id: string }) {
               onChange={(e) => setFilters(id, { text: e.target.value })}
             />
           </div>
+          <QualityGuide />
         </div>
 
         {newCount > 0 && (

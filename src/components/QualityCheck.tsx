@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { usePrefs } from '../prefs';
-import { runCheck, useCheckAll } from '../lib/check';
+import { checkNote, runCheck, useCheckAll, verdictText } from '../lib/check';
 import { useStore } from '../store';
+import { QualityGuide } from './QualityGuide';
 
 /** Severity to a tone: green, amber or red. */
 const tone = (sev: number) => (sev < 0 ? 'none' : sev >= 7 ? 'bad' : sev >= 3 ? 'warn' : 'ok');
@@ -56,8 +57,8 @@ export function CheckResult({ check, onFindAnother }: { check: ReturnType<typeof
   return (
     <div className={`check ${t}`}>
       <div className="check-head">
-        <span className={`check-chip ${t}`}>{t === 'ok' ? '✓ ' : t === 'warn' ? '⚠ ' : t === 'none' ? '– ' : '✕ '}{c.verdict}</span>
-        <span className="check-note">{c.note}</span>
+        <span className={`check-chip ${t}`}>{t === 'ok' ? '✓ ' : t === 'warn' ? '⚠ ' : t === 'none' ? '– ' : '✕ '}{verdictText(c.verdict)}</span>
+        <span className="check-note">{checkNote(c)}</span>
         {c.tracks.length > 0 && (
           <button className="link" onClick={() => setOpen((o) => !o)}>
             {open ? 'Hide tracks' : 'Each track'}
@@ -75,7 +76,7 @@ export function CheckResult({ check, onFindAnother }: { check: ReturnType<typeof
             {c.tracks.map((x) => (
               <tr key={x.name} className={tone(x.severity)}>
                 <td className="name">{x.name}</td>
-                <td className="verdict">{x.verdict}</td>
+                <td className="verdict">{verdictText(x.verdict)}</td>
                 <td className="dim">{x.cutoff ? `${(x.cutoff / 1000).toFixed(1)} kHz` : ''}</td>
                 <td className="dim note">{x.note}</td>
               </tr>
@@ -83,6 +84,7 @@ export function CheckResult({ check, onFindAnother }: { check: ReturnType<typeof
           </tbody>
         </table>
       )}
+      <QualityGuide first="checks" />
     </div>
   );
 }

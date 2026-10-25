@@ -34,6 +34,8 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'An album deleted from Downloads can be downloaded again straight away',
       'Downloads follow albums you put in your library, so they keep playing',
       'Clearer reason when someone’s copy changed since your search',
+      'Check quality says “Probably hi-res” when the sound can’t confirm hi-res',
+      '“What do these labels mean?” explains the quality labels in Search and Check quality',
       'Fixed download speeds sometimes shown with long, odd numbers',
     ],
   },

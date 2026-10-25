@@ -326,7 +326,8 @@ namespace Nightjar
                     if (s.cutoff <= 26500 && s.sharp) { t.verdict = "Upsampled"; t.note = "Sold as hi-res, but the sound stops at " + KHz(s.cutoff) + ": made from a CD-quality master."; t.severity = 5; }
                     else if (s.cutoff < 20500 && s.sharp) LossySource(t, s.cutoff);
                     else if (s.cutoff >= nyq * 0.55) { t.verdict = "True hi-res"; t.note = "Sound goes up to " + KHz(s.cutoff) + "."; }
-                    else { t.verdict = "Hi-res"; t.note = "Little sound above " + KHz(s.cutoff) + ", but no sign of a lossy source."; }
+                    // Genuine-looking, but the sound alone can't prove it: many recordings have little up there.
+                    else { t.verdict = "Probably hi-res"; t.note = "Little sound above " + KHz(s.cutoff) + ", so its sound can't confirm hi-res; no sign of a CD or lossy source."; }
                 }
                 else
                 {
@@ -336,7 +337,7 @@ namespace Nightjar
                 }
                 if (fake24 && t.severity < 6)
                 {
-                    t.verdict = t.verdict == "Lossless" || t.verdict == "True hi-res" || t.verdict == "Hi-res" ? "Fake 24-bit" : t.verdict;
+                    t.verdict = t.verdict == "Lossless" || t.verdict == "True hi-res" || t.verdict == "Probably hi-res" ? "Fake 24-bit" : t.verdict;
                     t.note = "Labelled 24-bit, but the last 8 bits are always zero: it's 16-bit in a 24-bit file. " + t.note;
                     t.severity = Math.Max(t.severity, 4);
                 }
@@ -381,7 +382,9 @@ namespace Nightjar
             {
                 var main = tracks.GroupBy(t => t.verdict).OrderByDescending(g => g.Count()).First().Key;
                 verdict = main == "Lossless" ? "Verified lossless" : main == "True hi-res" ? "Verified hi-res" : main;
-                note = "Every track looks genuine.";
+                note = main == "Probably hi-res"
+                    ? "Every track looks genuine, but most have too little high sound to confirm hi-res."
+                    : "Every track looks genuine.";
             }
             else if (flagged.Count * 2 >= tracks.Count)
             {

@@ -1008,6 +1008,18 @@ button.pulse-tile:hover { background: color-mix(in srgb, var(--surface) 80%, var
 .check { margin-top: 8px; }
 .check-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 13px; }
 .check-chip { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+/* What the labels mean: opens in place under the filters, and under a check's result. */
+.quality-guide { margin-top: 8px; font-size: 13px; }
+.quality-guide-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px 28px; margin-top: 10px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
+.quality-guide h3 { margin: 0 0 2px; font-size: 14px; }
+.quality-guide section > p { margin: 0 0 10px; }
+.quality-guide dl { margin: 0; display: grid; gap: 8px; }
+.quality-guide dl > div { display: grid; grid-template-columns: 9.5em 1fr; gap: 10px; align-items: baseline; }
+.quality-guide dt { margin: 0; }
+.quality-guide dd { margin: 0; color: var(--ink-2); line-height: 1.4; }
+.quality-guide .chip.static { height: 24px; font-size: 12.5px; cursor: default; }
+.quality-guide .check-chip { display: inline-block; white-space: normal; }
+@media (max-width: 480px) { .quality-guide dl > div { grid-template-columns: 1fr; gap: 3px; } }
 .check-chip.ok { background: color-mix(in srgb, var(--t-high) 16%, transparent); color: var(--t-high); }
 .check-chip.warn { background: color-mix(in srgb, var(--t-mid) 18%, transparent); color: var(--t-mid); }
 .check-chip.none { background: var(--sunken); color: var(--ink-2); }

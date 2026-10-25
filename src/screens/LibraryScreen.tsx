@@ -6,7 +6,7 @@ import type { LibAlbum, LibraryInfo } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
-import { useCheckAll } from '../lib/check';
+import { useCheckAll, verdictText } from '../lib/check';
 import { useFilesAvailable } from '../lib/files';
 import { placeOf, useLibraryReview, type AlbumEdit } from '../lib/libraryReview';
 import { bytes } from '../lib/quality';
@@ -278,7 +278,7 @@ function AlbumRow({ a }: { a: LibAlbum }) {
           {c && !check.running && (
             <button className={`check-chip ${tone(c.severity)}`} onClick={() => setOpen((o) => !o)}>
               {tone(c.severity) === 'ok' ? '✓ ' : tone(c.severity) === 'warn' ? '⚠ ' : tone(c.severity) === 'none' ? '– ' : '✕ '}
-              {c.verdict}
+              {verdictText(c.verdict)}
             </button>
           )}
         </div>
