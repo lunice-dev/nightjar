@@ -73,7 +73,9 @@ export const useUpdates = create<{
       await new Promise((r) => setTimeout(r, 2000));
       try {
         const res = await fetch(`${HELPER}/update`, { signal: AbortSignal.timeout(4000) });
-        if (res.ok && ((await res.json()) as UpdateState).current !== from) {
+        // The helper answers a few seconds before the engine that serves this page: reloading then would load
+        // an empty page (a white screen on a phone). Wait until the page itself comes back too.
+        if (res.ok && ((await res.json()) as UpdateState).current !== from && (await pageIsBack())) {
           location.reload();
           return;
         }
@@ -84,6 +86,16 @@ export const useUpdates = create<{
     set({ restarting: false });
   },
 }));
+
+/** The page can be loaded again: its address answers with the real page, not an error from Tailscale or nothing. */
+async function pageIsBack() {
+  try {
+    const res = await fetch(location.origin + location.pathname, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+    return res.ok && (await res.text()).includes('id="root"');
+  } catch {
+    return false;
+  }
+}
 
 let polling = false;
 /** Looks at the app's update state now and then (the app itself checks GitHub every few hours). */
