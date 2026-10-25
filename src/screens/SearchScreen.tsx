@@ -13,9 +13,11 @@ import { groupCoverDir, useLocalFiles } from '../lib/useLocal';
 import { groupDownloads } from '../lib/transfers';
 import { localShareDir } from '../lib/covers';
 import {
+  AUDIO_EXT,
   TIERS,
   TIER_LABEL,
   basename,
+  extOf,
   bytes,
   duration,
   formatLabel,
@@ -28,6 +30,7 @@ import {
   type Release,
   type Tier,
 } from '../lib/quality';
+import type { SearchFile } from '../api/types';
 import { bestStart, sameFiles, smartDownload } from '../lib/smart';
 import { usePrefs } from '../prefs';
 import { fakeCounts } from '../lib/fakes';
@@ -697,6 +700,80 @@ function DownloadButton({ r, release, quiet, auto }: { r: FolderResult; release:
   );
 }
 
+/**
+ * The tracks of one copy, opened from its track count. A search result lists only the files that matched your
+ * words (and some clients send only part), so the whole folder is asked for when the list opens: tracks the search
+ * didn't show are added, marked as such.
+ */
+function TrackList({ r }: { r: FolderResult }) {
+  const backend = useStore((s) => s.backend);
+  const enqueue = useStore((s) => s.enqueue);
+  const queuedKeys = useStore((s) => s.queuedKeys);
+  const [folder, setFolder] = useState<{ filename: string; size: number }[] | null | 'asking'>('asking');
+  useEffect(() => {
+    let alive = true;
+    if (!backend) return setFolder(null);
+    backend
+      .folderContents(r.username, r.folder)
+      .catch(() => null)
+      .then((list) => alive && setFolder(list));
+    return () => {
+      alive = false;
+    };
+  }, [backend, r.username, r.folder]);
+
+  const known = new Set(r.audio.map((f) => f.filename.toLowerCase()));
+  const more = Array.isArray(folder)
+    ? folder.filter((f) => AUDIO_EXT.has(extOf(f.filename)) && !known.has(f.filename.toLowerCase()) && !/(^|[\\/])(__MACOSX|\._)/.test(f.filename))
+    : [];
+  const rows = [
+    ...r.audio.map((f) => ({ filename: f.filename, size: f.size, file: f as SearchFile | undefined })),
+    ...more.map((f) => ({ filename: f.filename, size: f.size, file: undefined })),
+  ].sort((a, b) => a.filename.localeCompare(b.filename, undefined, { numeric: true }));
+  const otherFiles = Array.isArray(folder)
+    ? folder.filter((f) => !AUDIO_EXT.has(extOf(f.filename))).map((f) => basename(f.filename))
+    : r.files.filter((f) => !r.audio.includes(f)).map((f) => basename(f.filename));
+
+  return (
+    <div>
+      <h3 className="subhead">
+        Tracks from {r.username}
+        {folder === 'asking' && <span className="dim"> · asking for the whole folder…</span>}
+        {more.length > 0 && <span className="dim"> · {more.length} more in the folder than the search showed</span>}
+      </h3>
+      <ol className="tracks">
+        {rows.map(({ filename, size, file }, i) => {
+          const queued = queuedKeys.has(`${r.username}\u0000${filename}`);
+          const name = basename(filename);
+          return (
+            <li key={filename} className={`track ${file ? `t-${tierOf(file)}` : 'extra'}`}>
+              <span className="no">{i + 1}</span>
+              <span className="name" title={filename.slice(r.folder.length + 1) || name}>
+                {name.replace(/\.[^.]+$/, '')}
+              </span>
+              <span className="dim">{file?.length ? duration(file.length) : ''}</span>
+              <span className="dim size">{file ? `${formatLabel(file)}, ${bytes(size)}` : `${extOf(filename).toUpperCase()}, ${bytes(size)} · not in the search`}</span>
+              <button
+                className="icon-btn"
+                disabled={queued}
+                onClick={() => enqueue(r.username, [{ filename, size }], name)}
+                aria-label={queued ? 'Queued' : `Download ${name}`}
+              >
+                <Icon name={queued ? 'check' : 'download'} size={16} />
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      {otherFiles.length > 0 && (
+        <p className="subhead" style={{ marginTop: 8 }}>
+          Also in the folder: {otherFiles.join(', ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const NO_ALBUMS: LibAlbum[] = [];
 
 export const ReleaseRow = memo(function ReleaseRow({
@@ -717,9 +794,9 @@ export const ReleaseRow = memo(function ReleaseRow({
   const better = betterThanYours(release, have);
   const others = release.sources.length - 1;
   const openProfile = useStore((s) => s.openProfile);
-  const enqueue = useStore((s) => s.enqueue);
-  const queuedKeys = useStore((s) => s.queuedKeys);
   const panelId = `rel-${r.key.replace(/[^a-z0-9]/gi, '')}`;
+  // The tracks open on their own, from the track count; "N more sources" opens the other copies.
+  const [tracksOpen, setTracksOpen] = useState(false);
 
   return (
     <article className={`release with-cover t-${r.tier}`}>
@@ -751,13 +828,16 @@ export const ReleaseRow = memo(function ReleaseRow({
           </button>
           {r.fakes ? <FakeNote n={r.fakes} /> : null}
           <IdentityNote c={checks[r.key]} r={r} />
-          {r.partial ? (
-            <span className="fake-note" title="Other people share more of this album. This copy sits below every complete one.">
-              ⚠ only {r.partial.have} of {r.partial.of} tracks
-            </span>
-          ) : (
-            <span>{r.audio.length} tracks</span>
-          )}
+          <button
+            className={`tracks-chip ${r.partial ? 'fake-note' : ''} ${tracksOpen ? 'on' : ''}`}
+            onClick={() => setTracksOpen((o) => !o)}
+            aria-expanded={tracksOpen}
+            aria-controls={`${panelId}-tracks`}
+            title={r.partial ? 'Other people share more of this album. This copy sits below every complete one.' : 'Show the tracks'}
+          >
+            {r.partial ? `⚠ only ${r.partial.have} of ${r.partial.of} tracks` : `${r.audio.length} tracks`}
+            <Icon name="chevron" size={12} />
+          </button>
           <span>{bytes(r.size)}</span>
           {r.length > 0 && <span>{duration(r.length)}</span>}
           <TeamChip release={release} />
@@ -773,17 +853,16 @@ export const ReleaseRow = memo(function ReleaseRow({
               {others} more {others === 1 ? 'source' : 'sources'}
             </button>
           )}
-          {others === 0 && (
-            <button className="link" onClick={() => onToggle(release.key)} aria-expanded={open} aria-controls={panelId}>
-              {open ? 'Hide tracks' : 'Show tracks'}
-            </button>
-          )}
         </div>
       </div>
 
-      {open && (
+      {tracksOpen && (
+        <div className="expand" id={`${panelId}-tracks`}>
+          <TrackList r={r} />
+        </div>
+      )}
+      {open && others > 0 && (
         <div className="expand" id={panelId}>
-          {others > 0 && (
             <div>
               <h3 className="subhead">Same release from other people</h3>
               <table className="sources">
@@ -818,36 +897,6 @@ export const ReleaseRow = memo(function ReleaseRow({
                 </tbody>
               </table>
             </div>
-          )}
-          <div>
-            <h3 className="subhead">Tracks from {r.username}</h3>
-            <ol className="tracks">
-              {r.audio.map((f, i) => {
-                const queued = queuedKeys.has(`${r.username}\u0000${f.filename}`);
-                return (
-                  <li key={f.filename} className={`track t-${tierOf(f)}`}>
-                    <span className="no">{i + 1}</span>
-                    <span className="name" title={basename(f.filename)}>{basename(f.filename).replace(/\.[^.]+$/, '')}</span>
-                    <span className="dim">{f.length ? duration(f.length) : ''}</span>
-                    <span className="dim size">{formatLabel(f)}, {bytes(f.size)}</span>
-                    <button
-                      className="icon-btn"
-                      disabled={queued}
-                      onClick={() => enqueue(r.username, [{ filename: f.filename, size: f.size }], basename(f.filename))}
-                      aria-label={queued ? 'Queued' : `Download ${basename(f.filename)}`}
-                    >
-                      <Icon name={queued ? 'check' : 'download'} size={16} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-            {r.extras > 0 && (
-              <p className="subhead" style={{ marginTop: 8 }}>
-                Also in the folder: {r.files.filter((f) => !r.audio.includes(f)).map((f) => basename(f.filename)).join(', ')}
-              </p>
-            )}
-          </div>
         </div>
       )}
       </div>

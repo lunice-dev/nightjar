@@ -293,6 +293,11 @@ button { cursor: pointer; }
 .release-title .year { font-weight: 400; color: var(--ink-3); margin-left: 8px; font-size: 16px; }
 .release-side { display: flex; align-items: center; gap: 16px; grid-row: span 2; }
 .meta { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--ink-2); font-size: 13.5px; margin-top: 6px; }
+/* The track count opens the tracklist: it reads like the rest of the line, with a small arrow. */
+.tracks-chip { display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.tracks-chip svg { rotate: -90deg; transition: rotate 0.15s; opacity: 0.7; }
+.tracks-chip.on svg { rotate: 0deg; }
+.track.extra .name { font-style: italic; }
 .meta .muted { color: var(--ink-3); }
 .slot-free { color: var(--t-high); font-weight: 600; }
 .slot-busy { color: var(--ink-3); }
