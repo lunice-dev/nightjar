@@ -296,11 +296,28 @@ namespace Nightjar
         /// An album's picture: an image file in its folder, or else the artwork saved inside its
         /// music files (most downloads only have that). Embedded pictures are kept in memory a while.
         /// </summary>
-        static void SendCover(Stream stream, string dir)
+        static void SendCover(Stream stream, string dir, int size = 0)
         {
             var file = FindCover(dir);
-            if (file != null) { SendImage(stream, file); return; }
-            var art = EmbeddedArt(dir);
+            if (file != null && size == 0) { SendImage(stream, file); return; }
+            byte[] small = null;
+            try { small = file != null ? Thumbs.OfFile(file, size) : null; }
+            catch (Exception e) { Log.Write("Cover copy not made for " + dir + ": " + e.Message); }
+            if (file != null && small == null) { SendImage(stream, file); return; }
+            var art = file == null ? EmbeddedArt(dir) : null;
+            if (small == null && art != null && size > 0)
+            {
+                try { small = Thumbs.OfBytes(art.Item1, size); }
+                catch (Exception e) { Log.Write("Cover copy not made for " + dir + ": " + e.Message); }
+            }
+            if (small != null)
+            {
+                // The small copy only changes when the picture does; the phone may keep it for a day.
+                var h = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: " + small.Length + "\r\nCache-Control: private, max-age=86400\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n");
+                stream.Write(h, 0, h.Length);
+                stream.Write(small, 0, small.Length);
+                return;
+            }
             if (art == null) { SendImage(stream, null); return; }
             var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + art.Item2 + "\r\nContent-Length: " + art.Item1.Length + "\r\nCache-Control: private, max-age=3600\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n");
             stream.Write(head, 0, head.Length);
@@ -461,7 +478,7 @@ namespace Nightjar
                     { Reply(stream, 403, null, new { }); return; }
                 }
                 if (req.Path == "/stream") await SendTrack(req, stream).ConfigureAwait(false);
-                else if (req.Path == "/cover") SendCover(stream, req.Q("dir"));
+                else if (req.Path == "/cover") SendCover(stream, req.Q("dir"), Thumbs.Bucket(req.Q("w")));
                 else SendImage(stream, req.Q("path"));
                 return;
             }

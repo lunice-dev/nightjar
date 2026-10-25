@@ -25,7 +25,7 @@ export function useAlbumArt(dir: string | undefined, artist?: string | null, alb
     let alive = true;
     setArt(null);
     (async () => {
-      const local = await backend.files.coverUrl(dir).catch(() => null);
+      const local = await backend.files.coverUrl(dir, 1000).catch(() => null);
       if (local && (await loads(local))) return alive && setArt(local);
       if (!album) return;
       const web = await onlineCover(artist ?? undefined, album).catch(() => null);

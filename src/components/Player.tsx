@@ -4,6 +4,7 @@ import { audioCtl, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueIt
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { FullPlayer } from './FullPlayer';
+import { useScrub } from '../lib/scrub';
 import { generatedCover, onlineCover } from '../lib/covers';
 
 /**
@@ -96,7 +97,7 @@ export function Player() {
     let alive = true;
     setCover(null);
     (async () => {
-      const local = await backend.files.coverUrl(track.dir).catch(() => null);
+      const local = await backend.files.coverUrl(track.dir, 1000).catch(() => null);
       if (local && (await loads(local))) return alive && setCover(local);
       const web = await onlineCover(track.artist ?? undefined, track.album ?? undefined).catch(() => null);
       if (web && (await loads(web))) return alive && setCover(web);
@@ -206,6 +207,10 @@ export function Player() {
     />
   );
 
+  const scrub = useScrub(time, (t) => {
+    if (audio.current) audio.current.currentTime = t;
+  });
+
   // The same tree with or without a track, so the <audio> element is never replaced.
   if (!track)
     return (
@@ -216,7 +221,7 @@ export function Player() {
     );
 
   const p = usePlayer.getState();
-  const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
+  const progress = duration > 0 ? Math.min(100, (scrub.shown / duration) * 100) : 0;
 
   return (
     <>
@@ -246,7 +251,7 @@ export function Player() {
           </button>
         </div>
         <span className="player-time hide-narrow">
-          {fmtTime(time)} / {fmtTime(duration)}
+          {fmtTime(scrub.shown)} / {fmtTime(duration)}
         </span>
         <button className="player-btn close" onClick={() => p.stop()} aria-label="Stop and close the player">
           <Icon name="close" size={16} />
@@ -257,12 +262,10 @@ export function Player() {
           min={0}
           max={duration || 0}
           step={1}
-          value={Math.min(time, duration || 0)}
+          value={Math.min(scrub.shown, duration || 0)}
           aria-label="Position"
           style={{ ['--p' as string]: `${progress}%` }}
-          onChange={(e) => {
-            if (audio.current) audio.current.currentTime = Number(e.target.value);
-          }}
+          {...scrub.props}
         />
       </div>
     </div>

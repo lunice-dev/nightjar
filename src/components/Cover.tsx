@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { generatedCover, onlineCover } from '../lib/covers';
+import { coverSize } from '../api/slskd';
 import { useStore } from '../store';
 
 /**
@@ -30,9 +31,11 @@ export function Cover({
 }) {
   const backend = useStore((s) => s.backend);
   const ref = useRef<HTMLSpanElement>(null);
-  const cacheKey = `${dir ?? ''}|${artist ?? ''}|${album ?? ''}`;
-  const known = found.get(cacheKey);
-  const [seen, setSeen] = useState(!!known);
+  // The size it's shown at (sharp on this screen), in the steps the computer makes copies in.
+  const [px, setPx] = useState(0);
+  const cacheKey = `${dir ?? ''}|${artist ?? ''}|${album ?? ''}|${px}`;
+  const known = px ? found.get(cacheKey) : undefined;
+  const [seen, setSeen] = useState(false);
   const [srcs, setSrcs] = useState<string[]>(known ? [known] : []);
   const [i, setI] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -40,10 +43,22 @@ export function Cover({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver((e) => e.some((x) => x.isIntersecting) && setSeen(true), { rootMargin: '200px' });
+    const size = () => setPx(coverSize(Math.max(el.getBoundingClientRect().width, 60) * (window.devicePixelRatio || 1)));
+    size();
+    const io = new IntersectionObserver(
+      (e) => {
+        if (!e.some((x) => x.isIntersecting)) return;
+        size();
+        setSeen(true);
+      },
+      { rootMargin: '200px' },
+    );
     io.observe(el);
     // A window that isn't painting (a hidden frame, some embedded browsers) never reports; load anyway.
-    const t = setTimeout(() => setSeen(true), 2000);
+    const t = setTimeout(() => {
+      size();
+      setSeen(true);
+    }, 2000);
     return () => {
       io.disconnect();
       clearTimeout(t);
@@ -72,7 +87,7 @@ export function Cover({
       if (dir && backend) {
         // Never wait long on the helper: a phone, or a browser that blocks it, just moves on.
         const local = await Promise.race([
-          backend.files.coverUrl(dir).catch(() => null),
+          backend.files.coverUrl(dir, px).catch(() => null),
           new Promise<null>((r) => setTimeout(() => r(null), 3000)),
         ]);
         if (!gone && local) setSrcs([local]);
@@ -82,7 +97,7 @@ export function Cover({
     return () => {
       gone = true;
     };
-  }, [seen, dir, backend, cacheKey]);
+  }, [seen, dir, backend, cacheKey, px]);
 
   // Only when there's no picture on this computer: ask the Cover Art Archive.
   const exhausted = localDone && i >= srcs.length;

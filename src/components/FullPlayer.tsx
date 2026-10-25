@@ -6,6 +6,7 @@ import { Mark } from './Mark';
 import { WindowControls } from './WindowControls';
 import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
+import { useScrub } from '../lib/scrub';
 
 /**
  * The large player, over the whole app: big album art, the time bar, the buttons and what plays
@@ -74,8 +75,12 @@ export function FullPlayer({
     return () => window.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const remaining = Math.max(0, duration - time);
-  const progress = duration > 0 ? Math.min(100, (time / duration) * 100) : 0;
+  const scrub = useScrub(time, (t) => {
+    if (audioCtl.el) audioCtl.el.currentTime = t;
+  });
+  const shown = scrub.shown;
+  const remaining = Math.max(0, duration - shown);
+  const progress = duration > 0 ? Math.min(100, (shown / duration) * 100) : 0;
   const upNext = queue.map((q, i) => ({ q, i })).filter(({ i }) => i > index);
   const played = queue.map((q, i) => ({ q, i })).filter(({ i }) => i < index);
 
@@ -152,15 +157,13 @@ export function FullPlayer({
               min={0}
               max={duration || 0}
               step={0.5}
-              value={Math.min(time, duration || 0)}
+              value={Math.min(shown, duration || 0)}
               aria-label="Position"
               style={{ ['--p' as string]: `${progress}%` }}
-              onChange={(e) => {
-                if (audioCtl.el) audioCtl.el.currentTime = Number(e.target.value);
-              }}
+              {...scrub.props}
             />
             <div className="fp-times">
-              <span>{fmtTime(time)}</span>
+              <span>{fmtTime(shown)}</span>
               <span>{waiting && playing ? 'loading…' : ''}</span>
               <span>−{fmtTime(remaining)}</span>
             </div>

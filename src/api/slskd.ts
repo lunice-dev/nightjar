@@ -6,6 +6,9 @@ import { pickFolderHere } from '../components/FolderBrowser';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { isScalar, isSeq, parseDocument, type Document } from 'yaml';
 import { ApiError, type Backend, type Direction, type FileAccess, type FolderAccess, type LinkProblem, type PortCheck, type SignInResult, type SearchWatch, type Unsubscribe } from './backend';
+
+/** The sizes the computer makes covers in (the same steps as Thumbs.cs), so equal requests share one copy. */
+export const coverSize = (px: number) => [160, 320, 640, 1000].find((s) => px <= s) ?? 1000;
 import type {
   BrowseResult,
   ChatMessage,
@@ -731,9 +734,10 @@ export class SlskdBackend implements Backend {
         return null;
       }
     },
-    coverUrl: async (dir) => {
+    coverUrl: async (dir, width) => {
       const key = await this.imageKey();
-      return key ? `${HELPER}/cover?k=${key}&dir=${enc(dir)}` : null;
+      // With a width, the computer sends a small copy at that size (much less to download on a phone).
+      return key ? `${HELPER}/cover?k=${key}&dir=${enc(dir)}${width ? `&w=${coverSize(width)}` : ''}` : null;
     },
     pictureUrl: async (path) => {
       const key = await this.imageKey();

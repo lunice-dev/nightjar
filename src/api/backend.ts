@@ -141,7 +141,7 @@ export interface FileAccess {
    * An <img> address for the album art in a folder on this computer (cover.jpg,
    * folder.png…), or null when the helper isn't reachable (a phone).
    */
-  coverUrl(dir: string): Promise<string | null>;
+  coverUrl(dir: string, width?: number): Promise<string | null>;
   /** An <img> address for a picture file on the computer (a playlist's cover). */
   pictureUrl(path: string): Promise<string | null>;
   /**
