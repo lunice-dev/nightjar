@@ -8,7 +8,7 @@ export const VERSION = '0.7';
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
     version: '0.8',
-    date: '24 Oct 2026',
+    date: '25 Oct 2026',
     title: 'Nightjar on your phone, anywhere',
     items: [
       'Remote access: use Nightjar on your phone or another computer away from home, through Tailscale (free, private, nothing open to the internet). Settings → Remote access walks you through it and installs Tailscale for you',
@@ -24,7 +24,8 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Something not working? Make a report from Settings or About, also from your phone, which can send it straight from the share sheet. It now says what remote access is doing',
       'Fake albums: a folder named after one album that holds another is caught before you download (its track names are compared with the real album on MusicBrainz, or with other people’s copies), and while it downloads (the first track’s tags are read as it arrives; the rest pauses and you choose). The person who shared it goes last in searches',
       'Safer: updates install only when signed by Nightjar’s own release key; only the computer changes the library folder; Delete only ever removes album folders',
-      'Your home Wi-Fi can stay open to phones without Tailscale (search, downloads, chat), with the remote password',
+      'Your home Wi-Fi can stay open to phones without Tailscale (everything, playing music too), with a code or the remote password',
+      'On mobile data: covers come at the size they’re shown (made once by your computer), and dragging the time bar is smooth: the music jumps once, when you let go',
       'Uploads and Activity show when things happened, grouped by day; block someone straight from Uploads',
       'Click any name for a profile card; people who sent you fake copies are remembered and ranked down',
       'Leech rules and friends first decide who gets your uploads; smart downloads fetch the whole album and warn when a copy is incomplete',
