@@ -1,5 +1,6 @@
 # Builds the installer exactly as a release does (without signing it) and installs it on a fresh Windows:
-# clean install, first start, Tailscale, uninstall, update from 0.7.0, and the built-in updater.
+# clean install, first start, Tailscale, uninstall, update from 0.7.0, and the built-in updater; then the
+# library tools on a made-up library, and remote access as a phone reaches it.
 # Publishes nothing. Results are in the run's summary; Nightjar's logs are in the "install-test" artifact.
 name: Install test
 on:
@@ -46,9 +47,16 @@ jobs:
         # Windows PowerShell, not pwsh: Nightjar runs powershell.exe (to check Tailscale's signature) and inherits
         # this step's module path, which under pwsh points at modules Windows PowerShell can't load.
         shell: powershell
-        run: |
-          $setup = Get-ChildItem installer/out/Nightjar-Setup-*.exe | Select-Object -First 1
-          ./installer/test/install-test.ps1 -Setup $setup.FullName -Out test-out
+        run: ./installer/test/install-test.ps1 -Setup (Get-ChildItem installer/out/Nightjar-Setup-*.exe)[0].FullName -Out test-out
+      # Each step installs Nightjar afresh, so one failing doesn't stop the others from running.
+      - name: Library tools (Tidy library, organiser, Delete)
+        if: success() || failure()
+        shell: powershell
+        run: ./installer/test/library-test.ps1 -Setup (Get-ChildItem installer/out/Nightjar-Setup-*.exe)[0].FullName -Out test-out
+      - name: Remote access
+        if: success() || failure()
+        shell: powershell
+        run: ./installer/test/remote-test.ps1 -Setup (Get-ChildItem installer/out/Nightjar-Setup-*.exe)[0].FullName -Out test-out
       - if: always()
         uses: actions/upload-artifact@v4
         with:
