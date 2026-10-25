@@ -19,8 +19,21 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
   {
     version: '0.8.4',
     date: '25 Oct 2026',
-    title: 'Clearer download speeds',
-    items: ['Albums downloading from several people show each person’s speed', 'The total download speed is steadier'],
+    title: 'Seeking, tracklists and download fixes',
+    items: [
+      'Hold the previous or next button to rewind or fast-forward',
+      'Double-tap the album cover to go back or forward 10 seconds',
+      'Drag along the time bar more finely by moving your finger away from it',
+      'Long tracks get buttons to go back 15 or forward 30 seconds',
+      'On a computer, the arrow keys move 5 seconds, or 30 with Shift',
+      'Tap an album’s track count in Search to see its tracks before downloading',
+      'Albums downloading from several people show each person’s speed, and the total is steadier',
+      'Albums started on your phone no longer show up several times in Downloads',
+      'An album deleted from Downloads can be downloaded again straight away',
+      'Downloads follow albums you put in your library, so they keep playing',
+      'Clearer reason when someone’s copy changed since your search',
+      'Fixed download speeds sometimes shown with long, odd numbers',
+    ],
   },
   {
     version: '0.8.3',
@@ -123,7 +136,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
     ],
   },
 ];
-
+
 
 /**
  * Hidden, for trying the fake-album check on a real download: five quick taps on the title arm it (or disarm it).
