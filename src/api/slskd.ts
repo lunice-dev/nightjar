@@ -111,7 +111,7 @@ export class SlskdBackend implements Backend {
    * Every call gives up after a while (30 s, or what the caller says), so a busy or
    * restarting engine shows an error instead of a page that waits forever.
    */
-  private async request<T>(method: string, path: string, body?: unknown, timeout = 30_000, retried = false): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown, timeout = 30_000, retried = false, attempt = 0): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -132,6 +132,14 @@ export class SlskdBackend implements Backend {
     }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      // slskd checks its settings on most requests, and part of that check opens the profile picture so that
+      // nothing else may open it at the same moment: two requests together (or someone viewing your profile on
+      // Soulseek) make one of them fail with "A validation error has occurred", though nothing is wrong.
+      // Reading is safe to ask again after a moment.
+      if (res.status === 500 && method === 'GET' && attempt < 3 && /validation error/i.test(text)) {
+        await new Promise((r) => setTimeout(r, 80 + Math.random() * 220 * (attempt + 1)));
+        return this.request<T>(method, path, body, timeout, retried, attempt + 1);
+      }
       throw new ApiError(text || `${method} ${path} failed with ${res.status}`, res.status);
     }
 
