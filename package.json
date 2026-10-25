@@ -7,6 +7,7 @@
     "build": "tsc --noEmit && vite build",
     "build:demo": "tsc --noEmit && vite build --mode demo",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "license": "AGPL-3.0-only",
@@ -28,7 +29,8 @@
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "^7.0.2",
     "vite": "^5.4.21",
-    "vite-plugin-singlefile": "^2.3.4"
+    "vite-plugin-singlefile": "^2.3.4",
+    "vitest": "^2.1.9"
   },
   "private": true,
   "type": "module"

@@ -1,6 +1,7 @@
 # Builds the installer exactly as a release does (without signing it) and installs it on a fresh Windows:
 # clean install, first start, Tailscale, uninstall, update from 0.7.0, and the built-in updater; then the
-# library tools on a made-up library, and remote access as a phone reaches it.
+# library tools on a made-up library, remote access as a phone reaches it, and Check quality's verdicts.
+# Before building, the interface's own tests (npm test).
 # Publishes nothing. Results are in the run's summary; Nightjar's logs are in the "install-test" artifact.
 name: Install test
 on:
@@ -26,6 +27,8 @@ jobs:
           dotnet-version: 8.0.x
       - run: sudo apt-get update && sudo apt-get install -y nsis unzip
       - run: npm ci
+      - name: Interface tests (fake-album checks)
+        run: npm test
       - run: bash installer/build.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -57,6 +60,10 @@ jobs:
         if: success() || failure()
         shell: powershell
         run: ./installer/test/remote-test.ps1 -Setup (Get-ChildItem installer/out/Nightjar-Setup-*.exe)[0].FullName -Out test-out
+      - name: Check quality
+        if: success() || failure()
+        shell: powershell
+        run: ./installer/test/quality-test.ps1 -Setup (Get-ChildItem installer/out/Nightjar-Setup-*.exe)[0].FullName -Out test-out
       - if: always()
         uses: actions/upload-artifact@v4
         with:
