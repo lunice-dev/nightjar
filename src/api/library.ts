@@ -171,6 +171,10 @@ export interface LibraryAccess {
   playlists(): Promise<PlaylistSummary[] | null>;
   playlist(id: string): Promise<PlaylistFull | null>;
   changePlaylist(change: PlaylistChange): Promise<{ ok: boolean; error?: string; playlist?: PlaylistSummary; added?: number }>;
+  /** The copies of your playlists kept automatically, newest first. */
+  playlistBackups(): Promise<PlaylistBackup[]>;
+  /** Goes back to one of them (what's there now is kept as a backup first). */
+  restorePlaylists(name: string): Promise<{ ok: boolean; error?: string }>;
   /** A picture from this device becomes the playlist's cover. */
   playlistImage(id: string, picture: Blob): Promise<{ ok: boolean; error?: string }>;
 }
@@ -192,6 +196,15 @@ export interface PlaylistTrack extends Track {
   dir: string;
   /** The file isn't there any more and wasn't found elsewhere: shown greyed out and skipped. */
   missing?: boolean;
+}
+
+export interface PlaylistBackup {
+  name: string;
+  /** Local time, ISO without zone. */
+  when: string;
+  playlists: number;
+  tracks: number;
+  readable: boolean;
 }
 
 export interface PlaylistFull {
@@ -283,6 +296,8 @@ export function helperLibrary(helper: string): LibraryAccess {
       return r && 'tracks' in r ? r : null;
     },
     changePlaylist: (change) => post('/playlists', change, 30_000),
+    playlistBackups: async () => (await get<PlaylistBackup[]>('/playlists/backups', 15_000)) ?? [],
+    restorePlaylists: (name) => post('/playlists/restore', { name }, 30_000),
     playlistImage: async (id, picture) => {
       try {
         const res = await fetch(`${helper}/playlist/cover?id=${enc(id)}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: picture, signal: AbortSignal.timeout(60_000) });
@@ -454,6 +469,8 @@ export function demoLibrary(): LibraryAccess {
       p.updated = now;
       return { ok: true, playlist: summaryOf(p), added: c.action === 'add' ? c.tracks.length : undefined };
     },
+    playlistBackups: async () => [],
+    restorePlaylists: async () => ({ ok: false, error: 'Sample data has no backups.' }),
     playlistImage: async () => ({ ok: false, error: 'Sample data can’t keep pictures.' }),
     tracks: async (dir) => {
       // Sample data: a made-up album, so the player can be tried (it plays silence).

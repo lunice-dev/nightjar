@@ -54,6 +54,7 @@ namespace Nightjar
             Updater.Start(() => form.BeginInvoke((Action)(() => Quit())));
             helper.Start();
             Tailscale.UpgradeServe();
+            Playlists.Backup();
 
             engine.Status += text => form.BeginInvoke((Action)(() => form.SetStatus(text)));
             engine.Failed += p => form.BeginInvoke((Action)(() => { form.ShowProblem(p); ShowWindow(); }));

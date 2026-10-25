@@ -48,18 +48,160 @@ namespace Nightjar
             public List<Entry> tracks { get; set; } = new List<Entry>();
         }
 
+        /// <summary>
+        /// Reads the playlists. A file that is missing or damaged is never treated as "no playlists": the newest
+        /// good backup is put back instead, and the damaged file is kept aside. A file that is only busy for a
+        /// moment is waited for, never mistaken for an empty one (the next save would wipe everything).
+        /// </summary>
         static List<Playlist> Load()
         {
-            try { return Json.Deserialize<List<Playlist>>(System.IO.File.ReadAllText(File)) ?? new List<Playlist>(); }
-            catch { return new List<Playlist>(); }
+            if (!System.IO.File.Exists(File)) return RestoreNewest("the playlists file was missing") ?? new List<Playlist>();
+            string text = null;
+            for (int attempt = 0; ; attempt++)
+            {
+                try { text = System.IO.File.ReadAllText(File); break; }
+                catch (IOException) when (attempt < 4) { System.Threading.Thread.Sleep(150); }
+            }
+            try { return Json.Deserialize<List<Playlist>>(text) ?? new List<Playlist>(); }
+            catch (Exception e)
+            {
+                Log.Write("Playlists file is damaged (" + e.Message + ")");
+                try { System.IO.File.Move(File, File + ".damaged-" + DateTime.Now.ToString("yyyyMMdd-HHmmss")); } catch { }
+                return RestoreNewest("the playlists file was damaged") ?? new List<Playlist>();
+            }
         }
 
         static void Save(List<Playlist> all)
         {
             Directory.CreateDirectory(Paths.Data);
+            Backup(false); // what's there now, before it changes
             var tmp = File + ".tmp";
             System.IO.File.WriteAllText(tmp, Json.Serialize(all), new UTF8Encoding(false));
             if (System.IO.File.Exists(File)) System.IO.File.Replace(tmp, File, null); else System.IO.File.Move(tmp, File);
+        }
+
+        // ---------------------------------------------------------------- backups
+
+        static string BackupDir => Path.Combine(Paths.Data, "backups", "playlists");
+        static readonly Regex BackupName = new Regex(@"^playlists-(\d{8}-\d{6})\.json$");
+
+        /// <summary>Backups, newest first.</summary>
+        static List<string> BackupFiles()
+        {
+            try
+            {
+                if (!Directory.Exists(BackupDir)) return new List<string>();
+                return Directory.GetFiles(BackupDir).Where(f => BackupName.IsMatch(Path.GetFileName(f))).OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal).ToList();
+            }
+            catch { return new List<string>(); }
+        }
+
+        static DateTime BackupTime(string file)
+        {
+            var m = BackupName.Match(Path.GetFileName(file));
+            return m.Success && DateTime.TryParseExact(m.Groups[1].Value, "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t) ? t : DateTime.MinValue;
+        }
+
+        /// <summary>
+        /// Keeps a copy of the playlists as they are now: at most one every 30 minutes while you edit (always one
+        /// when Nightjar starts, and before a restore), and never two identical in a row. The newest 10 stay, plus
+        /// the last one of each of the past 14 days.
+        /// </summary>
+        public static void Backup(bool force = true)
+        {
+            try
+            {
+                lock (Gate)
+                {
+                    if (!System.IO.File.Exists(File)) return;
+                    var current = System.IO.File.ReadAllBytes(File);
+                    if (current.Length < 3) return; // "[]": nothing worth keeping
+                    var files = BackupFiles();
+                    if (files.Count > 0)
+                    {
+                        if (!force && DateTime.Now - BackupTime(files[0]) < TimeSpan.FromMinutes(30)) return;
+                        if (System.IO.File.ReadAllBytes(files[0]).SequenceEqual(current)) return;
+                    }
+                    Directory.CreateDirectory(BackupDir);
+                    var name = Path.Combine(BackupDir, "playlists-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".json");
+                    System.IO.File.WriteAllBytes(name, current);
+                    Prune();
+                }
+            }
+            catch (Exception e) { Log.Write("Playlist backup failed: " + e.Message); }
+        }
+
+        static void Prune()
+        {
+            var files = BackupFiles();
+            var keep = new HashSet<string>(files.Take(10));
+            var seen = new HashSet<DateTime>();
+            foreach (var f in files)
+            {
+                var t = BackupTime(f);
+                if (DateTime.Now - t > TimeSpan.FromDays(14)) continue;
+                if (seen.Add(t.Date)) keep.Add(f);
+            }
+            foreach (var f in files.Where(f => !keep.Contains(f))) try { System.IO.File.Delete(f); } catch { }
+        }
+
+        static List<Playlist> TryRead(string file)
+        {
+            try { return Json.Deserialize<List<Playlist>>(System.IO.File.ReadAllText(file)); } catch { return null; }
+        }
+
+        /// <summary>Puts the newest readable backup back as the playlists file.</summary>
+        static List<Playlist> RestoreNewest(string why)
+        {
+            foreach (var f in BackupFiles())
+            {
+                var list = TryRead(f);
+                if (list == null) continue;
+                try
+                {
+                    Directory.CreateDirectory(Paths.Data);
+                    System.IO.File.Copy(f, File, true);
+                    Log.Write("Playlists restored from " + Path.GetFileName(f) + " because " + why);
+                    return list;
+                }
+                catch (Exception e) { Log.Write("Couldn't restore playlists: " + e.Message); return null; }
+            }
+            return null;
+        }
+
+        /// <summary>The backups you can go back to, newest first.</summary>
+        public static object Backups()
+        {
+            lock (Gate)
+                return BackupFiles().Select(f =>
+                {
+                    var list = TryRead(f);
+                    return new
+                    {
+                        name = Path.GetFileName(f),
+                        when = BackupTime(f).ToString("s"),
+                        playlists = list?.Count ?? 0,
+                        tracks = list?.Sum(x => x.tracks.Count) ?? 0,
+                        readable = list != null,
+                    };
+                }).ToList();
+        }
+
+        /// <summary>Goes back to a backup. What's there now is backed up first, so this can be undone.</summary>
+        public static object Restore(string name)
+        {
+            if (name == null || !BackupName.IsMatch(name)) return new { ok = false, error = "That isn't a backup." };
+            lock (Gate)
+            {
+                var file = Path.Combine(BackupDir, name);
+                if (!System.IO.File.Exists(file)) return new { ok = false, error = "That backup doesn't exist any more." };
+                if (TryRead(file) == null) return new { ok = false, error = "That backup can't be read." };
+                Backup(true);
+                try { System.IO.File.Copy(file, File, true); }
+                catch (Exception e) { return new { ok = false, error = "Couldn't restore it: " + e.Message }; }
+                Log.Write("Playlists restored from " + name + " by choice");
+                return new { ok = true };
+            }
         }
 
         static string NewId()

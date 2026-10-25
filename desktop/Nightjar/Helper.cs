@@ -559,6 +559,16 @@ namespace Nightjar
                     }
                     else Reply(stream, 200, origin, Playlists.List());
                     return;
+                case "/playlists/backups":
+                    Reply(stream, 200, origin, Playlists.Backups());
+                    return;
+                case "/playlists/restore":
+                    {
+                        if (req.Method != "POST") { Reply(stream, 405, origin, new { }); return; }
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        Reply(stream, 200, origin, Playlists.Restore(body.TryGetValue("name", out var n) ? n as string : null));
+                        return;
+                    }
                 case "/playlist":
                     {
                         var pl = Playlists.Get(req.Q("id"));
@@ -755,6 +765,17 @@ namespace Nightjar
                     {
                         var body = req.Body.Length > 0 ? Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body)) : new Dictionary<string, object>();
                         Reply(stream, 200, origin, Report.Make(body.TryGetValue("note", out var n) ? n as string : null));
+                        return;
+                    }
+                case "/report/file":
+                    {
+                        var f = Report.Find(req.Q("name"));
+                        if (f == null) { Reply(stream, 404, origin, new { error = "That report isn't there any more." }); return; }
+                        var bytes = File.ReadAllBytes(f);
+                        var head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: application/zip\r\nContent-Length: " + bytes.Length + "\r\nCache-Control: no-store\r\nConnection: close\r\n"
+                            + (origin != null ? "Access-Control-Allow-Origin: " + origin + "\r\nVary: Origin\r\n" : "") + "\r\n");
+                        stream.Write(head, 0, head.Length);
+                        stream.Write(bytes, 0, bytes.Length);
                         return;
                     }
                 case "/reveal":

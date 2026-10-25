@@ -1,4 +1,6 @@
 import { RemoteAccessSection } from '../components/RemoteAccess';
+import { PlaylistBackupsSection } from '../components/PlaylistBackups';
+import { ReportProblem } from '../components/ReportProblem';
 import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useState } from 'react';
 import type { LeechMode, Settings, ShareStatus } from '../api/types';
@@ -289,6 +291,8 @@ export function SettingsScreen() {
 
         <LibrarySection />
 
+        <PlaylistBackupsSection />
+
         <Reachability />
 
         <AccountSection />
@@ -420,6 +424,8 @@ export function SettingsScreen() {
         <ProfileSection settings={settings} readOnly={ro} canPick={canPick} onSaved={afterSave} />
 
         <Notifications />
+
+        <ReportProblem />
       </div>
     </div>
   );
