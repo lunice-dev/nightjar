@@ -1,6 +1,7 @@
 # Builds the installer exactly as a release does (without signing it) and installs it on a fresh Windows:
 # clean install, first start, Tailscale, uninstall, update from 0.7.0, and the built-in updater; then the
 # library tools on a made-up library, remote access as a phone reaches it, and Check quality's verdicts.
+# Beside them, a pairing code waited out to its expiry.
 # Before building, the interface's own tests (npm test).
 # Publishes nothing. Results are in the run's summary; Nightjar's logs are in the "install-test" artifact.
 name: Install test
@@ -68,5 +69,26 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: install-test
+          path: test-out
+          retention-days: 14
+
+  # A pairing code's 10 minutes, waited out on a machine of its own so the results above don't wait for it.
+  pairing-expiry:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: installer
+          path: installer/out
+      - name: Pairing code expires after 10 minutes
+        shell: powershell
+        run: ./installer/test/pairing-expiry-test.ps1 -Setup (Get-ChildItem installer/out/Nightjar-Setup-*.exe)[0].FullName -Out test-out
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pairing-expiry
           path: test-out
           retention-days: 14
