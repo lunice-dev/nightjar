@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Backend, Direction, Unsubscribe } from './api/backend';
-import type { Conversation, EnqueueFile, Search, SearchResponse, TransferUser } from './api/types';
+import { searchRunning, type Conversation, type EnqueueFile, type Search, type SearchResponse, type TransferUser } from './api/types';
 import { TIERS, type Tier } from './lib/quality';
 import { usePrefs } from './prefs';
 
@@ -12,6 +12,8 @@ export interface SearchTab {
   /** Answers from earlier searches for the same words. */
   earlier?: SearchResponse[];
   unwatch?: Unsubscribe;
+  /** You pressed Stop (or a newer search of yours needed the engine): its results may be partial. */
+  stoppedByYou?: boolean;
 }
 
 export interface Filters {
@@ -217,6 +219,10 @@ export const useStore = create<State>((set, get) => ({
         route: 'search',
         filters: { ...s.filters, [search.id]: defaultFilters() },
       }));
+      // The engine runs one search at a time: a new one waits behind yours still running. You moved on, so the
+      // earlier ones end now (keeping every answer they had) and this one starts straight away.
+      if (search.state === 'Queued')
+        for (const t of get().tabs) if (t.search.id !== search.id && searchRunning(t.search.state)) get().stopSearch(t.search.id);
       tab.unwatch = backend.watchSearch(search.id, {
         onResponses: (rs) =>
           set((s) => ({
@@ -247,6 +253,7 @@ export const useStore = create<State>((set, get) => ({
 
   stopSearch(id) {
     get().backend?.stopSearch(id).catch(() => undefined);
+    set((s) => ({ tabs: s.tabs.map((t) => (t.search.id === id ? { ...t, stoppedByYou: true } : t)) }));
   },
 
   setFilters: (id, f) =>

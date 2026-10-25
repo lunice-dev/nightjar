@@ -1,5 +1,6 @@
 import type { StreamAs } from '../lib/player';
 import { uuid } from '../lib/uuid';
+import { quietEnough } from '../lib/searchQuiet';
 import { helperLibrary } from './library';
 import { asDevice, helperBase, signHelperRequests } from './remote';
 import { pickFolderHere } from '../components/FolderBrowser';
@@ -322,6 +323,12 @@ export class SlskdBackend implements Backend {
 
     // Answers arrive fastest in the first seconds; after that, looking every few seconds is plenty.
     const started = Date.now();
+    // slskd hands over a search's answers only when it ends, and a search for something rare runs its full
+    // 30 seconds. Most answers come in the first few seconds, so once they stop coming the search is ended here
+    // and its results show.
+    let running = 0;
+    let counted = -1;
+    let countedAt = 0;
     const pollLoop = async () => {
       if (stopped || finished) return;
       const search = await catchUp(true);
@@ -329,7 +336,16 @@ export class SlskdBackend implements Backend {
         finish();
         return;
       }
-      poll = setTimeout(pollLoop, Date.now() - started < 8000 ? 1000 : 2500);
+      const now = Date.now();
+      if (search?.state === 'InProgress') {
+        running ||= now;
+        if ((search.responseCount ?? 0) !== counted) {
+          counted = search.responseCount ?? 0;
+          countedAt = now;
+        }
+        if (quietEnough(now - running, now - countedAt, counted)) this.stopSearch(id).catch(() => undefined);
+      }
+      poll = setTimeout(pollLoop, now - started < 8000 ? 1000 : 2500);
     };
     pollLoop();
 

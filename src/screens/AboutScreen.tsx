@@ -27,6 +27,8 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Long tracks get buttons to go back 15 or forward 30 seconds',
       'On a computer, the arrow keys move 5 seconds, or 30 with Shift',
       'Tap an album’s track count in Search to see its tracks before downloading',
+      'Searches show their results as soon as answers stop coming in',
+      'A new search no longer waits behind the previous one or shows “no results” early',
       'Albums downloading from several people show each person’s speed, and the total is steadier',
       'Albums started on your phone no longer show up several times in Downloads',
       'An album deleted from Downloads can be downloaded again straight away',

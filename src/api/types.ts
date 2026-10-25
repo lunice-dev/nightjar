@@ -28,6 +28,12 @@ export interface SearchResponse {
 
 export type SearchState = string; // e.g. "InProgress", "Completed, TimedOut"
 
+/**
+ * Still going: asked for, waiting its turn ("Queued": the engine runs one search at a time) or running.
+ * Only "Completed, …" means it ended.
+ */
+export const searchRunning = (state: SearchState) => !state.startsWith('Completed');
+
 export interface Search {
   id: string;
   searchText: string;

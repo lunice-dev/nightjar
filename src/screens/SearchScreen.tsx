@@ -30,7 +30,7 @@ import {
   type Release,
   type Tier,
 } from '../lib/quality';
-import type { SearchFile } from '../api/types';
+import { searchRunning, type SearchFile } from '../api/types';
 import { bestStart, sameFiles, smartDownload } from '../lib/smart';
 import { usePrefs } from '../prefs';
 import { fakeCounts } from '../lib/fakes';
@@ -386,7 +386,7 @@ function Results({ id }: { id: string }) {
 
   // Results keep their place once you start reading them; newcomers wait behind a button.
   const [frozen, setFrozen] = useState<string[] | null>(null);
-  const live0 = tab.search.state === 'InProgress' || tab.search.state === 'Requested';
+  const live0 = searchRunning(tab.search.state);
   const visible = useMemo(() => {
     if (!frozen) return ranked;
     const byKey = new Map(ranked.map((r) => [r.key, r]));
@@ -440,8 +440,11 @@ function Results({ id }: { id: string }) {
     scrollMargin: headerHeight,
   });
 
-  const live = tab.search.state === 'InProgress' || tab.search.state === 'Requested';
-  const users = tab.responses.length;
+  const live = searchRunning(tab.search.state);
+  // Waiting for the search before it to end: the engine runs one at a time.
+  const waitingTurn = tab.search.state === 'Queued';
+  // The engine hands over answers when a search ends; until then it only counts them.
+  const users = live ? Math.max(tab.responses.length, tab.search.responseCount ?? 0) : tab.responses.length;
 
   const toggleTier = (t: Tier) => {
     const next = new Set(filters.tiers);
@@ -478,16 +481,22 @@ function Results({ id }: { id: string }) {
               <>
                 <span className="spinner" aria-hidden />
                 <span>
-                  Searching, {users} {users === 1 ? 'person has' : 'people have'} answered
+                  {waitingTurn
+                    ? 'Waiting for the previous search to end…'
+                    : users > 0
+                      ? `Searching, ${users} ${users === 1 ? 'person has' : 'people have'} answered. Results show when it ends`
+                      : 'Searching…'}
                 </span>
-                <button className="link" onClick={() => stopSearch(id)}>
-                  Stop searching
-                </button>
+                {!waitingTurn && (
+                  <button className="link" onClick={() => stopSearch(id)}>
+                    {users > 0 ? 'Show results now' : 'Stop searching'}
+                  </button>
+                )}
               </>
             ) : (
               <span>
                 {releases.length} {releases.length === 1 ? 'release' : 'releases'} from {users} {users === 1 ? 'person' : 'people'}
-                {tab.search.state === 'Completed, Cancelled' ? ', stopped early' : ''}
+                {tab.stoppedByYou ? ', stopped early' : ''}
               </span>
             )}
           </div>

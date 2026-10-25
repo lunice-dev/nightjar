@@ -1,6 +1,7 @@
 import { UpdateBanner } from './components/Updates';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DemoBackend } from './api/demo';
+import { searchRunning } from './api/types';
 import { Icon } from './components/Icon';
 import { WindowControls } from './components/WindowControls';
 import { inApp, windowAction } from './lib/host';
@@ -354,7 +355,7 @@ function Shell() {
             {r === 'search' && tabs.length > 0 && (
               <div className="search-tabs" role="tablist" aria-label="Your searches">
                 {tabs.map((t) => {
-                  const live = t.search.state === 'InProgress' || t.search.state === 'Requested';
+                  const live = searchRunning(t.search.state);
                   const current = activeTab === t.search.id;
                   return (
                     <span key={t.search.id} className={`search-tab ${current ? 'on' : ''}`}>
