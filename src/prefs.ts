@@ -185,6 +185,8 @@ export interface DownloadPlan {
     /** Whose files they were. */
     user?: string;
     paused?: { username: string; filename: string; size: number; dest?: string }[];
+    /** Paused by the hidden fake-album test, not because anything was wrong. */
+    test?: boolean;
     at: number;
   };
 }

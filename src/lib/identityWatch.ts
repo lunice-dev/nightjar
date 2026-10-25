@@ -13,8 +13,11 @@ import { uuid } from './uuid';
  * "Delete it" and "Keep downloading".
  */
 
-/** Enough of a FLAC or MP3 for its tags (pictures inside can come before them, so a little more than the minimum). */
-const ENOUGH = 384 * 1024;
+/**
+ * Enough of a track for its tags. A FLAC's come first and Nightjar reads them even when a picture after them is
+ * still arriving; an MP3's pictures can come before them, so a little more than the minimum.
+ */
+const enough = (filename: string) => (extOf(filename) === 'flac' ? 64 * 1024 : 384 * 1024);
 const tries = new Map<string, { n: number; at: number }>();
 
 export async function watchIdentity(notify: (title: string, body?: string) => void) {
@@ -27,11 +30,12 @@ export async function watchIdentity(notify: (title: string, body?: string) => vo
   for (const plan of plans) {
     if (plan.finishedAt || plan.identity || !plan.title) continue;
     const mine = transfers.filter((t) => t.batchId && plan.batches.includes(t.batchId) && AUDIO_EXT.has(extOf(t.filename)));
-    const ready = mine.filter((t) => phaseOf(t.state) === 'done' || t.bytesTransferred >= ENOUGH).sort((a, b) => b.bytesTransferred - a.bytesTransferred);
+    const ready = mine.filter((t) => phaseOf(t.state) === 'done' || t.bytesTransferred >= enough(t.filename)).sort((a, b) => b.bytesTransferred - a.bytesTransferred);
     if (!ready.length) continue;
     const tried = tries.get(plan.id) ?? { n: 0, at: 0 };
-    if (now - tried.at < 8000) continue;
-    if (tried.n >= 8) {
+    // Again on the next round (every 5 s) while more of the track arrives: a fast album is done in seconds.
+    if (now - tried.at < 4000) continue;
+    if (tried.n >= 12) {
       updatePlan(plan.id, { identity: { state: 'ok', at: now } }); // no readable tags: nothing to judge by
       continue;
     }
@@ -49,7 +53,7 @@ export async function watchIdentity(notify: (title: string, body?: string) => vo
       continue;
     }
     if (test) usePrefs.getState().setTestWrongAlbum(false);
-    await pause(plan, mine, tags, t.username, now);
+    await pause(plan, mine, tags, t.username, now, !!test);
     const real = [tags.albumArtist || tags.artist, tags.album].filter(Boolean).join(' – ');
     const wanted = plan.artist ? `${plan.artist} – ${plan.title}` : plan.title;
     recordFake({ user: t.username, album: wanted, verdict: 'Wrong album', dir: `wrong-album:${plan.id}`, at: now });
@@ -60,7 +64,7 @@ export async function watchIdentity(notify: (title: string, body?: string) => vo
 }
 
 /** Takes the album's unfinished tracks off the list, remembering them so "Keep downloading" can ask for them again. */
-async function pause(plan: DownloadPlan, mine: Transfer[], tags: { artist?: string; albumArtist?: string; album?: string }, user: string, now: number) {
+async function pause(plan: DownloadPlan, mine: Transfer[], tags: { artist?: string; albumArtist?: string; album?: string }, user: string, now: number, test: boolean) {
   const { backend, refreshTransfers } = useStore.getState();
   const unfinished = mine.filter((t) => phaseOf(t.state) !== 'done');
   // Covers and logs of the same copy too.
@@ -75,7 +79,7 @@ async function pause(plan: DownloadPlan, mine: Transfer[], tags: { artist?: stri
   // Cancelled but left in the list, so the album stays in Downloads with the explanation and the choice.
   for (const t of [...unfinished, ...extras]) await backend?.cancel('download', t.username, t.id, false).catch(() => undefined);
   usePrefs.getState().updatePlan(plan.id, {
-    identity: { state: 'mismatch', artist: tags.albumArtist || tags.artist, album: tags.album, user, paused, at: now },
+    identity: { state: 'mismatch', artist: tags.albumArtist || tags.artist, album: tags.album, user, paused, test: test || undefined, at: now },
     notes: [
       ...plan.notes,
       {

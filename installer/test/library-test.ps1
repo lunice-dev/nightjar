@@ -213,6 +213,37 @@ $un = Helper "/organize/undo" "POST" @{ id = $m1.id }
 Check "Organiser: undo puts the download back" ([bool]$un.ok -and (Same $ok1Files (Contents $ok1)) -and -not (Test-Path "$Lib\FLAC\Radiohead\1997 - OK Computer")) $un.error
 Check "Organiser: library otherwise as expected" ((Test-Path "$Lib\FLAC\Radiohead\1997 - OK Computer (2)") -and (Test-Path "$Lib\FLAC\Massive Attack\1998 - Mezzanine"))
 SaveLogs "library-organiser"
+
+# --- while downloading: the tags of a track that has only partly arrived ------------------
+# A FLAC with a big cover picture after its tags, cut off in the middle of the picture, as when the fake-album check
+# first looks at a track (25 Oct: To the Sea's 465 KB picture kept the tags unread for 11 s).
+$peekDir = Join-Path $Dl "Peek Test"
+$full = Join-Path $env:RUNNER_TEMP "nj-peek-full.flac"
+MakeFlac $full @{ artist = "Foo Fighters"; albumArtist = "Foo Fighters"; album = "The Colour and the Shape"; title = "Everlong" } 16 44100 3
+$tf = [TagLib.File]::Create($full)
+$art = New-Object byte[] 600000
+(New-Object Random 3).NextBytes($art)
+$tf.Tag.Pictures = [TagLib.IPicture[]]@([TagLib.Picture]::new([TagLib.ByteVector]::new($art)))
+$tf.Save(); $tf.Dispose()
+# Where the tags end and the picture is, from the file's own block headers.
+$b = [IO.File]::ReadAllBytes($full)
+$p = 4; $tagsEnd = 0; $picEnd = 0
+do {
+    $last = ([int]$b[$p] -band 0x80) -ne 0; $type = [int]$b[$p] -band 0x7F; $len = [int]$b[$p + 1] * 65536 + [int]$b[$p + 2] * 256 + [int]$b[$p + 3]
+    if ($type -eq 4) { $tagsEnd = $p + 4 + $len }
+    if ($type -eq 6 -and $tagsEnd -gt 0) { $picEnd = $p + 4 + $len }
+    $p += 4 + $len
+} while (-not $last -and $p -lt $b.Length)
+if ($picEnd -eq 0) { Note "Partial track tags" "TagLib put the picture before the tags, so this case wasn't made." }
+else {
+    $cut = [Math]::Min($tagsEnd + 64 * 1024, $picEnd - 1)
+    New-Item -ItemType Directory -Force $peekDir | Out-Null
+    $part = New-Object byte[] $cut
+    [Array]::Copy($b, $part, $cut)
+    [IO.File]::WriteAllBytes((Join-Path $peekDir "06 - Everlong.flac"), $part)
+    $peek = Helper "/peek-tags?user=someone&file=$(Q 'Music\Foo Fighters\The Colour and the Shape\06 - Everlong.flac')&dest=$(Q 'Peek Test')"
+    Check "While downloading: tags read before the cover picture has arrived" ($peek.found -and $peek.artist -eq "Foo Fighters" -and $peek.album -eq "The Colour and the Shape") "found=$($peek.found) artist=$($peek.artist) album=$($peek.album), $cut of $($b.Length) bytes"
+}
 }
 catch {
     Check "Test ran to the end" $false "$($_.Exception.Message) at $(Split-Path -Leaf $_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)"

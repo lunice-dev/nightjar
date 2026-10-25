@@ -53,10 +53,12 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
 
   const active = groups.filter((g) => g.phase === 'active');
   const queued = groups.filter((g) => g.phase === 'queued');
-  const failedGroups = groups.filter((g) => g.phase === 'failed');
+  // An album paused as the wrong one isn't finished: it waits for your answer.
+  const ended = (g: DownloadGroup) => g.phase === 'done' || g.phase === 'cancelled';
+  const failedGroups = groups.filter((g) => g.phase === 'failed' || (ended(g) && wrongAlbum(g)));
   // Finished: most recently ended first, so the newest is always at the top of its day.
   const done = groups
-    .filter((g) => g.phase === 'done' || g.phase === 'cancelled')
+    .filter((g) => ended(g) && !wrongAlbum(g))
     .sort((a, b) => (b.endedAt || b.time) - (a.endedAt || a.time));
   const finished = [...failedGroups, ...done];
   const totalSpeed = active.reduce((s, g) => s + g.speed, 0);
@@ -441,7 +443,11 @@ function useNow(ms = 30_000) {
   return now;
 }
 
+/** Paused because its files are another album: waiting for Delete it or Keep downloading. */
+const wrongAlbum = (g: DownloadGroup) => g.plan?.identity?.state === 'mismatch';
+
 function stateLine(g: DownloadGroup, direction: Direction) {
+  if (direction === 'download' && wrongAlbum(g)) return 'Paused: waiting for your choice';
   const n = g.files.length;
   switch (g.phase) {
     case 'active':
@@ -599,6 +605,8 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
 
   const barClass = g.phase === 'failed' ? 'bar failed' : g.phase === 'queued' && pct === 0 ? 'bar queued' : 'bar';
   const finished = unfinished.length === 0;
+  // While the banner asks about a wrong album, its two buttons are the only way on: Retry would fetch the rest unasked.
+  const asking = direction === 'download' && wrongAlbum(g);
   // Finished albums you moved or deleted outside Nightjar: say so instead of offering buttons that can't work.
   const [gone, setGone] = useState(false);
   useEffect(() => {
@@ -643,12 +651,12 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
             </button>
           )}
           {direction === 'download' && finished && albumDir && canFiles && !gone && <CheckButton check={quality} />}
-          {direction === 'download' && finished && albumDir && canFiles && !inLibrary && !gone && (
+          {direction === 'download' && finished && albumDir && canFiles && !inLibrary && !gone && !asking && (
             <button className="btn quiet small" onClick={() => setOrganizing(true)}>
               Put in library
             </button>
           )}
-          {direction === 'download' && failed.length > 0 && (
+          {direction === 'download' && failed.length > 0 && !asking && (
             <button className="btn quiet small" onClick={retry}>
               <Icon name="retry" size={16} /> Retry {failed.length === 1 ? 'file' : `${failed.length} files`}
             </button>
@@ -658,7 +666,7 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
               {direction === 'upload' ? 'Stop upload' : 'Cancel'}
             </button>
           )}
-          {direction === 'download' && finished && (saved.length > 0 || failed.length > 0) && canFiles && !confirmDelete && !gone && (
+          {direction === 'download' && finished && (saved.length > 0 || failed.length > 0) && canFiles && !confirmDelete && !gone && !asking && (
             <button className="btn quiet small" onClick={() => setConfirmDelete(true)}>
               <Icon name="trash" size={16} /> Delete
             </button>
@@ -717,6 +725,12 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
       {direction === 'download' && g.plan?.identity?.state === 'mismatch' && (
         <div className="confirm wrong-album" role="alert">
           <span>
+            {g.plan.identity.test && (
+              <>
+                <b>Fake-album test:</b> nothing is wrong with this album; Nightjar acted as if it were. Keep downloading carries on and clears the
+                mark.{' '}
+              </>
+            )}
             <b>This isn’t {g.plan.artist ? `${g.plan.artist} – ` : ''}{g.plan.title}.</b> The files’ own tags say{' '}
             <b>{[g.plan.identity.artist, g.plan.identity.album].filter(Boolean).join(' – ')}</b>. Nightjar paused it
             {g.plan.identity.user ? ` and will rank ${g.plan.identity.user}’s copies last in searches` : ''}.
@@ -760,7 +774,7 @@ function TransferRow({ g, direction, local }: { g: DownloadGroup; direction: Dir
             {when.text}
           </time>
         )}
-        <span className={g.phase === 'failed' ? 'state-failed' : g.phase === 'done' ? 'state-done' : ''}>
+        <span className={g.phase === 'failed' || (direction === 'download' && wrongAlbum(g)) ? 'state-failed' : g.phase === 'done' ? 'state-done' : ''}>
           {stateLine(g, direction)}
         </span>
         <span>

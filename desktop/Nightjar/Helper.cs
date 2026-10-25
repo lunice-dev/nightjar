@@ -442,6 +442,7 @@ namespace Nightjar
                         if (got < head.Length) Array.Resize(ref head, got);
                     }
                     if (head.Length < 4096) continue;
+                    if (file.EndsWith(".flac", StringComparison.OrdinalIgnoreCase)) head = FlacTagsOnly(head) ?? head;
                     using (var ms = new MemoryStream(head))
                     using (var t = TagLib.File.Create(new MemoryFile(file, ms), TagLib.ReadStyle.None))
                     {
@@ -452,6 +453,48 @@ namespace Nightjar
                 catch { /* not enough of it yet, or not a format TagLib reads: try the next, or again later */ }
             }
             return new { found = false };
+        }
+
+        /// <summary>
+        /// The start of a FLAC that is still arriving, cut down to its stream info and tags. TagLib refuses a FLAC whose
+        /// metadata stops half-way, and a big cover picture often comes after the tags, so tags that arrived in the
+        /// first kilobyte couldn't be read until the whole picture had. Null when the tags haven't arrived yet.
+        /// </summary>
+        internal static byte[] FlacTagsOnly(byte[] head)
+        {
+            int p = 0;
+            if (head.Length > 10 && head[0] == 'I' && head[1] == 'D' && head[2] == '3') p = 10 + ((head[6] << 21) | (head[7] << 14) | (head[8] << 7) | head[9]);
+            if (p + 4 > head.Length || head[p] != 'f' || head[p + 1] != 'L' || head[p + 2] != 'a' || head[p + 3] != 'C') return null;
+            p += 4;
+            var kept = new List<byte[]>();
+            bool tags = false;
+            while (p + 4 <= head.Length)
+            {
+                bool last = (head[p] & 0x80) != 0;
+                int type = head[p] & 0x7F, len = (head[p + 1] << 16) | (head[p + 2] << 8) | head[p + 3];
+                if (p + 4 + len > head.Length) break; // not all here yet
+                if (type == 0 || type == 4)
+                {
+                    var block = new byte[4 + len];
+                    Array.Copy(head, p, block, 0, block.Length);
+                    kept.Add(block);
+                    tags |= type == 4;
+                }
+                p += 4 + len;
+                if (last) break;
+            }
+            if (!tags || kept.Count == 0 || (kept[0][0] & 0x7F) != 0) return null;
+            using (var ms = new MemoryStream())
+            {
+                ms.Write(new byte[] { (byte)'f', (byte)'L', (byte)'a', (byte)'C' }, 0, 4);
+                for (int i = 0; i < kept.Count; i++)
+                {
+                    var b = kept[i];
+                    b[0] = (byte)((b[0] & 0x7F) | (i == kept.Count - 1 ? 0x80 : 0)); // the last block says so
+                    ms.Write(b, 0, b.Length);
+                }
+                return ms.ToArray();
+            }
         }
 
         /// <summary>A file's first bytes, for TagLib (which otherwise opens the file itself, and slskd is still writing it).</summary>
