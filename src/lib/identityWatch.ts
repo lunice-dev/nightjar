@@ -41,16 +41,21 @@ export async function watchIdentity(notify: (title: string, body?: string) => vo
     const dest = plan.tracks.find((k) => k.username === t.username && k.filename === t.filename)?.dest ?? plan.destination;
     const tags = await backend.files.peekTags(t.username, t.filename, dest);
     if (!tags || (!tags.artist && !tags.albumArtist && !tags.album)) continue;
-    if (!tagsSayOtherAlbum({ artist: plan.artist, album: plan.title }, tags)) {
+    // The hidden test: this album is judged as if it were meant to be one that matches no real tags.
+    const test = usePrefs.getState().testWrongAlbum;
+    const expected = test ? { artist: 'Nightjar Test Artist', album: 'Nightjar Test Album' } : { artist: plan.artist, album: plan.title };
+    if (!tagsSayOtherAlbum(expected, tags)) {
       updatePlan(plan.id, { identity: { state: 'ok', at: now } });
       continue;
     }
+    if (test) usePrefs.getState().setTestWrongAlbum(false);
     await pause(plan, mine, tags, t.username, now);
     const real = [tags.albumArtist || tags.artist, tags.album].filter(Boolean).join(' – ');
     const wanted = plan.artist ? `${plan.artist} – ${plan.title}` : plan.title;
     recordFake({ user: t.username, album: wanted, verdict: 'Wrong album', dir: `wrong-album:${plan.id}`, at: now });
-    toast(`Paused ${plan.title}: the files are ${real}, not ${wanted}.`, 'error');
-    notify(`Paused ${plan.title}`, `The files are ${real}, not ${wanted}.`);
+    const why = test ? ' This was the fake-album test: choose Keep downloading to carry on and clear the mark.' : '';
+    toast(`Paused ${plan.title}: the files are ${real}, not ${wanted}.${why}`, 'error');
+    notify(`Paused ${plan.title}`, `The files are ${real}, not ${wanted}.${why}`);
   }
 }
 

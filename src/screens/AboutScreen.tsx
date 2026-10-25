@@ -1,6 +1,9 @@
+import { useRef } from 'react';
 import { ReportProblem } from '../components/ReportProblem';
 import { UpdateSection } from '../components/Updates';
 import { Mark } from '../components/Mark';
+import { usePrefs } from '../prefs';
+import { useStore } from '../store';
 
 declare const __APP_VERSION__: string;
 /** This page's version (package.json at build time), e.g. "0.8.0". */
@@ -177,14 +180,34 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
   },
 ];
 
+/**
+ * Hidden, for trying the fake-album check on a real download: five quick taps on the title arm it (or disarm it).
+ * The next album downloaded is then treated as the wrong album: paused, with the banner in Downloads.
+ */
+function useFakeAlbumTest() {
+  const taps = useRef<number[]>([]);
+  return () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < 3000), now];
+    if (taps.current.length < 5) return;
+    taps.current = [];
+    const on = !usePrefs.getState().testWrongAlbum;
+    usePrefs.getState().setTestWrongAlbum(on);
+    useStore.getState().toast(on ? 'Fake-album test on: the next album you download will be treated as the wrong album.' : 'Fake-album test off.');
+  };
+}
+
 export function AboutScreen() {
+  const tap = useFakeAlbumTest();
   return (
     <div className="page">
       <div className="page-inner narrow">
         <header className="about-head">
           <Mark size={44} />
           <div>
-            <h1 className="page-title">Nightjar {VERSION}</h1>
+            <h1 className="page-title" onClick={tap}>
+              Nightjar {VERSION}
+            </h1>
             <p className="page-sub">A modern client for the Soulseek network.</p>
           </div>
         </header>

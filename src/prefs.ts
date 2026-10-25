@@ -267,6 +267,12 @@ interface Prefs {
   recordFake(fake: FakeCopy): void;
   /** Forgets one album's fake mark (it was checked again and passed) or everything about one person. */
   forgetFakes(match: { dir?: string; user?: string }): void;
+  /**
+   * For trying the fake-album check on a real download (hidden, see AboutScreen): the next album whose tags are read
+   * is treated as the wrong one, then this turns itself off.
+   */
+  testWrongAlbum?: boolean;
+  setTestWrongAlbum(on: boolean): void;
   /** Files people finished downloading from you, newest first. */
   sent: SentFile[];
   recordSent(files: SentFile[]): void;
@@ -359,6 +365,7 @@ export const usePrefs = create<Prefs>()(
         set((s) => ({
           fakes: s.fakes.filter((f) => !((dir && f.dir.toLowerCase() === dir.toLowerCase()) || (user && f.user === user))),
         })),
+      setTestWrongAlbum: (on) => set({ testWrongAlbum: on }),
       sent: [],
       recordSent(files) {
         if (!files.length) return;
