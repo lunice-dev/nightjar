@@ -121,8 +121,11 @@ Requirements: Node 20+, the .NET SDK (8 is fine; it builds a .NET Framework 4.8 
 npm install
 npm run dev              # the interface against an slskd at http://127.0.0.1:5030
 npm run build:demo       # a single-file demo with sample data (dist-demo/index.html)
+npm test                 # the interface's own tests
 bash installer/build.sh  # web build + Windows app + slskd + installer in installer/out
 ```
+
+Every push to `main` is also tested on a fresh Windows by `.github/workflows/install-test.yml`: installing, updating and uninstalling; Tidy library and the organiser on a made-up library; remote access as a phone reaches it; and Check quality on music made to order. The scripts are in `installer/test/`; they replace any installed Nightjar, so they only run on CI.
 
 - `src/` — the interface (React, TypeScript, Vite).
 - `desktop/Nightjar/` — the Windows app (WinForms + WebView2): starts and watches slskd, the window, the tray icon, the helper that the page and your other devices talk to, remote access, the library organiser, the quality checker, playlists and the updater.
