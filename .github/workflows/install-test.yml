@@ -43,7 +43,9 @@ jobs:
           name: installer
           path: installer/out
       - name: Install and check
-        shell: pwsh
+        # Windows PowerShell, not pwsh: Nightjar runs powershell.exe (to check Tailscale's signature) and inherits
+        # this step's module path, which under pwsh points at modules Windows PowerShell can't load.
+        shell: powershell
         run: |
           $setup = Get-ChildItem installer/out/Nightjar-Setup-*.exe | Select-Object -First 1
           ./installer/test/install-test.ps1 -Setup $setup.FullName -Out test-out

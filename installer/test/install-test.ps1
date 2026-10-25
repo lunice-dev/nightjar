@@ -29,12 +29,17 @@ function Say($text) { Write-Host "[$(Get-Date -Format HH:mm:ss)] $text" }
 function Check($name, [bool]$ok, $detail = "") {
     $results.Add([pscustomobject]@{ Check = $name; Result = $(if ($ok) { "pass" } else { "FAIL" }); Detail = $detail })
     Say ("{0} {1}{2}" -f $(if ($ok) { "PASS" } else { "FAIL" }), $name, $(if ($detail) { " - $detail" } else { "" }))
+    # Annotations show on the run's page without signing in to GitHub; the log needs a sign-in.
+    if (-not $ok -and $env:GITHUB_ACTIONS) { Write-Host "::error title=$name::$(Flat $detail)" }
 }
 
 function Note($name, $detail) {
     $results.Add([pscustomobject]@{ Check = $name; Result = "warn"; Detail = $detail })
     Say "WARN $name - $detail"
+    if ($env:GITHUB_ACTIONS) { Write-Host "::warning title=$name::$(Flat $detail)" }
 }
+
+function Flat($text) { ("$text" -replace "\s+", " ").Trim() }
 
 # The helper only answers the Nightjar page's own origin, from this PC.
 function Helper($path, $method = "GET", $body = $null) {
@@ -91,8 +96,10 @@ function Release($tag) {
     $v = $tag.TrimStart("v")
     $file = Join-Path $env:RUNNER_TEMP "Nightjar-Setup-$v.exe"
     $base = "https://github.com/$Repo/releases/download/$tag/Nightjar-Setup-$v.exe"
-    Invoke-WebRequest $base -OutFile $file
-    $expected = [regex]::Match((Invoke-WebRequest "$base.sha256").Content, "[0-9a-fA-F]{64}").Value
+    Invoke-WebRequest $base -OutFile $file -UseBasicParsing
+    # Saved and read as text: GitHub serves it as binary, so .Content would be bytes.
+    Invoke-WebRequest "$base.sha256" -OutFile "$file.sha256" -UseBasicParsing
+    $expected = [regex]::Match((Get-Content "$file.sha256" -Raw), "[0-9a-fA-F]{64}").Value
     if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $expected) { throw "$tag installer doesn't match its checksum" }
     return $file
 }
@@ -114,7 +121,8 @@ Check "Clean install: Start menu shortcut" (Test-Path (Join-Path ([Environment]:
 StartNightjar
 Check "First start: helper answers" ([bool](WaitFor 60 { (Helper "/ping").ok }))
 Check "First start: engine up and signed in" (EngineReady)
-Check "First start: settings written" ((Test-Path (Join-Path $Data "slskd.yml")) -and (Test-Path (Join-Path $Data "nightjar.json")))
+# nightjar.json only appears once a setting is changed; the engine's config is written on the first start.
+Check "First start: engine config written" (Test-Path (Join-Path $Data "slskd.yml"))
 $u = Helper "/update"
 Check "First start: reports version $Version" ($u.current -eq $Version) "reports $($u.current)"
 
