@@ -195,6 +195,11 @@ export class SlskdBackend implements Backend {
   /** Your own name, once known, so your own share is read locally. */
   private me?: string;
 
+  async engineVersion() {
+    const app = await this.request<{ version?: { current?: string } }>('GET', '/application', undefined, 8000).catch(() => undefined);
+    return app?.version?.current ?? null;
+  }
+
   async server() {
     const app = await this.request<{ server: ServerState; user?: { username?: string } }>('GET', '/application', undefined, 8000);
     this.me = app.user?.username || app.server.username || this.me;

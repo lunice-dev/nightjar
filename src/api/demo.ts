@@ -230,6 +230,10 @@ export class DemoBackend implements Backend {
 
   async quit() {}
 
+  async engineVersion() {
+    return '0.26.1';
+  }
+
   async server(): Promise<ServerState> {
     return { isConnected: true, isLoggedIn: true, username: 'demo' };
   }

@@ -46,6 +46,8 @@ export interface Backend {
   quit(): Promise<void>;
 
   server(): Promise<ServerState>;
+  /** The engine's own version (slskd), for the credit in the bottom bar; null when unknown. */
+  engineVersion(): Promise<string | null>;
 
   startSearch(text: string): Promise<Search>;
   stopSearch(id: string): Promise<void>;

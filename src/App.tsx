@@ -405,6 +405,7 @@ function Shell() {
         <LinkStatus demo={kind === 'demo'} me={me} />
         {kind !== 'demo' && <RemoteFoot onOpen={() => open('settings')} />}
         <ThemeSwitch theme={theme} onChange={setTheme} />
+        <EngineCredit />
         <button className="foot-item" aria-current={route === 'about' ? 'page' : undefined} onClick={() => open('about')}>
           About
         </button>
@@ -652,6 +653,33 @@ function ClosedScreen() {
 }
 
 /** "Remote on" in the footer while your devices can reach Nightjar; a warning when they can't any more. */
+/**
+ * The engine's credit, as slskd shows it in its own interface (name, version, licence, link): Nightjar replaces
+ * that interface, so it carries the credit instead, as slskd's licence asks.
+ */
+function EngineCredit() {
+  const backend = useStore((s) => s.backend);
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    backend?.engineVersion().then((v) => alive && setVersion(v)).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [backend]);
+  return (
+    <a
+      className="foot-item engine-credit"
+      href="https://github.com/slskd/slskd"
+      target="_blank"
+      rel="noreferrer"
+      title="Nightjar runs slskd, an open source Soulseek engine, without changes. Nightjar isn’t made by or affiliated with the slskd project."
+    >
+      Engine: slskd{version ? ` ${version}` : ''} · AGPLv3
+    </a>
+  );
+}
+
 function RemoteFoot({ onOpen }: { onOpen: () => void }) {
   const [state, setState] = useState<'on' | 'broken' | null>(null);
   useEffect(() => {
