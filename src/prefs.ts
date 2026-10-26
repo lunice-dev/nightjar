@@ -130,11 +130,29 @@ async function fetchShared(base: string, maxAge = 0) {
   return prefs;
 }
 
+/** The newest copy waiting to go to the shared one. */
+let pending: string | null = null;
+
+/**
+ * Sends this window's copy to the shared one, at most every 1.5 s. Changes in between ride along with the next
+ * send. (It used to wait for 1.5 s without changes, which never came while something saved every second.)
+ */
 function push(v: string) {
+  if (!sharedAt) return;
+  pending = v;
+  if (pushTimer) return;
+  pushTimer = setTimeout(() => {
+    pushTimer = undefined;
+    const next = pending;
+    pending = null;
+    if (next) send(next);
+  }, 1500);
+}
+
+function send(v: string) {
   const base = sharedAt;
   if (!base) return;
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(async () => {
+  void (async () => {
     // Fold in what another device saved meanwhile, so neither copy loses the other's albums.
     const remote = await fetchShared(base, RECENT_MS).catch(() => null);
     const merged = mergeShared(v, remote);
@@ -145,7 +163,7 @@ function push(v: string) {
     fetch(`${base}/prefs`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ascii })
       .then((r) => r.ok && (lastShared = { at: Date.now(), prefs: merged }))
       .catch(() => undefined);
-  }, 1500);
+  })();
 }
 
 /** Takes another device's additions into this page's state (the shared lists only). */
@@ -444,22 +462,21 @@ export const usePrefs = create<Prefs>()(
       activity: [],
       smart: { enabled: true, queueMinutes: 10, parallel: true },
       finished: [],
+      // These three run every few seconds with mostly known items. They call set only when something is new: every
+      // set saves the whole copy (over a megabyte), and saving every second kept the shared copy from ever updating.
       recordFinished(albums) {
         if (!albums.length) return;
-        set((s) => {
-          const have = new Map(s.finished.map((a) => [a.key, a]));
-          let changed = false;
-          for (const a of albums) {
-            const old = have.get(a.key);
-            // New, or known better now (a folder found for its cover).
-            if (!old || (!old.dir && a.dir)) {
-              have.set(a.key, { ...a, at: old?.at ?? a.at });
-              changed = true;
-            }
+        const have = new Map(get().finished.map((a) => [a.key, a]));
+        let changed = false;
+        for (const a of albums) {
+          const old = have.get(a.key);
+          // New, or known better now (a folder found for its cover).
+          if (!old || (!old.dir && a.dir)) {
+            have.set(a.key, { ...a, at: old?.at ?? a.at });
+            changed = true;
           }
-          if (!changed) return s;
-          return { finished: [...have.values()].sort((x, y) => y.at - x.at).slice(0, 300) };
-        });
+        }
+        if (changed) set({ finished: [...have.values()].sort((x, y) => y.at - x.at).slice(0, 300) });
       },
       checks: {},
       saveCheck: (dir, check) =>
@@ -510,12 +527,9 @@ export const usePrefs = create<Prefs>()(
       sent: [],
       recordSent(files) {
         if (!files.length) return;
-        set((s) => {
-          const seen = new Set(s.sent.map((f) => f.id));
-          const fresh = files.filter((f) => !seen.has(f.id));
-          if (!fresh.length) return s;
-          return { sent: [...fresh, ...s.sent].sort((a, b) => b.at - a.at).slice(0, 3000) };
-        });
+        const seen = new Set(get().sent.map((f) => f.id));
+        const fresh = files.filter((f) => !seen.has(f.id));
+        if (fresh.length) set((s) => ({ sent: [...fresh, ...s.sent].sort((a, b) => b.at - a.at).slice(0, 3000) }));
       },
       forgetFinished: (key) => set((s) => ({ finished: s.finished.filter((a) => a.key !== key) })),
 
@@ -529,12 +543,9 @@ export const usePrefs = create<Prefs>()(
       updatePlan: (id, patch) => set((s) => ({ plans: s.plans.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
       addActivity(events) {
         if (!events.length) return;
-        set((s) => {
-          const seen = new Set(s.activity.map((e) => e.id));
-          const fresh = events.filter((e) => !seen.has(e.id));
-          if (!fresh.length) return s;
-          return { activity: [...fresh, ...s.activity].sort((a, b) => b.at - a.at).slice(0, 500) };
-        });
+        const seen = new Set(get().activity.map((e) => e.id));
+        const fresh = events.filter((e) => !seen.has(e.id));
+        if (fresh.length) set((s) => ({ activity: [...fresh, ...s.activity].sort((a, b) => b.at - a.at).slice(0, 500) }));
       },
       clearActivity: () => set({ activity: [] }),
       setSmart: (patch) => set((s) => ({ smart: { ...s.smart, ...patch } })),
