@@ -25,6 +25,9 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Your wishlist and saved people are checked from one device only, not every open one',
       'Saved people’s online status is checked every few minutes instead of every few seconds',
       'Opening an album’s tracks again doesn’t ask its owner a second time',
+      'When someone sharing an album can’t be reached, their tracks go to the others sharing it',
+      'Tracks left waiting on someone unreachable move to another copy by themselves',
+      'Whether others can reach your computer is noted in Nightjar’s log every hour, to help explain connection trouble',
     ],
   },
   {

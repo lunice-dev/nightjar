@@ -994,9 +994,16 @@ namespace Nightjar
                         {
                             var page = await Web.GetStringAsync("http://tools.slsknet.org/porttest.php?port=" + port).ConfigureAwait(false);
                             var ip = Regex.Match(page, @"IP:\s*([0-9a-fA-F.:]+)").Groups[1].Value;
-                            Reply(stream, 200, origin, new { port, open = page.Contains("/tcp open"), ip });
+                            var open = page.Contains("/tcp open");
+                            // Kept in the log (and so in reports): when the port closes and opens again by itself.
+                            Log.Write("Port " + port + " is " + (open ? "open" : "closed") + " from the internet (Soulseek's port test)");
+                            Reply(stream, 200, origin, new { port, open, ip });
                         }
-                        catch (Exception e) { Reply(stream, 200, origin, new { port, open = (bool?)null, error = e.Message }); }
+                        catch (Exception e)
+                        {
+                            Log.Write("Port test failed: " + e.Message);
+                            Reply(stream, 200, origin, new { port, open = (bool?)null, error = e.Message });
+                        }
                         return;
                     }
                 case "/upnp":

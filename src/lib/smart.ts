@@ -5,6 +5,7 @@ import { AUDIO_EXT, basename, expectedTracks, extOf, type FolderResult, type Rel
 import { phaseOf, planFinder } from './transfers';
 import { uuid } from './uuid';
 import { isMismatch } from './identity';
+import { portCheckSoon } from './portCheck';
 
 // ---------------------------------------------------------------------------
 // Why a download didn't happen, in plain words. The remote client sends a
@@ -324,23 +325,60 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
       failures.push(s.username);
     }
   }
-  // A helper that couldn't be reached: its tracks go back to the chosen copy.
-  if (failures.length && !failures.includes(chosen.username)) {
+  // Someone in the team couldn't be reached (offline, or neither side can accept a connection): their tracks go to
+  // the people who could, and when nobody could, to the next people with exactly the same files, a few at most.
+  if (failures.length) {
+    portCheckSoon(); // so the log shows whether our side could be reached then
     const back = tracks.filter((t) => failures.includes(t.username));
-    back.forEach((t) => {
-      t.failedBy.push(t.username);
-      t.username = chosen.username;
-      t.filename = t.name;
-    });
-    for (const dest of new Set(back.map((t) => t.dest))) {
-      const batchId = uuid();
-      const list = back.filter((t) => t.dest === dest).map((t) => ({ filename: t.filename, size: t.size }));
-      await backend.enqueue(chosen.username, list, { batchId, destination: dest ?? plan.destination }).catch(() => undefined);
-      plan.batches.push(batchId);
+    back.forEach((t) => (t.failedBy = [...new Set([...t.failedBy, t.username])]));
+    const reached: (SourceOption | 'first')[] = team.filter((s) => !failures.includes(s.username)).map((s) => (s.username === chosen.username ? 'first' : s));
+    const spare = sources.filter((s) => !team.some((m) => m.username === s.username)).slice(0, 3);
+    const handOver = async (to: SourceOption | 'first', list: PlanTrack[]) => {
+      const user = to === 'first' ? chosen.username : to.username;
+      const moved = list.map((t) => ({ t, file: to === 'first' ? { filename: t.name, size: t.size } : matchTrack(t.name, to) }));
+      if (moved.some((m) => !m.file)) return false;
+      const ids: string[] = [];
+      try {
+        for (const dest of new Set(list.map((t) => t.dest))) {
+          const batchId = uuid();
+          const files = moved.filter((m) => m.t.dest === dest).map((m) => ({ filename: m.file!.filename, size: m.file!.size }));
+          await backend.enqueue(user, files, { batchId, destination: dest ?? plan.destination });
+          ids.push(batchId);
+        }
+      } catch {
+        plan.batches.push(...ids);
+        return false;
+      }
+      plan.batches.push(...ids);
+      moved.forEach(({ t, file }) => {
+        t.username = user;
+        t.filename = file!.filename;
+      });
+      return true;
+    };
+    if (reached.length) {
+      // Shared out in turn between everyone who answered.
+      const shares = reached.map(() => [] as PlanTrack[]);
+      back.forEach((t, i) => shares[i % reached.length].push(t));
+      for (let i = 0; i < reached.length; i++) if (shares[i].length) await handOver(reached[i], shares[i]);
+    } else {
+      for (const s of spare) {
+        if (await handOver(s, back)) break;
+        back.forEach((t) => t.failedBy.push(s.username));
+      }
     }
-  } else if (failures.includes(chosen.username)) {
-    toast(`${chosen.username} is offline. Try another source.`, 'error');
-    if (plan.batches.length === 0) return;
+    const stranded = back.filter((t) => failures.includes(t.username) || t.failedBy.includes(t.username));
+    const names = listOf([...new Set(failures)]);
+    if (plan.batches.length === 0) {
+      toast(`Couldn’t reach ${names}${spare.length ? ' or anyone else with exactly these files' : ''}. Try another copy of ${chosen.title}.`, 'error');
+      return;
+    }
+    plan.notes.push({
+      at: Date.now(),
+      text: stranded.length
+        ? `Couldn’t reach ${names}: ${stranded.length} ${stranded.length === 1 ? 'track waits' : 'tracks wait'} for another copy.`
+        : `Couldn’t reach ${names}: their tracks went to ${listOf([...new Set(back.map((t) => t.username))])}.`,
+    });
   }
 
   const used = [...new Set(tracks.map((t) => t.username))];
@@ -463,7 +501,11 @@ export async function manageDownloads() {
     // 1. Tracks that need a new home: refused or failed, or stuck in a remote queue.
     const needy: { i: number; why: string }[] = [];
     live.forEach(({ k, t }) => {
-      if (!t) return;
+      // Never asked for: the person it was meant for couldn't be reached when it was. Another copy, then.
+      if (!t) {
+        if (k.failedBy.includes(k.username)) needy.push({ i: plan.tracks.indexOf(k), why: `${k.username} couldn’t be reached` });
+        return;
+      }
       const i = plan.tracks.indexOf(k);
       const phase = phaseOf(t.state);
       if (phase === 'failed') needy.push({ i, why: failureReason(t) ?? 'it failed' });
