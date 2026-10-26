@@ -8,11 +8,19 @@ describe('ending a search once answers stop coming', () => {
   });
   it('ends a rare search that went quiet, long before 30 seconds', () => {
     // "subfocus": 248 answers at 3 s, 260 at 8 s, nothing new after
-    expect(quietEnough(8000, 2000, 260)).toBe(false);
-    expect(quietEnough(12_000, 4000, 260)).toBe(true);
+    expect(quietEnough(5000, 2000, 255, 7)).toBe(false);
+    expect(quietEnough(7000, 3000, 260, 0)).toBe(true);
+    // and, by 8 s, a trickle counts as done too
+    expect(quietEnough(8000, 2000, 260, 2)).toBe(true);
   });
-  it('keeps going while answers still arrive', () => {
-    expect(quietEnough(20_000, 1000, 800)).toBe(false);
+  it('ends a popular search once only a trickle is left', () => {
+    // "Static-X": 348 answers after 1 s, then a few more every second for a minute
+    expect(quietEnough(8000, 500, 700, 60)).toBe(false);
+    expect(quietEnough(9000, 500, 760, 15)).toBe(true);
+  });
+  it('keeps going while answers still pour in, up to 20 seconds', () => {
+    expect(quietEnough(15_000, 200, 800, 120)).toBe(false);
+    expect(quietEnough(20_000, 200, 950, 120)).toBe(true);
   });
   it('gives up on a search nobody answers', () => {
     expect(quietEnough(11_000, 11_000, 0)).toBe(false);

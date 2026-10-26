@@ -17,6 +17,16 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
  */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8.5',
+    date: '26 Oct 2026',
+    title: 'Faster searches on phones',
+    items: [
+      'Search results show much sooner, especially on a phone',
+      'Searches for popular names end once the answers slow down, instead of running for a minute',
+      'Nightjar on your phone uses far less mobile data',
+    ],
+  },
+  {
     version: '0.8.4',
     date: '26 Oct 2026',
     title: 'Seeking, tracklists and download fixes',

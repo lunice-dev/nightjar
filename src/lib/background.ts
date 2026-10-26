@@ -10,6 +10,7 @@ import { groupCoverDir, useLocalFiles } from './useLocal';
 import { parseActivity, uploadsActivity } from './activity';
 import { manageDownloads } from './smart';
 import { watchIdentity } from './identityWatch';
+import { onThisComputer } from '../api/remote';
 
 declare const __DEMO__: boolean;
 
@@ -234,14 +235,16 @@ function useDownloadManager() {
   }, []);
   useEffect(() => {
     let busy = false;
-    let pulled = 0;
+    let pulled = Date.now(); // the page just loaded the shared copy
     const id = uuid();
     const t = setInterval(async () => {
       if (busy) return;
       busy = true;
       try {
         // Albums started on another device: their plans, so they show as one album and get managed here too.
-        if (Date.now() - pulled > 30_000) {
+        // The shared copy is over a megabyte: the computer looks every two minutes, a phone (mobile data) every ten,
+        // and never while the page is in the background. Saving merges too, so nothing waits on this.
+        if (!document.hidden && Date.now() - pulled > (onThisComputer ? 120_000 : 600_000)) {
           pulled = Date.now();
           await pullShared();
         }

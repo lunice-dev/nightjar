@@ -114,10 +114,20 @@ export function mergeShared(mine: string, theirs: string | null): string {
   return changed ? JSON.stringify(a) : mine;
 }
 
-async function fetchShared(base: string) {
+/**
+ * The shared copy as last seen. It is over a megabyte, too much to fetch on every save or every few seconds on a
+ * phone on mobile data (it slowed searches down), so a copy younger than RECENT_MS is reused.
+ */
+let lastShared: { at: number; prefs: string | null } | null = null;
+const RECENT_MS = 60_000;
+
+async function fetchShared(base: string, maxAge = 0) {
+  if (lastShared && Date.now() - lastShared.at < maxAge) return lastShared.prefs;
   const res = await fetch(`${base}/prefs`, { signal: AbortSignal.timeout(2500) });
   if (!res.ok) throw new Error(String(res.status));
-  return ((await res.json()) as { prefs?: string | null }).prefs ?? null;
+  const prefs = ((await res.json()) as { prefs?: string | null }).prefs ?? null;
+  lastShared = { at: Date.now(), prefs };
+  return prefs;
 }
 
 function push(v: string) {
@@ -126,13 +136,15 @@ function push(v: string) {
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
     // Fold in what another device saved meanwhile, so neither copy loses the other's albums.
-    const remote = await fetchShared(base).catch(() => null);
+    const remote = await fetchShared(base, RECENT_MS).catch(() => null);
     const merged = mergeShared(v, remote);
     if (merged !== v) adopt(merged);
     // Plain ASCII (non-ASCII as \u escapes, still the same JSON), so the
     // launcher's small helper can count characters as bytes.
     const ascii = merged.replace(/[\u007f-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
-    fetch(`${base}/prefs`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ascii }).catch(() => undefined);
+    fetch(`${base}/prefs`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ascii })
+      .then((r) => r.ok && (lastShared = { at: Date.now(), prefs: merged }))
+      .catch(() => undefined);
   }, 1500);
 }
 

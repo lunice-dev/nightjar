@@ -275,6 +275,10 @@ export class SlskdBackend implements Backend {
     // haven't seen yet; several searches at once stay light.
     let fetching: Promise<Search | undefined> | undefined;
     let finished = false;
+    // How many answers the last fetch of a finished search held. Counted as slskd counts them (one person can
+    // answer twice), not by person: counting people made a finished search look short and fetched its whole list,
+    // megabytes, again and again.
+    let fetched = 0;
     // A finished search is only passed on once its responses are all in: slskd
     // marks a search complete a moment before it has saved the responses.
     const catchUp = (holdCompleted = false) =>
@@ -282,13 +286,15 @@ export class SlskdBackend implements Backend {
         try {
           const search = await this.request<Search>('GET', `/searches/${enc(id)}`);
           if (stopped) return search;
-          if ((search.responseCount ?? 0) > seen.size) {
+          // slskd hands answers over only once a search has ended; until then the list is empty.
+          if (search.state.startsWith('Completed') && (search.responseCount ?? 0) > fetched) {
             const responses = await this.request<SearchResponse[]>('GET', `/searches/${enc(id)}/responses`, undefined, 60_000);
             if (stopped) return search;
+            fetched = Math.max(fetched, responses.length);
             deliver(responses);
           }
           const done = search.state.startsWith('Completed');
-          const complete = !done || seen.size >= (search.responseCount ?? 0);
+          const complete = !done || fetched >= (search.responseCount ?? 0);
           if (!(done && holdCompleted && !complete)) watch.onUpdate(search);
           return done && !complete ? { ...search, state: 'InProgress' } : search;
         } catch {
@@ -329,6 +335,7 @@ export class SlskdBackend implements Backend {
     let running = 0;
     let counted = -1;
     let countedAt = 0;
+    const counts: { at: number; n: number }[] = [];
     const pollLoop = async () => {
       if (stopped || finished) return;
       const search = await catchUp(true);
@@ -343,9 +350,14 @@ export class SlskdBackend implements Backend {
           counted = search.responseCount ?? 0;
           countedAt = now;
         }
-        if (quietEnough(now - running, now - countedAt, counted)) this.stopSearch(id).catch(() => undefined);
+        counts.push({ at: now, n: counted });
+        // Answers in the last three seconds (from the newest count at least that old).
+        const before = [...counts].reverse().find((c) => now - c.at >= 3000);
+        const lastFew = before ? counted - before.n : counted;
+        if (quietEnough(now - running, now - countedAt, counted, lastFew)) this.stopSearch(id).catch(() => undefined);
       }
-      poll = setTimeout(pollLoop, now - started < 8000 ? 1000 : 2500);
+      // Every second while it may end soon (see quietEnough), so its results show without a wait.
+      poll = setTimeout(pollLoop, now - started < 25_000 ? 1000 : 2500);
     };
     pollLoop();
 
