@@ -31,6 +31,8 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'A new search no longer waits behind the previous one or shows “no results” early',
       'Albums downloading from several people show each person’s speed, and the total is steadier',
       'Albums started on your phone no longer show up several times in Downloads',
+      'An album interrupted by a restart stays one entry in Downloads',
+      'Quality checks made on your phone show on your computer too',
       'An album deleted from Downloads can be downloaded again straight away',
       'Downloads follow albums you put in your library, so they keep playing',
       'Clearer reason when someone’s copy changed since your search',

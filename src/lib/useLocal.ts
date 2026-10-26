@@ -23,6 +23,12 @@ export function relocated(path: string, moves: Record<string, string> | undefine
   return undefined;
 }
 
+/** Where a folder is now, following albums moved into the library (see relocated). */
+export function relocatedDir(dir: string, moves: Record<string, string> | undefined): string {
+  const now = relocated(`${dir}\\x`, moves);
+  return now ? now.slice(0, -2) : dir;
+}
+
 /**
  * Where finished downloads are, by transfer id (refreshed every few seconds): where they were saved, or where they
  * went in the library since. `moved` holds the ids of files that went to the library.

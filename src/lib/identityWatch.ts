@@ -3,7 +3,7 @@ import { usePrefs, type DownloadPlan } from '../prefs';
 import { useStore } from '../store';
 import { tagsSayOtherAlbum } from './identity';
 import { AUDIO_EXT, extOf } from './quality';
-import { phaseOf } from './transfers';
+import { phaseOf, planFinder } from './transfers';
 import { uuid } from './uuid';
 
 /**
@@ -27,9 +27,10 @@ export async function watchIdentity(notify: (title: string, body?: string) => vo
   const transfers: Transfer[] = downloads.flatMap((u: TransferUser) => u.directories.flatMap((d) => d.files));
   const now = Date.now();
 
+  const planOf = planFinder(plans);
   for (const plan of plans) {
     if (plan.finishedAt || plan.identity || !plan.title) continue;
-    const mine = transfers.filter((t) => t.batchId && plan.batches.includes(t.batchId) && AUDIO_EXT.has(extOf(t.filename)));
+    const mine = transfers.filter((t) => planOf(t) === plan && AUDIO_EXT.has(extOf(t.filename)));
     const ready = mine.filter((t) => phaseOf(t.state) === 'done' || t.bytesTransferred >= enough(t.filename)).sort((a, b) => b.bytesTransferred - a.bytesTransferred);
     if (!ready.length) continue;
     const tried = tries.get(plan.id) ?? { n: 0, at: 0 };
@@ -69,9 +70,10 @@ async function pause(plan: DownloadPlan, mine: Transfer[], tags: { artist?: stri
   const unfinished = mine.filter((t) => phaseOf(t.state) !== 'done');
   // Covers and logs of the same copy too.
   const { downloads } = useStore.getState();
+  const planOf = planFinder(usePrefs.getState().plans);
   const extras = downloads
     .flatMap((u: TransferUser) => u.directories.flatMap((d) => d.files))
-    .filter((t) => t.batchId && plan.batches.includes(t.batchId) && !AUDIO_EXT.has(extOf(t.filename)) && phaseOf(t.state) !== 'done');
+    .filter((t) => planOf(t) === plan &&!AUDIO_EXT.has(extOf(t.filename)) && phaseOf(t.state) !== 'done');
   const paused = [...unfinished, ...extras].map((t) => {
     const k = plan.tracks.find((x) => x.username === t.username && x.filename === t.filename);
     return { username: t.username, filename: t.filename, size: t.size, dest: k?.dest };

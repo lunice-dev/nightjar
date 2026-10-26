@@ -11,7 +11,7 @@ import { changedSize, failureReason } from '../lib/smart';
 import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
 import { useStore } from '../store';
-import { useLocalFiles, groupCoverDir } from '../lib/useLocal';
+import { useLocalFiles, groupCoverDir, relocatedDir } from '../lib/useLocal';
 import { Cover } from '../components/Cover';
 import { dirOf, joinPath, localShareDir } from '../lib/covers';
 import { uuid } from '../lib/uuid';
@@ -617,7 +617,10 @@ function TransferRow({
     await removeFromList(g.files.filter((f) => ['done', 'failed', 'cancelled'].includes(phaseOf(f.state))));
   };
 
-  const albumDir = movedTo ?? (finishedEntry?.dir && savedDir && finishedEntry.dir.toLowerCase() !== savedDir.toLowerCase() ? finishedEntry.dir : savedDir);
+  // The album's folder as the history remembers it, following any move into the library since.
+  const moves = usePrefs((s) => s.moves);
+  const rememberedDir = finishedEntry?.dir ? relocatedDir(finishedEntry.dir, moves) : undefined;
+  const albumDir = movedTo ?? (rememberedDir && savedDir && rememberedDir.toLowerCase() !== savedDir.toLowerCase() ? rememberedDir : savedDir);
   const inLibrary =
     !!movedTo || g.files.some((f) => local.moved.has(f.id)) || (!!albumDir && !!savedDir && albumDir.toLowerCase() !== savedDir.toLowerCase());
   const quality = useQualityCheck(albumDir);

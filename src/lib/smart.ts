@@ -2,7 +2,7 @@ import type { EnqueueFile, Transfer, TransferUser } from '../api/types';
 import { usePrefs, type DownloadPlan, type PlanTrack, type SourceOption } from '../prefs';
 import { useStore } from '../store';
 import { AUDIO_EXT, basename, expectedTracks, extOf, type FolderResult, type Release } from './quality';
-import { phaseOf } from './transfers';
+import { phaseOf, planFinder } from './transfers';
 import { uuid } from './uuid';
 import { isMismatch } from './identity';
 
@@ -399,11 +399,12 @@ export async function manageDownloads() {
   const transfers = downloads.flatMap((u: TransferUser) => u.directories.flatMap((d) => d.files));
   const now = Date.now();
 
+  const planOf = planFinder(plans);
   for (const plan of plans) {
     if (plan.finishedAt) continue;
     // Paused because its files are another album: nothing moves until you decide (Downloads).
     if (plan.identity?.state === 'mismatch') continue;
-    const mine = transfers.filter((t) => t.batchId && plan.batches.includes(t.batchId));
+    const mine = transfers.filter((t) => planOf(t) === plan);
     if (mine.length === 0) {
       // Cleared from the list, or not created yet; give up on it after a day.
       if (now - plan.createdAt > 86_400_000) updatePlan(plan.id, { finishedAt: now });
@@ -683,7 +684,3 @@ const movedRecently = new Set<string>();
 /** The copy the album was started from. */
 const firstSource = (plan: DownloadPlan) => plan.key.split('\u0000')[0];
 
-/** The plan a download belongs to, by its batch. */
-export function planOf(t: Pick<Transfer, 'batchId'>, plans: DownloadPlan[]) {
-  return t.batchId ? plans.find((p) => p.batches.includes(t.batchId!)) : undefined;
-}

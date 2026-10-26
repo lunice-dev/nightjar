@@ -94,6 +94,15 @@ export function mergeShared(mine: string, theirs: string | null): string {
     a.state[field] = [...byId.values()].sort((x, y) => rule.order(y) - rule.order(x)).slice(0, rule.max);
     changed = true;
   }
+  // Quality checks made on the other device (a check from the phone), by album folder: the newer one wins. A check
+  // that comes back for a folder that has since moved is harmless, unlike a removed download coming back.
+  const ca = (a.state.checks ?? {}) as Record<string, { at?: number }>;
+  const cb = (b.state.checks ?? {}) as Record<string, { at?: number }>;
+  const newer = Object.keys(cb).filter((k) => !ca[k] || (cb[k].at ?? 0) > (ca[k].at ?? 0));
+  if (newer.length) {
+    a.state.checks = { ...ca, ...Object.fromEntries(newer.map((k) => [k, cb[k]])) };
+    changed = true;
+  }
   // Albums moved into the library on the other device: their downloads follow them here too.
   const ma = (a.state.moves ?? {}) as Record<string, string>;
   const mb = (b.state.moves ?? {}) as Record<string, string>;
@@ -132,7 +141,7 @@ function adopt(merged: string) {
   try {
     const s = (JSON.parse(merged) as Saved).state ?? {};
     const patch: Record<string, unknown> = {};
-    for (const field of [...Object.keys(MERGED), 'moves']) if (field in s) patch[field] = s[field];
+    for (const field of [...Object.keys(MERGED), 'moves', 'checks']) if (field in s) patch[field] = s[field];
     usePrefs.setState(patch as Partial<Prefs>);
   } catch {
     // keep this device's copy

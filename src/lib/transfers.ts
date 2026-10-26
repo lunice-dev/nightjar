@@ -42,16 +42,36 @@ export interface DownloadGroup {
 }
 
 /**
+ * Finds the album (plan) a download belongs to: by its batch, which every download Nightjar starts carries; or, for
+ * one without (slskd asks again for downloads that were interrupted when it stopped, as new entries with no batch),
+ * by who sends it and from which folder. Then a restart in the middle of an album doesn't split it in two.
+ */
+export function planFinder(plans: DownloadPlan[]) {
+  const byBatch = new Map<string, DownloadPlan>();
+  const byFolder = new Map<string, DownloadPlan>();
+  // Oldest first, so a folder downloaded again later belongs to its latest plan.
+  for (const p of [...plans].sort((a, b) => a.createdAt - b.createdAt)) {
+    for (const b of p.batches) byBatch.set(b, p);
+    for (const k of p.tracks) byFolder.set(folderKey(k.username, k.filename), p);
+  }
+  return (t: Pick<Transfer, 'batchId' | 'username' | 'filename'>) =>
+    (t.batchId ? byBatch.get(t.batchId) : undefined) ?? (!t.batchId || !byBatch.has(t.batchId) ? byFolder.get(folderKey(t.username, t.filename)) : undefined);
+}
+
+const folderKey = (username: string, filename: string) => `${username}\u0000${filename.slice(0, Math.max(0, filename.lastIndexOf('\\'))).toLowerCase()}`;
+
+/**
  * Groups transfers into albums. Downloads that belong to one plan (one album
  * from several people) form a single group; anything else groups by person
  * and folder. Newest first.
  */
 export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []): DownloadGroup[] {
   const buckets = new Map<string, { files: Transfer[]; plan?: DownloadPlan; directory: string; username: string }>();
+  const planOf = planFinder(plans);
   for (const u of users) {
     for (const d of u.directories) {
       for (const f of d.files) {
-        const plan = f.batchId ? plans.find((p) => p.batches.includes(f.batchId!)) : undefined;
+        const plan = planOf(f);
         const key = plan ? `plan:${plan.id}` : `${u.username}\u0000${d.directory}`;
         const b = buckets.get(key) ?? { files: [], plan, directory: d.directory, username: u.username };
         b.files.push(f);

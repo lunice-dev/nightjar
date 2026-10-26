@@ -26,6 +26,14 @@ describe('preferences shared by two devices', () => {
     expect(JSON.parse(mergeShared(pc, phone)).state.moves).toEqual({ 'c:\\dl\\x': 'C:\\Music\\X' });
   });
 
+  it('keeps a quality check made on the other device, the newer one winning', () => {
+    const pc = saved({ plans: [], checks: { 'c:\\a': { verdict: 'Lossless', at: 5 } } });
+    const phone = saved({ plans: [], checks: { 'c:\\a': { verdict: 'Old', at: 1 }, 'c:\\b': { verdict: 'Verified hi-res', at: 3 } } });
+    const merged = JSON.parse(mergeShared(pc, phone)).state.checks;
+    expect(merged['c:\\a'].verdict).toBe('Lossless');
+    expect(merged['c:\\b'].verdict).toBe('Verified hi-res');
+  });
+
   it('leaves this copy alone when there is nothing new', () => {
     const pc = saved({ plans: [plan('a', 1, 1)] });
     expect(mergeShared(pc, pc)).toBe(pc);
