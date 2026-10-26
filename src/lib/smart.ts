@@ -238,9 +238,19 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
   // Ask for the whole folder (and its disc folders) so the album arrives complete.
   const listed = await backend.folderContents(chosen.username, chosen.folder).catch(() => null);
   const byName = new Map(chosen.files.map((f) => [f.filename.toLowerCase(), { filename: f.filename, size: f.size }]));
+  // The same file can come back under another path: some clients list a folder flat, its disc folders' files as if
+  // they were in the album's own folder ("Album\03 - Wonderwall.flac" for "Album\CD 01\03 - Wonderwall.flac").
+  // A file whose name and size are already known is that file, not a new one; asked for under the flat path, the
+  // other person would refuse it.
+  const known = new Set(chosen.files.map((f) => `${basename(f.filename).toLowerCase()}\u0000${f.size}`));
+  const inDiscFolders = chosen.files.some((f) => f.filename.length > chosen.folder.length + 1 && /[\\/]/.test(f.filename.slice(chosen.folder.length + 1)));
+  const flat = !!listed && inDiscFolders && listed.every((f) => !/[\\/]/.test(f.filename.slice(chosen.folder.length + 1)));
   let found = 0;
   for (const f of listed ?? []) {
     if (byName.has(f.filename.toLowerCase()) || /(^|[\\/])(__MACOSX|\._[^\\/]*$)/.test(f.filename)) continue;
+    if (known.has(`${basename(f.filename).toLowerCase()}\u0000${f.size}`)) continue;
+    // A flat list doesn't say which disc folder a new file is in: its path would be a guess, and refused.
+    if (flat) continue;
     byName.set(f.filename.toLowerCase(), f);
     if (isAudioName(f.filename)) found++;
   }
@@ -459,8 +469,20 @@ export async function manageDownloads() {
     }
 
     const state = plan.tracks.map((k) => ({ k, t: latest(mine, k.username, k.filename) }));
-    // You cancelled a track yourself: stop managing it.
     let changed = false;
+    // A track queued twice under two paths (a flat folder listing, see smartDownload): the copy that failed is a
+    // phantom of one that is coming or came. It leaves the album, and its entry leaves the list.
+    for (const { k, t } of state) {
+      if (k.dropped || !t || phaseOf(t.state) !== 'failed') continue;
+      const twin = state.find(
+        (o) => o.k !== k && !o.k.dropped && o.t && phaseOf(o.t.state) !== 'failed' && o.k.size === k.size && basename(o.k.name).toLowerCase() === basename(k.name).toLowerCase(),
+      );
+      if (!twin) continue;
+      k.dropped = true;
+      changed = true;
+      backend.cancel('download', t.username, t.id, true).catch(() => undefined);
+    }
+    // You cancelled a track yourself: stop managing it.
     for (const { k, t } of state) {
       if (t?.state === 'Completed, Cancelled' && !k.dropped && !movedRecently.has(t.id)) {
         k.dropped = true;
