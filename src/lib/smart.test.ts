@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { albumSize, changedSize, failureReason } from './smart';
+import { albumSize, changedSize, failureReason, shownNotes } from './smart';
+
+describe('an album’s notes after its phantom twins were dropped', () => {
+  const k = (path: string, size: number, dropped = false) => ({ name: path, size, dropped }) as never;
+  const tracks = [k('A\\CD 01\\01.flac', 1), k('A\\CD 01\\02.flac', 2), k('A\\01.flac', 1, true), k('A\\02.flac', 2, true)];
+  const note = (text: string) => ({ at: 1, text });
+  it('takes the twins out of "more tracks than the search showed", and the note when none are left', () => {
+    expect(shownNotes({ tracks, notes: [note("anna's folder has 2 more tracks than the search showed: downloading all 4.")] }, true)).toEqual([]);
+    const three = [...tracks, k('A\\CD 02\\03.flac', 3)];
+    expect(shownNotes({ tracks: three, notes: [note("anna's folder has 3 more tracks than the search showed: downloading all 5.")] }, true)[0].text).toBe(
+      "anna's folder has 1 more track than the search showed: downloading all 3.",
+    );
+  });
+  it('drops "No other identical copy left" once the album is complete, not before', () => {
+    const notes = [note('No other identical copy left to try. Search again, or choose a different copy of the album.')];
+    expect(shownNotes({ tracks, notes }, true)).toEqual([]);
+    expect(shownNotes({ tracks, notes }, false)).toHaveLength(1);
+  });
+});
 
 describe('the size of an album that had phantom twins', () => {
   const k = (path: string, size: number, dropped = false) => ({ name: path, size, dropped }) as never;

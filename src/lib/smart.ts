@@ -752,6 +752,29 @@ export function albumSize(plan: Pick<DownloadPlan, 'expected' | 'tracks'>) {
   return Math.max(live.size, (plan.expected ?? 0) - twins);
 }
 
+/**
+ * An album's notes as they read now. Notes are written as things happen; some stop being true later: tracks counted
+ * as "more than the search showed" that turned out to be phantom twins (dropped since), and "No other identical copy
+ * left to try" once every track has arrived after all.
+ */
+export function shownNotes(plan: Pick<DownloadPlan, 'notes' | 'tracks'>, complete: boolean) {
+  const live = new Set(plan.tracks.filter((k) => !k.dropped).map(twinKey));
+  const twins = plan.tracks.filter((k) => k.dropped && live.has(twinKey(k))).length;
+  const out: DownloadPlan['notes'] = [];
+  for (const n of plan.notes) {
+    if (complete && n.text.startsWith('No other identical copy')) continue;
+    const more = twins ? n.text.match(/^(.+?)'s folder has (\d+) more tracks? than the search showed: downloading all (\d+)\.$/) : null;
+    if (more) {
+      const extra = Number(more[2]) - twins;
+      if (extra <= 0) continue;
+      out.push({ ...n, text: `${more[1]}'s folder has ${extra} more ${extra === 1 ? 'track' : 'tracks'} than the search showed: downloading all ${Number(more[3]) - twins}.` });
+      continue;
+    }
+    out.push(n);
+  }
+  return out;
+}
+
 /** A failure caused on this computer, not by the other person: the engine stopped, or the disk refused the file. */
 export const ourFault = (t: Pick<Transfer, 'exception'>) =>
   /application shut ?down|no space left|disk (is )?full|being used by another process|access to the path/i.test(t.exception ?? '');

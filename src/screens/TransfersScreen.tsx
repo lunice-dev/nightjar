@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
-import { albumSize, changedSize, failureReason } from '../lib/smart';
+import { albumSize, changedSize, failureReason, shownNotes } from '../lib/smart';
 import { parkedRetries, uploadKey, uploadReason } from '../lib/uploads';
 import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
@@ -616,6 +616,9 @@ function TransferRow({
   const audioDone = g.files.filter((f) => AUDIO_EXT.has(extOf(f.filename)) && phaseOf(f.state) === 'done').length;
   // The copy itself is short: the person shares only part of the album.
   const expected = g.plan?.expected ? albumSize(g.plan) : 0;
+  // Notes as they read now: corrected for phantom twins dropped since, and without "no other copy" once complete.
+  const complete = unfinished.length === 0 && failed.length === 0 && missing.length === 0;
+  const shownNoteList = useMemo(() => (g.plan ? shownNotes(g.plan, complete) : notes), [g.plan, complete, notes]);
   const shortCopy = direction === 'download' && expected > 0 && planTracks.length < expected * 0.75;
   const getMissing = async () => {
     const byUser = new Map<string, { filename: string; size: number }[]>();
@@ -928,9 +931,9 @@ function TransferRow({
       {direction === 'download' && <CheckResult check={quality} onFindAnother={() => searchFor(`${g.parent} ${g.title}`)} />}
       {organizing && albumDir && <OrganizeDialog dir={albumDir} onClose={() => setOrganizing(false)} onMoved={(to) => setMovedTo(to)} />}
       {direction === 'download' && inLibrary && albumDir && !gone && <p className="hint-text moved-line">In your library: {albumDir}</p>}
-      {notes.length > 0 && (
+      {shownNoteList.length > 0 && (
         <ul className="plan-notes">
-          {notes.slice(-3).map((n) => (
+          {shownNoteList.slice(-3).map((n) => (
             <li key={n.at}>{n.text}</li>
           ))}
         </ul>
