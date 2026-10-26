@@ -23,6 +23,14 @@ npm run build
 
 rm -rf "$STAGE" && mkdir -p "$STAGE/slskd"
 unzip -q "$ZIP" -d "$STAGE/slskd"
+# slskd's NOTICE goes with its LICENSE (the release zip has only the LICENSE). Its author asks for both when the
+# binaries are distributed; taken from the source at the same version and checked like the zip.
+SLSKD_NOTICE=installer/cache/slskd-$SLSKD_VERSION-NOTICE
+SLSKD_NOTICE_SHA256=3703a7170ec848de94ffc8ea437f7468ab850920cb70ca8639b17c68e8ca7b14
+[ -f "$SLSKD_NOTICE" ] || curl -fsSL -o "$SLSKD_NOTICE" "https://raw.githubusercontent.com/slskd/slskd/$SLSKD_VERSION/NOTICE"
+echo "$SLSKD_NOTICE_SHA256  $SLSKD_NOTICE" | sha256sum -c -
+cp "$SLSKD_NOTICE" "$STAGE/slskd/NOTICE"
+[ -f "$STAGE/slskd/LICENSE" ] || { echo "slskd's LICENSE is missing from its release zip" >&2; exit 1; }
 cp -r dist "$STAGE/slskd/nightjar-web"
 cp -r installer/app-bin/. "$STAGE/"
 rm -f "$STAGE/Microsoft.Web.WebView2.Wpf.dll"
@@ -45,8 +53,10 @@ Nightjar is free software under the GNU Affero General Public License v3.0
 
 This program includes slskd $SLSKD_VERSION, unmodified, from
 https://github.com/slskd/slskd/releases/tag/$SLSKD_VERSION
-slskd is free software under the GNU Affero General Public License v3.0; its
-licence is in slskd\\LICENSE and its source code is at https://github.com/slskd/slskd
+slskd is free software under the GNU Affero General Public License v3.0 with
+Additional Terms (Section 7); its licence, with those terms, is in
+slskd\\LICENSE, its notice in slskd\\NOTICE, and its source code is at
+https://github.com/slskd/slskd
 
 It also includes Microsoft's WebView2 SDK (Microsoft.Web.WebView2), under its
 own licence (BSD-style), to show its window with Microsoft Edge WebView2;

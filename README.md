@@ -133,4 +133,4 @@ Every push to `main` is also tested on a fresh Windows by `.github/workflows/ins
 
 ## Licence
 
-GNU AGPL 3.0, like slskd. Nightjar bundles slskd ([source](https://github.com/slskd/slskd)) and the FLAC command-line tools from [xiph.org](https://github.com/xiph/flac), and uses [NAudio](https://github.com/naudio/NAudio) and [TagLib#](https://github.com/mono/taglib-sharp); see `NOTICE.txt` in the installed folder. Tailscale is not included: Nightjar downloads Tailscale's official installer when you ask it to.
+GNU AGPL 3.0, like slskd. Nightjar bundles slskd, unmodified ([source](https://github.com/slskd/slskd)), with its own `LICENSE` (the AGPL 3.0 with slskd's Additional Terms) and `NOTICE` in the installed `slskd` folder. It also bundles the FLAC command-line tools from [xiph.org](https://github.com/xiph/flac), and uses [NAudio](https://github.com/naudio/NAudio) and [TagLib#](https://github.com/mono/taglib-sharp); see `NOTICE.txt` in the installed folder. Tailscale is not included: Nightjar downloads Tailscale's official installer when you ask it to.

@@ -33,7 +33,7 @@ Reset
 # --- 1. clean install, first start, quit -------------------------------------------------
 $code = RunSetup $Setup "/S"
 Check "Clean install: installer finished" ($code -eq 0) "exit code $code"
-$missing = @("Nightjar.exe", "slskd\slskd.exe", "slskd\nightjar-web\index.html", "tools\flac.exe", "WebView2Loader.dll", "Uninstall Nightjar.exe") | Where-Object { -not (Test-Path (Join-Path $Dir $_)) }
+$missing = @("Nightjar.exe", "slskd\slskd.exe", "slskd\LICENSE", "slskd\NOTICE", "slskd\nightjar-web\index.html", "tools\flac.exe", "WebView2Loader.dll", "LICENSE.txt", "NOTICE.txt", "Uninstall Nightjar.exe") | Where-Object { -not (Test-Path (Join-Path $Dir $_)) }
 Check "Clean install: all program files are there" ($missing.Count -eq 0) ($missing -join ", ")
 Check "Clean install: Windows lists version $Version" ((Installed) -eq $Version) "listed: $(Installed)"
 Check "Clean install: Start menu shortcut" (Test-Path (Join-Path ([Environment]::GetFolderPath("Programs")) "Nightjar.lnk"))
