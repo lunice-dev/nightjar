@@ -12,6 +12,7 @@ import { manageDownloads } from './smart';
 import { watchIdentity } from './identityWatch';
 import { onThisComputer } from '../api/remote';
 import { portCheck } from './portCheck';
+import { tidyUploads } from './uploads';
 
 declare const __DEMO__: boolean;
 
@@ -252,6 +253,7 @@ function useDownloadManager() {
   useEffect(() => {
     let busy = false;
     let pulled = Date.now(); // the page just loaded the shared copy
+    let tidied = 0;
     const id = uuid();
     const t = setInterval(async () => {
       if (busy) return;
@@ -267,6 +269,12 @@ function useDownloadManager() {
         const backend = useStore.getState().backend;
         managing = !!backend && (await backend.files.lease(id));
         if (!backend || !managing) return;
+        // Retries of uploads that failed: clear the failed entry the engine would trip over (every 30 s is plenty).
+        if (Date.now() - tidied > 30_000) {
+          tidied = Date.now();
+          const uploads = await backend.transfers('upload').catch(() => null);
+          if (uploads && (await tidyUploads(backend, uploads))) useStore.getState().refreshTransfers('upload');
+        }
         // Whose album is it really? Before anything else moves tracks around.
         await watchIdentity((title, body) => notify('downloads', title, body, () => useStore.getState().go('downloads'))).catch(() => undefined);
         await manageDownloads();

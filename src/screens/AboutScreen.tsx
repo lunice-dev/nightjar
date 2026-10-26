@@ -32,6 +32,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'When an album can’t be moved because a track is playing or open elsewhere, Nightjar says which file',
       'Uploads explain in plain words why a file didn’t go through, and whose side it was',
       'Clearer waiting lines and buttons in Uploads',
+      'Fixed a file someone asks for again, after it didn’t go through, sometimes never starting',
     ],
   },
   {

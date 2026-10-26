@@ -8,7 +8,7 @@ import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
 import { changedSize, failureReason } from '../lib/smart';
-import { uploadReason } from '../lib/uploads';
+import { parkedRetries, uploadKey, uploadReason } from '../lib/uploads';
 import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
 import { useStore } from '../store';
@@ -66,6 +66,20 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
   // slskd sends one file at a time to each person: a waiting upload may only be waiting behind their other album.
   const aheadOf = (g: DownloadGroup) =>
     direction === 'upload' && g.phase === 'queued' ? active.find((a) => a.username === g.username)?.title : undefined;
+  // Why an upload waits, as far as Nightjar can tell (the engine doesn't say which group someone is in): all your
+  // upload slots busy, or a retry waiting for the other person to ask again, or simply in the queue.
+  const [slots, setSlots] = useState<number | null>(null);
+  useEffect(() => {
+    if (direction === 'upload') backend?.settings().then((s) => setSlots(s.uploadSlots)).catch(() => undefined);
+  }, [backend, direction]);
+  const sendingTo = new Set(active.map((g) => g.username)).size;
+  const waitOf = (g: DownloadGroup) => {
+    if (direction !== 'upload' || g.phase !== 'queued') return undefined;
+    if (g.files.some((f) => !f.state.startsWith('Completed') && parkedRetries.has(uploadKey(f.username, f.filename))))
+      return 'Waiting for them to ask for it again (it didn’t go through the first time)';
+    if (slots && sendingTo >= slots) return 'Waiting: you’re sending to as many people as you allow at once';
+    return 'Waiting in your upload queue';
+  };
   const totalSpeed = active.reduce((s, g) => s + g.speed, 0);
   const where = useStore((s) => s.local);
   // Albums still arriving aren't offered for the library yet, and finished ones already have their own row above.
@@ -145,7 +159,7 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
                           ))}
                         </div>
                       ))
-                    : list.map((g) => <TransferRow key={g.key} g={g} direction={direction} local={local} ahead={aheadOf(g)} />)}
+                    : list.map((g) => <TransferRow key={g.key} g={g} direction={direction} local={local} ahead={aheadOf(g)} wait={waitOf(g)} />)}
                 </section>
               ) : null,
             )}
@@ -455,8 +469,11 @@ function useNow(ms = 30_000) {
 /** Paused because its files are another album: waiting for Delete it or Keep downloading. */
 const wrongAlbum = (g: DownloadGroup) => g.plan?.identity?.state === 'mismatch';
 
-/** `ahead`: the album going to the same person first, which this upload waits behind (not a lack of slots). */
-function stateLine(g: DownloadGroup, direction: Direction, ahead?: string) {
+/**
+ * `ahead`: the album going to the same person first, which this upload waits behind (not a lack of slots).
+ * `wait`: why else an upload waits, as far as the list can tell (see waitOf).
+ */
+function stateLine(g: DownloadGroup, direction: Direction, ahead?: string, wait?: string) {
   if (direction === 'download' && wrongAlbum(g)) return 'Paused: waiting for your choice';
   const n = g.files.length;
   switch (g.phase) {
@@ -465,10 +482,10 @@ function stateLine(g: DownloadGroup, direction: Direction, ahead?: string) {
     case 'queued':
       // Uploads: say what it waits for on your side, in words that don't need knowing what a "slot" is.
       if (direction === 'upload' && ahead) return `Next in line: you send ${g.username} one album at a time, and ${ahead} goes first`;
-      if (direction === 'upload')
-        return g.placeInQueue
-          ? `Waiting: you’re sending to as many people as you allow at once. ${ordinal(g.placeInQueue)} in line`
-          : 'Waiting: you’re sending to as many people as you allow at once';
+      if (direction === 'upload') {
+        const why = wait ?? 'Waiting in your upload queue';
+        return g.placeInQueue ? `${why}. ${ordinal(g.placeInQueue)} in line` : why;
+      }
       if (g.usernames.length > 1) return g.placeInQueue ? `Waiting in ${g.usernames.length} queues, best position ${g.placeInQueue}` : 'Waiting to start';
       return g.placeInQueue ? `Waiting in ${g.username}'s queue, position ${g.placeInQueue}` : 'Waiting to start';
     case 'failed':
@@ -490,11 +507,13 @@ function TransferRow({
   direction,
   local,
   ahead,
+  wait,
 }: {
   g: DownloadGroup;
   direction: Direction;
   local: LocalFiles & { moved: Set<string> };
   ahead?: string;
+  wait?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -829,7 +848,7 @@ function TransferRow({
                 : ''
           }
         >
-          {stateLine(g, direction, ahead)}
+          {stateLine(g, direction, ahead, wait)}
         </span>
         <span>
           {bytes(g.transferred)} of {bytes(g.size)}
