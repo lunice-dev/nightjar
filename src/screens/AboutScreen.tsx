@@ -4,6 +4,7 @@ import { UpdateSection } from '../components/Updates';
 import { Mark } from '../components/Mark';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
+import { shownChanges } from '../lib/changes';
 
 declare const __APP_VERSION__: string;
 /** This page's version (package.json at build time), e.g. "0.8.0". */
@@ -208,7 +209,7 @@ export function AboutScreen() {
         <section className="changelog" aria-labelledby="changes-h">
           <h2 id="changes-h">What’s new</h2>
           <ol>
-            {CHANGES.map((c) => (
+            {shownChanges(VERSION, CHANGES).map((c) => (
               <li key={c.version}>
                 <div className="cl-head">
                   <span className="cl-version">{c.version}</span>
