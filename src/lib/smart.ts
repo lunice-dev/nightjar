@@ -738,6 +738,20 @@ function addNote(notes: DownloadPlan['notes'], at: number, n: number, from: stri
   return m && m[2] === listOf(from) && m[3] === to && m[4] === reason ? [...notes.slice(0, -1), { at, text }] : [...notes, { at, text }];
 }
 
+/** A track's name and size: the same file whatever folder path it was listed under. */
+const twinKey = (k: Pick<PlanTrack, 'name' | 'size'>) => `${basename(k.name).toLowerCase()}\u0000${k.size}`;
+
+/**
+ * How many tracks the album has, for "Not the whole album": the count from when it was started, less the phantom
+ * twins later dropped (the same tracks queued again under another path, see manageDownloads), which that count
+ * included.
+ */
+export function albumSize(plan: Pick<DownloadPlan, 'expected' | 'tracks'>) {
+  const live = new Set(plan.tracks.filter((k) => !k.dropped).map(twinKey));
+  const twins = plan.tracks.filter((k) => k.dropped && live.has(twinKey(k))).length;
+  return Math.max(live.size, (plan.expected ?? 0) - twins);
+}
+
 /** A failure caused on this computer, not by the other person: the engine stopped, or the disk refused the file. */
 export const ourFault = (t: Pick<Transfer, 'exception'>) =>
   /application shut ?down|no space left|disk (is )?full|being used by another process|access to the path/i.test(t.exception ?? '');

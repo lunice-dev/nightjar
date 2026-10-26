@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
-import { changedSize, failureReason } from '../lib/smart';
+import { albumSize, changedSize, failureReason } from '../lib/smart';
 import { parkedRetries, uploadKey, uploadReason } from '../lib/uploads';
 import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
@@ -615,7 +615,8 @@ function TransferRow({
       : [];
   const audioDone = g.files.filter((f) => AUDIO_EXT.has(extOf(f.filename)) && phaseOf(f.state) === 'done').length;
   // The copy itself is short: the person shares only part of the album.
-  const shortCopy = direction === 'download' && !!g.plan?.expected && planTracks.length < g.plan.expected * 0.75;
+  const expected = g.plan?.expected ? albumSize(g.plan) : 0;
+  const shortCopy = direction === 'download' && expected > 0 && planTracks.length < expected * 0.75;
   const getMissing = async () => {
     const byUser = new Map<string, { filename: string; size: number }[]>();
     missing.forEach((k) => byUser.set(k.username, [...(byUser.get(k.username) ?? []), { filename: k.filename, size: k.size }]));
@@ -917,7 +918,7 @@ function TransferRow({
       )}
       {shortCopy && (
         <p className="incomplete-line">
-          <b>Not the whole album:</b> {g.usernames.join(', ')} shares only {planTracks.length} of its {g.plan!.expected} tracks.{' '}
+          <b>Not the whole album:</b> {g.usernames.join(', ')} shares only {planTracks.length} of its {expected} tracks.{' '}
           <button className="link" onClick={() => searchFor(`${g.parent} ${g.title}`)}>
             Find a complete copy
           </button>
