@@ -50,6 +50,13 @@ const KEEP_MATCHES = 80;
 let lastWishRun = 0;
 const queue = new Set<string>(); // items asked to run now
 
+/**
+ * Whether this window holds the lease the download manager runs under (one window at a time: normally Nightjar's own
+ * on the computer). Anything that asks the Soulseek network on a schedule runs only there, so a phone, an iPad and
+ * a browser tab open at once don't each search the wishlist and ask after people.
+ */
+let managing = false;
+
 export function checkWishNow(id: string) {
   queue.add(id);
 }
@@ -117,11 +124,12 @@ function useWishlistRunner() {
       const now = Date.now();
       const asked = wishlist.find((w) => queue.has(w.id));
       if (asked) {
+        // You pressed "Search now" here: it runs here, whichever window manages the rest.
         queue.delete(asked.id);
         runWish(asked);
         return;
       }
-      if (now - lastWishRun < WISH_GAP) return;
+      if (!managing || now - lastWishRun < WISH_GAP) return;
       const due = wishlist
         .filter((w) => !w.lastRunAt || now - w.lastRunAt >= WISH_EVERY)
         .sort((a, b) => (a.lastRunAt ?? 0) - (b.lastRunAt ?? 0))[0];
@@ -136,14 +144,22 @@ function useWishlistRunner() {
 // People: check each saved person's status now and then, and say when one you
 // asked to be alerted about comes online.
 
+/** How often one person's status is asked of the server: an online alert may come up to this late. */
+const STATUS_EVERY = 5 * MIN;
+const statusAt = new Map<string, number>();
+
 function useBuddyWatcher() {
   useEffect(() => {
-    let i = 0;
     const tick = async () => {
       const backend = useStore.getState().backend;
       const { buddies, updateBuddy } = usePrefs.getState();
-      if (!backend || buddies.length === 0) return;
-      const b = buddies[i++ % buddies.length];
+      if (!backend || buddies.length === 0 || !managing) return;
+      // The person asked about longest ago, once their last answer is five minutes old. Asking the server every few
+      // seconds, around the clock, is the kind of traffic a server notices.
+      const now = Date.now();
+      const b = [...buddies].sort((x, y) => (statusAt.get(x.username) ?? 0) - (statusAt.get(y.username) ?? 0))[0];
+      if (now - (statusAt.get(b.username) ?? 0) < STATUS_EVERY) return;
+      statusAt.set(b.username, now);
       try {
         const st = await backend.userStatus(b.username);
         const was = b.presence;
@@ -155,8 +171,7 @@ function useBuddyWatcher() {
         updateBuddy(b.username, { presence: 'Offline' });
       }
     };
-    tick();
-    // One person every few seconds keeps the load on the server flat however long the list is.
+    // At most one question every few seconds, however long the list.
     const t = setInterval(tick, isDemo ? 3000 : 6000);
     return () => clearInterval(t);
   }, []);
@@ -249,7 +264,8 @@ function useDownloadManager() {
           await pullShared();
         }
         const backend = useStore.getState().backend;
-        if (!backend || !(await backend.files.lease(id))) return;
+        managing = !!backend && (await backend.files.lease(id));
+        if (!backend || !managing) return;
         // Whose album is it really? Before anything else moves tracks around.
         await watchIdentity((title, body) => notify('downloads', title, body, () => useStore.getState().go('downloads'))).catch(() => undefined);
         await manageDownloads();

@@ -17,6 +17,16 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
  */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.8.6',
+    date: '2 Nov 2026',
+    title: 'Lighter on the network',
+    items: [
+      'Your wishlist and saved people are checked from one device only, not every open one',
+      'Saved people’s online status is checked every few minutes instead of every few seconds',
+      'Opening an album’s tracks again doesn’t ask its owner a second time',
+    ],
+  },
+  {
     version: '0.8.5',
     date: '26 Oct 2026',
     title: 'Faster searches on phones',

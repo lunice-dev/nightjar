@@ -34,6 +34,8 @@ import type {
 const INT_MAX = 2147483647;
 const limitOf = (v: unknown) => (typeof v === 'number' && v > 0 && v < INT_MAX ? v : null);
 const enc = encodeURIComponent;
+/** How long a folder listing someone sent stays good for (see folderContents). */
+const FOLDER_KEEP_MS = 5 * 60_000;
 /**
  * Where the page finds slskd and the local helper. The standalone launcher
  * serves the page from slskd itself with a helper on port 5031; luniceOS
@@ -436,7 +438,24 @@ export class SlskdBackend implements Backend {
     await this.request('DELETE', `/transfers/${direction}s/all/completed`);
   }
 
-  async folderContents(username: string, folder: string) {
+  /**
+   * One person's folder, asked of them directly. Kept for a few minutes (and shared while a request is under way),
+   * so opening an album's tracks again, or pressing Download after looking, doesn't ask the same person again.
+   */
+  folderContents(username: string, folder: string) {
+    const key = `${username}\u0000${folder.toLowerCase()}`;
+    const had = this.folderCache.get(key);
+    if (had && Date.now() - had.at < FOLDER_KEEP_MS) return had.list;
+    const list = this.askFolder(username, folder);
+    this.folderCache.set(key, { at: Date.now(), list });
+    // A failed answer isn't kept: asking again later may work.
+    void list.then((l) => l === null && this.folderCache.delete(key));
+    if (this.folderCache.size > 200) this.folderCache.delete(this.folderCache.keys().next().value!);
+    return list;
+  }
+  private folderCache = new Map<string, { at: number; list: Promise<{ filename: string; size: number }[] | null> }>();
+
+  private async askFolder(username: string, folder: string) {
     try {
       const dirs = await this.request<{ name: string; files?: { filename: string; size: number }[] }[]>(
         'POST',
