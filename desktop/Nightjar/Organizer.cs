@@ -280,9 +280,38 @@ namespace Nightjar
         /// <summary>Moves a folder, copying and checking sizes first when it goes to another drive.</summary>
         internal static void MoveDir(string from, string to)
         {
-            if (SameVolume(from, to)) { Directory.Move(from, to); return; }
-            CopyDir(from, to);
-            Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(from, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+            try
+            {
+                if (SameVolume(from, to)) { Directory.Move(from, to); return; }
+                CopyDir(from, to);
+                Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(from, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                // Windows won't move a folder while one of its files is open, and only says "access denied" (in the
+                // system's language). Name the files instead: usually a track still playing, or open in another app.
+                var open = OpenFiles(from);
+                if (open.Count == 0) throw;
+                var names = string.Join(", ", open.Take(3)) + (open.Count > 3 ? " and " + (open.Count - 3) + " more" : "");
+                throw new IOException((open.Count == 1 ? "a file in it is" : "files in it are") + " open, playing or in another app (" + names + "). Stop playback or close that app, then try again.", e);
+            }
+        }
+
+        /// <summary>The files in a folder that something else has open right now (they can't be opened exclusively).</summary>
+        static List<string> OpenFiles(string dir)
+        {
+            var open = new List<string>();
+            try
+            {
+                foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    try { using (new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.None)) { } }
+                    catch (IOException) { open.Add(Path.GetFileName(f)); }
+                    catch (UnauthorizedAccessException) { }
+                }
+            }
+            catch { }
+            return open;
         }
 
         static void CopyDir(string from, string to)

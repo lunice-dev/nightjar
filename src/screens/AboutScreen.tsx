@@ -29,6 +29,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Tracks left waiting on someone unreachable move to another copy by themselves',
       'Settings can check every hour whether others can reach your computer, and note it in Nightjar’s log',
       'Fixed settings changed on your computer sometimes not reaching your phone',
+      'When an album can’t be moved because a track is playing or open elsewhere, Nightjar says which file',
     ],
   },
   {
