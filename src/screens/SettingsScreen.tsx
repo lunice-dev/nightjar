@@ -492,6 +492,8 @@ function Reachability() {
   const [state, setState] = useState<{ checking: boolean; result?: PortCheck | null }>({ checking: true });
   const [fixing, setFixing] = useState<'' | 'router' | 'firewall'>('');
   const [note, setNote] = useState('');
+  const portWatch = usePrefs((s) => !!s.portWatch);
+  const setPortWatch = usePrefs((s) => s.setPortWatch);
 
   const check = useCallback(async () => {
     if (!backend) return;
@@ -571,6 +573,12 @@ function Reachability() {
           </button>
         </div>
         {note && <p className="hint-text" role="status">{note}</p>}
+        {onThisComputer && (
+          <label className="toggle" htmlFor="port-watch">
+            <input id="port-watch" type="checkbox" checked={portWatch} onChange={(e) => setPortWatch(e.target.checked)} />
+            Check every hour and note it in Nightjar’s log, to find out when the port closes by itself
+          </label>
+        )}
       </div>
     </section>
   );

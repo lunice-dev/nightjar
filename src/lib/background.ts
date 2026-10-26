@@ -282,6 +282,7 @@ function useDownloadManager() {
 // Whether others can reach this computer: Soulseek's port test now and then, kept in Nightjar's log, so a port
 // that closes and opens again by itself (a router hiccup) shows up with its times. The test is a small web page
 // Soulseek runs, separate from its server: at start, every hour, and soon after someone couldn't be reached.
+// Only when chosen in Settings ("Check every hour").
 
 const PORT_EVERY = 60 * MIN;
 const PORT_AT_MOST = 10 * MIN;
@@ -292,7 +293,7 @@ function usePortWatch() {
     const tick = () => {
       const backend = useStore.getState().backend;
       const now = Date.now();
-      if (!backend || !managing || now - portCheckedAt < PORT_AT_MOST) return;
+      if (!backend || !managing || !usePrefs.getState().portWatch || now - portCheckedAt < PORT_AT_MOST) return;
       if (!portCheck.wanted && now - portCheckedAt < PORT_EVERY) return;
       portCheck.wanted = false;
       portCheckedAt = now;

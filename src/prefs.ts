@@ -396,6 +396,9 @@ interface Prefs {
    */
   testWrongAlbum?: boolean;
   setTestWrongAlbum(on: boolean): void;
+  /** Settings → "Check every hour": Soulseek's port test every hour, noted in Nightjar's log. Off unless chosen. */
+  portWatch?: boolean;
+  setPortWatch(on: boolean): void;
   /** Files people finished downloading from you, newest first. */
   sent: SentFile[];
   recordSent(files: SentFile[]): void;
@@ -497,6 +500,7 @@ export const usePrefs = create<Prefs>()(
           fakes: s.fakes.filter((f) => !((dir && f.dir.toLowerCase() === dir.toLowerCase()) || (user && f.user === user))),
         })),
       setTestWrongAlbum: (on) => set({ testWrongAlbum: on }),
+      setPortWatch: (on) => set({ portWatch: on }),
       sent: [],
       recordSent(files) {
         if (!files.length) return;

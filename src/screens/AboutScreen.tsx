@@ -27,7 +27,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Opening an album’s tracks again doesn’t ask its owner a second time',
       'When someone sharing an album can’t be reached, their tracks go to the others sharing it',
       'Tracks left waiting on someone unreachable move to another copy by themselves',
-      'Whether others can reach your computer is noted in Nightjar’s log every hour, to help explain connection trouble',
+      'Settings can check every hour whether others can reach your computer, and note it in Nightjar’s log',
     ],
   },
   {
