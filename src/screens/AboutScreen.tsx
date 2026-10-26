@@ -18,7 +18,7 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
     version: '0.8.4',
-    date: '25 Oct 2026',
+    date: '26 Oct 2026',
     title: 'Seeking, tracklists and download fixes',
     items: [
       'Hold the previous or next button to rewind or fast-forward',
