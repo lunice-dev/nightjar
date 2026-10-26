@@ -8,6 +8,7 @@ import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
 import { changedSize, failureReason } from '../lib/smart';
+import { uploadReason } from '../lib/uploads';
 import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
 import { useStore } from '../store';
@@ -400,11 +401,11 @@ function byDay(list: readonly DownloadGroup[]) {
 }
 
 /** When it happened, in the words that matter for its state. The full date is in the tooltip. */
-function whenLine(g: DownloadGroup, now: number): { text: string; at: number } | null {
+function whenLine(g: DownloadGroup, now: number, direction: Direction): { text: string; at: number } | null {
   const asked = g.requestedAt || g.time;
   switch (g.phase) {
     case 'queued':
-      return asked ? { text: `Asked ${clock(asked, now)} · waiting ${span(now - asked)}`, at: asked } : null;
+      return asked ? { text: `${direction === 'upload' ? 'They asked' : 'Asked'} ${clock(asked, now)} · waiting ${span(now - asked)}`, at: asked } : null;
     case 'active': {
       const t = g.startedAt || asked;
       if (!t) return null;
@@ -424,6 +425,9 @@ function whenLine(g: DownloadGroup, now: number): { text: string; at: number } |
     }
   }
 }
+
+/** 1st, 2nd, 3rd, 4th… */
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 
 /** "FLAC · 14 tracks", "MP3 + FLAC · 3 tracks"; nothing for folders without music. */
 function formatLine(g: DownloadGroup) {
@@ -459,12 +463,16 @@ function stateLine(g: DownloadGroup, direction: Direction, ahead?: string) {
     case 'active':
       return `${g.counts.done} of ${n - g.counts.cancelled} files, ${g.speed > 0 ? speed(g.speed) : 'connecting…'}`;
     case 'queued':
-      if (direction === 'upload' && ahead) return `Waiting for its turn: ${g.username} is getting ${ahead} first`;
-      if (direction === 'upload') return g.placeInQueue ? `Waiting for a free upload slot, #${g.placeInQueue} in line` : 'Waiting for a free upload slot';
+      // Uploads: say what it waits for on your side, in words that don't need knowing what a "slot" is.
+      if (direction === 'upload' && ahead) return `Next in line: you send ${g.username} one album at a time, and ${ahead} goes first`;
+      if (direction === 'upload')
+        return g.placeInQueue
+          ? `Waiting: you’re sending to as many people as you allow at once. ${ordinal(g.placeInQueue)} in line`
+          : 'Waiting: you’re sending to as many people as you allow at once';
       if (g.usernames.length > 1) return g.placeInQueue ? `Waiting in ${g.usernames.length} queues, best position ${g.placeInQueue}` : 'Waiting to start';
       return g.placeInQueue ? `Waiting in ${g.username}'s queue, position ${g.placeInQueue}` : 'Waiting to start';
     case 'failed':
-      return `${g.counts.failed} of ${n} files failed`;
+      return direction === 'upload' ? `${g.counts.failed} of ${n} files didn’t go through` : `${g.counts.failed} of ${n} files failed`;
     case 'done': {
       // How fast it went, weighted by size (most of an album is its tracks, not its cover).
       const sent = g.files.filter((f) => f.averageSpeed > 0 && f.bytesTransferred > 0);
@@ -514,7 +522,7 @@ function TransferRow({
   }, []);
   const finishedEntry = usePrefs((s) => s.finished.find((a) => a.key === g.key));
   const now = useNow();
-  const when = whenLine(g, now);
+  const when = whenLine(g, now, direction);
   const format = formatLine(g);
   // Uploads: what this person has had from you before (as far as Nightjar has kept count), not counting this album.
   const sentBefore = usePrefs((s) => s.sent);
@@ -532,12 +540,17 @@ function TransferRow({
   // Where the album is now: its saved files' folder, or where it went in the library.
   const savedDir = saved.length ? dirOf(saved[0]) : undefined;
 
-  // Group the reasons so "11 files: They no longer share this file" reads as one line.
-  const reasons = new Map<string, number>();
+  // Group the reasons so "11 files: They no longer share this file" reads as one line. Uploads say whose side it most
+  // likely was and stay calm (their client usually asks again); only a problem on this computer is red.
+  const reasons = new Map<string, { n: number; ours: boolean; detail?: string }>();
   failed.forEach((f) => {
-    const r = failureReason(f);
-    if (r) reasons.set(r, (reasons.get(r) ?? 0) + 1);
+    const u = direction === 'upload' ? uploadReason(f) : null;
+    const text = u ? u.text : failureReason(f);
+    if (!text) return;
+    const had = reasons.get(text);
+    reasons.set(text, { n: (had?.n ?? 0) + 1, ours: u ? u.ours : true, detail: had?.detail ?? u?.detail });
   });
+  const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
 
   const cancelAll = async () => {
     await Promise.all(unfinished.map((f) => backend?.cancel(direction, f.username, f.id, false)));
@@ -690,8 +703,12 @@ function TransferRow({
             </button>
           )}
           {unfinished.length > 0 && (
-            <button className="btn quiet small" onClick={cancelAll}>
-              {direction === 'upload' ? 'Stop upload' : 'Cancel'}
+            <button
+              className="btn quiet small"
+              onClick={cancelAll}
+              title={direction === 'upload' ? `Stops sending these files to ${g.username}. They can ask for them again, unless you block them.` : undefined}
+            >
+              {direction === 'upload' ? 'Stop sending' : 'Cancel'}
             </button>
           )}
           {direction === 'download' && finished && (saved.length > 0 || failed.length > 0) && canFiles && !confirmDelete && !gone && !asking && (
@@ -700,8 +717,8 @@ function TransferRow({
             </button>
           )}
           {finished && saved.length === 0 && (direction === 'upload' || !canFiles) && (
-            <button className="btn quiet small" onClick={() => removeFromList(g.files)}>
-              Remove from list
+            <button className="btn quiet small" onClick={() => removeFromList(g.files)} title="Only takes it off this list. No files are deleted.">
+              {direction === 'upload' ? 'Clear from list' : 'Remove from list'}
             </button>
           )}
         </div>
@@ -802,7 +819,16 @@ function TransferRow({
             {when.text}
           </time>
         )}
-        <span className={g.phase === 'failed' || (direction === 'download' && wrongAlbum(g)) ? 'state-failed' : g.phase === 'done' ? 'state-done' : ''}>
+        <span
+          className={
+            // An upload that stopped on their side isn't alarming: red only for a problem on this computer.
+            (g.phase === 'failed' && (direction === 'download' || [...reasons.values()].some((r) => r.ours))) || (direction === 'download' && wrongAlbum(g))
+              ? 'state-failed'
+              : g.phase === 'done'
+                ? 'state-done'
+                : ''
+          }
+        >
           {stateLine(g, direction, ahead)}
         </span>
         <span>
@@ -827,7 +853,7 @@ function TransferRow({
           </button>
         )}
         {direction === 'upload' && blockedList && !isBlocked && (
-          <button className="link" onClick={() => setConfirmBlock(true)}>
+          <button className="link" onClick={() => setConfirmBlock(true)} title={`${g.username} won’t be able to download anything from you. You can undo it.`}>
             Block
           </button>
         )}
@@ -842,9 +868,22 @@ function TransferRow({
       </div>
       {reasons.size > 0 && (
         <ul className="reasons">
-          {[...reasons].map(([r, n]) => (
-            <li key={r} className="state-failed">
-              {n === g.files.length ? 'All files' : `${n} ${n === 1 ? 'file' : 'files'}`}: {r}
+          {[...reasons].map(([r, { n, ours, detail }]) => (
+            <li key={r} className={ours ? 'state-failed' : 'reason-calm'}>
+              {direction === 'upload'
+                ? `${n === g.files.length ? 'None of the files went through' : `${n} ${n === 1 ? 'file' : 'files'} didn’t go through`}: `
+                : `${n === g.files.length ? 'All files' : `${n} ${n === 1 ? 'file' : 'files'}`}: `}
+              {r}
+              {direction === 'upload' && !ours && '. They can ask for it again.'}
+              {detail && (
+                <>
+                  {' '}
+                  <button className="link reason-more" title={detail} aria-expanded={detailsOpen === r} onClick={() => setDetailsOpen((o) => (o === r ? null : r))}>
+                    {detailsOpen === r ? 'Hide details' : 'Details'}
+                  </button>
+                  {detailsOpen === r && <code className="reason-detail">{detail}</code>}
+                </>
+              )}
             </li>
           ))}
         </ul>
