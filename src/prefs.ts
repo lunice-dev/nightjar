@@ -179,7 +179,12 @@ const safeStorage: StateStorage = {
     const local = localGet(k);
     if (!sharedAt) return local;
     try {
-      const res = await fetch(`${sharedAt}/prefs`, { signal: AbortSignal.timeout(2500) });
+      // The shared copy is over a megabyte and the computer may still be starting Nightjar: give it time.
+      const res = await fetch(`${sharedAt}/prefs`, { signal: AbortSignal.timeout(10_000) });
+      if (res.status === 404) {
+        sharedAt = null; // an older launcher without /prefs: this browser's copy only
+        return local;
+      }
       if (!res.ok) throw new Error(String(res.status));
       const remote = ((await res.json()) as { prefs?: string | null }).prefs ?? null;
       if (savedAt(remote) > savedAt(local)) {
@@ -189,8 +194,9 @@ const safeStorage: StateStorage = {
       if (local) push(local);
       return local;
     } catch {
-      // an older launcher without /prefs, or no helper at all: this browser's copy only
-      sharedAt = null;
+      // Slow or briefly unreachable (the computer starting up): carry on with this copy, and keep saving to the shared
+      // one with the next change; each save merges with it first (see push). Giving up here for good used to mean
+      // nothing changed in this window reached the other devices, or the file, until the next restart.
       return local;
     }
   },

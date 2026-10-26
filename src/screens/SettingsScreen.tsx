@@ -575,7 +575,16 @@ function Reachability() {
         {note && <p className="hint-text" role="status">{note}</p>}
         {onThisComputer && (
           <label className="toggle" htmlFor="port-watch">
-            <input id="port-watch" type="checkbox" checked={portWatch} onChange={(e) => setPortWatch(e.target.checked)} />
+            <input
+              id="port-watch"
+              type="checkbox"
+              checked={portWatch}
+              onChange={(e) => {
+                // Saved straight away, like the other switches here (only the engine's settings have a Save button).
+                setPortWatch(e.target.checked);
+                useStore.getState().toast(e.target.checked ? 'Saved: Nightjar checks your port every hour' : 'Saved: no hourly port checks');
+              }}
+            />
             Check every hour and note it in Nightjar’s log, to find out when the port closes by itself
           </label>
         )}
