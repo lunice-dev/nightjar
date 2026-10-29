@@ -159,7 +159,11 @@ export function FullPlayer({
     <>
       <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
       <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
-      {backdropArt && <img key={backdropArt} className="fp-bg" src={backdropArt} alt="" aria-hidden />}
+      {backdropArt && (
+        <div className="fp-bgbox" aria-hidden>
+          <img key={backdropArt} className="fp-bg" src={backdropArt} alt="" />
+        </div>
+      )}
       <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <span className="fp-grab" aria-hidden />
         <button className="fp-icon" onClick={close} aria-label="Close the player">
@@ -320,7 +324,7 @@ export function FullPlayer({
               </div>
               <ol className={editing ? 'editing' : undefined}>
                 {played.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="played" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                  <QueueRow key={q.qid} q={q} state="played" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} onMove={() => undefined} />
                 ))}
                 <li ref={current} className="fp-row now" aria-current="true">
                   <span className="fp-row-n">
@@ -336,9 +340,10 @@ export function FullPlayer({
                   </span>
                   <span className="fp-row-d">{fmtTime(track.seconds)}</span>
                   {editing && <span className="fp-row-x-space" aria-hidden />}
+                  {editing && <span className="fp-row-grip-space" aria-hidden />}
                 </li>
                 {upNext.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="next" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} />
+                  <QueueRow key={q.qid} q={q} state="next" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} onMove={(by) => p.move(q.qid, i + by)} />
                 ))}
                 {upNext.length === 0 && <li className="fp-row empty">Nothing after this{repeat === 'all' ? ': the queue starts again' : ''}.</li>}
               </ol>
@@ -352,23 +357,138 @@ export function FullPlayer({
   );
 }
 
-function QueueRow({ q, state, editing, album, onPlay, onRemove }: { q: QueueItem; state: 'played' | 'next'; editing: boolean; album?: string | null; onPlay: () => void; onRemove: () => void }) {
+/** How far a swipe pulls a row open: the width of its Remove button. */
+const SWIPE_OPEN = 88;
+
+/**
+ * One row of the queue. Swiping it left shows Remove (like Apple Music); while editing, the grip on the right
+ * drags a track that is still to come to another place in the queue.
+ */
+function QueueRow({
+  q,
+  state,
+  editing,
+  album,
+  onPlay,
+  onRemove,
+  onMove,
+}: {
+  q: QueueItem;
+  state: 'played' | 'next';
+  editing: boolean;
+  album?: string | null;
+  onPlay: () => void;
+  onRemove: () => void;
+  /** Called with how many places the track moved (negative: up). */
+  onMove: (by: number) => void;
+}) {
+  const row = useRef<HTMLLIElement>(null);
+  const [slide, setSlide] = useState(0); // how far the row is pulled left
+  const [live, setLive] = useState(false); // a finger is moving it
+  const [lift, setLift] = useState<number | null>(null); // dragging by the grip: how far from where it started
+  const touch = useRef<{ x: number; y: number; base: number; mode: '' | 'h' | 'v' } | null>(null);
+
+  const swipeStart = (e: React.TouchEvent) => {
+    if (editing) return;
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, base: slide, mode: '' };
+  };
+  const swipeMove = (e: React.TouchEvent) => {
+    const t = touch.current;
+    if (!t) return;
+    const dx = e.touches[0].clientX - t.x;
+    const dy = e.touches[0].clientY - t.y;
+    if (!t.mode) {
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) t.mode = 'h';
+      else if (Math.abs(dy) > 8) t.mode = 'v';
+    }
+    if (t.mode === 'h') {
+      setLive(true);
+      setSlide(Math.max(-SWIPE_OPEN - 16, Math.min(0, t.base + dx)));
+    }
+  };
+  const swipeEnd = () => {
+    const t = touch.current;
+    touch.current = null;
+    if (t?.mode !== 'h') return;
+    setLive(false);
+    setSlide((s) => (s < -SWIPE_OPEN / 2 ? -SWIPE_OPEN : 0));
+  };
+
+  const grip = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const li = row.current;
+    const list = li?.parentElement;
+    if (!li || !list) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const rows = Array.from(list.children).filter((c) => c.classList.contains('next'));
+    const centres = rows.map((r) => {
+      const b = r.getBoundingClientRect();
+      return b.top + b.height / 2;
+    });
+    const mine = rows.indexOf(li);
+    const startY = e.clientY;
+    setLift(0);
+    const onMoveEv = (ev: PointerEvent) => setLift(ev.clientY - startY);
+    const finish = (ev: PointerEvent) => {
+      handle.removeEventListener('pointermove', onMoveEv);
+      handle.removeEventListener('pointerup', finish);
+      handle.removeEventListener('pointercancel', finish);
+      const y = centres[mine] + (ev.clientY - startY);
+      let best = mine;
+      centres.forEach((c, k) => {
+        if (Math.abs(c - y) < Math.abs(centres[best] - y)) best = k;
+      });
+      setLift(null);
+      if (ev.type === 'pointerup' && best !== mine) onMove(best - mine);
+    };
+    handle.addEventListener('pointermove', onMoveEv);
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
+  };
+
   return (
-    <li className={`fp-row ${state}`}>
-      <button className="fp-row-main" onClick={editing ? undefined : onPlay} tabIndex={editing ? -1 : 0}>
-        <span className="fp-row-n">{q.no || ''}</span>
-        <span className="fp-row-t">
-          <strong>{q.title}</strong>
-          <span>{[q.artist, q.album !== album ? q.album : null].filter(Boolean).join(' · ')}</span>
-        </span>
-        <span className="fp-row-d">{fmtTime(q.seconds)}</span>
+    <li
+      ref={row}
+      className={`fp-row ${state} ${lift !== null ? 'lifted' : ''}`}
+      style={lift !== null ? { transform: `translateY(${lift}px)` } : undefined}
+      onTouchStart={swipeStart}
+      onTouchMove={swipeMove}
+      onTouchEnd={swipeEnd}
+      onTouchCancel={swipeEnd}
+    >
+      <button className="fp-row-del" onClick={onRemove} style={{ opacity: slide ? 1 : 0, pointerEvents: slide ? 'auto' : 'none' }} tabIndex={slide ? 0 : -1} aria-hidden={!slide} aria-label={`Remove ${q.title} from the queue`}>
+        Remove
       </button>
-      {editing && (
-        <button className="fp-row-x" onClick={onRemove} aria-label={`Remove ${q.title} from the queue`} title="Remove from the queue">
-          <span aria-hidden>−</span>
+      <div className="fp-row-slide" style={{ transform: slide ? `translateX(${slide}px)` : undefined, transition: live ? 'none' : undefined }}>
+        <button className="fp-row-main" onClick={editing ? undefined : slide ? () => setSlide(0) : onPlay} tabIndex={editing ? -1 : 0}>
+          <span className="fp-row-n">{q.no || ''}</span>
+          <span className="fp-row-t">
+            <strong>{q.title}</strong>
+            <span>{[q.artist, q.album !== album ? q.album : null].filter(Boolean).join(' · ')}</span>
+          </span>
+          <span className="fp-row-d">{fmtTime(q.seconds)}</span>
         </button>
-      )}
+        {editing && (
+          <button className="fp-row-x" onClick={onRemove} aria-label={`Remove ${q.title} from the queue`} title="Remove from the queue">
+            <span aria-hidden>−</span>
+          </button>
+        )}
+        {editing && state === 'next' && (
+          <button className="fp-row-grip" onPointerDown={grip} aria-label={`Drag ${q.title} to move it in the queue`} title="Drag to move">
+            <GripGlyph />
+          </button>
+        )}
+      </div>
     </li>
+  );
+}
+
+function GripGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M4 8h16M4 12h16M4 16h16" />
+    </svg>
   );
 }
 

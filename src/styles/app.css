@@ -1629,7 +1629,8 @@ html.in-app, html.in-app body { overflow: hidden; }
 
 /* ---------- the large player, Apple Music style ---------- */
 /* The cover, blurred and enlarged, behind everything (the drawer is its own stacking context). */
-.fp-bg { position: absolute; z-index: -1; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(56px) saturate(1.5); opacity: 0.5; pointer-events: none; animation: fp-fade 0.7s ease; }
+.fp-bgbox { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; }
+.fp-bg { position: absolute; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(56px) saturate(1.5); opacity: 0.5; pointer-events: none; animation: fp-fade 0.7s ease; }
 /* Opened from the small player: the drawer fades in while the art grows out of the small cover. */
 .full-player.morph { animation: fp-fade 0.3s ease; }
 
@@ -1651,6 +1652,17 @@ html.in-app, html.in-app body { overflow: hidden; }
 @keyframes fp-rise { from { transform: translateY(28px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .fp-bg, .full-player.morph, .fp-queue.open, .fp-details { animation: none; } }
 
+/* Queue rows: swipe left to remove, grip to drag (while editing). */
+.fp-row.played, .fp-row.next { display: block; position: relative; overflow: hidden; touch-action: pan-y; }
+.fp-row.played { opacity: 1; }
+.fp-row.played .fp-row-slide { opacity: 0.45; }
+.fp-row-slide { position: relative; z-index: 1; display: flex; align-items: center; transition: transform 0.28s var(--fp-ease); }
+.fp-row-del { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; background: #e5484d; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.fp-row-grip { width: 36px; height: 40px; display: grid; place-items: center; flex: none; padding: 0; border: 0; background: none; color: var(--fp-ink-3); cursor: grab; touch-action: none; }
+.fp-row-grip-space { width: 36px; flex: none; }
+.fp-row.lifted { z-index: 3; overflow: visible; background: color-mix(in srgb, var(--fp-tint) 70%, #0b0a09); box-shadow: 0 10px 28px rgb(0 0 0 / 0.45); border-radius: 10px; }
+.fp-row.lifted .fp-row-slide { transition: none; }
+
 /* Wide screens keep the queue beside the art, as before. */
 @media (min-aspect-ratio: 1/1) and (min-width: 700px) {
   .fp-upright-only, .fp-panel-head { display: none; }
@@ -1662,4 +1674,38 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-queue { padding-bottom: 12px; }
   .fp-details { display: grid; gap: 14px; padding: 4px 0 12px; }
   .fp-queue-head { position: static; padding: 4px 4px 8px; background: none; }
+}
+
+/* ---------- iPad ---------- */
+/* Held upright, the tabs move to the bar at the bottom, as on the iPhone; sideways, the tabs stay on top. */
+@media (min-width: 700px) and (pointer: coarse) and (max-aspect-ratio: 1/1) {
+  .topnav, .brand-name, .shell-foot { display: none; }
+  .topbar-search, .topbar-search:focus-within { flex: 1 1 auto; }
+  .tabbar {
+    position: relative; z-index: 9; display: grid; grid-template-columns: repeat(5, 1fr); border-radius: var(--r-xl); background: var(--surface);
+    padding: 6px max(12px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  }
+  .tab { display: grid; justify-items: center; gap: 2px; padding: 6px 0 4px; border: 0; background: none; color: var(--ink-3); font-size: 12px; font-weight: 500; }
+  .tab[aria-current='page'] { color: var(--ink); }
+  .tab[aria-current='page'] .tab-icon::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); }
+  .tab-icon { position: relative; display: grid; }
+  .dot-count { position: absolute; top: -4px; left: 14px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--t-lossless); color: #fff; font-size: 10.5px; font-weight: 600; display: grid; place-items: center; }
+  .sheet-backdrop { display: block; position: fixed; inset: 0; background: rgb(0 0 0 / 0.3); z-index: 8; }
+  .sheet {
+    position: absolute; left: 50%; bottom: 0; width: min(520px, 100%); translate: -50% 0; background: var(--paper); border-radius: 16px 16px 0 0;
+    padding: 10px 12px calc(84px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 2px; animation: rise 0.18s ease-out;
+  }
+  .sheet .nav-item { width: 100%; padding: 12px 10px; }
+  .sheet-foot { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px 0; margin-top: 8px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-3); }
+  .toasts { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* The large player is a sheet over the app on a tablet, so the app still shows around it. */
+@media (min-width: 700px) and (pointer: coarse) {
+  .full-player { inset: max(18px, calc(env(safe-area-inset-top, 0px) + 8px)) clamp(14px, 4vw, 56px) clamp(12px, 2.5vh, 26px); }
+  .fp-backdrop { background: rgb(8 7 6 / 0.55); }
+  .shelf { grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: 26px 22px; }
+}
+@media (min-aspect-ratio: 1/1) and (min-width: 700px) and (pointer: coarse) {
+  .fp-art { width: min(100%, calc(100vh - 230px), 560px); }
 }

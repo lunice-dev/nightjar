@@ -61,6 +61,8 @@ interface PlayerState {
   /** Adds an album right after the current track ("next") or at the end of the queue. */
   addAlbum(dir: string, where: 'next' | 'end'): Promise<void>;
   remove(qid: string): void;
+  /** Moves a track that hasn't played yet to another place among the ones still to come (`to` is a queue position). */
+  move(qid: string, to: number): void;
   setShuffle(on: boolean): void;
   cycleRepeat(): void;
   /** What happens when a track ends by itself. */
@@ -191,6 +193,18 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       index: i < index ? index - 1 : index,
       unshuffled: unshuffled?.filter((q) => q.qid !== qid) ?? null,
     });
+  },
+
+  move(qid, to) {
+    const { queue, index } = get();
+    const from = queue.findIndex((q) => q.qid === qid);
+    if (from <= index) return; // what has played, and what's playing now, stay where they are
+    const at = Math.max(index + 1, Math.min(queue.length - 1, to));
+    if (at === from) return;
+    const next = queue.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(at, 0, item);
+    set({ queue: next });
   },
 
   setShuffle(on) {
