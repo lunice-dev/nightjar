@@ -1751,6 +1751,21 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-art { width: min(100%, calc(100vh - 230px), 560px); }
 }
 
+/* Upright: use the height that is left. The art is as big as the width allows, the rows under it spread out a little on tall
+   screens, and the last row keeps clear of the bottom edge. */
+@media (max-aspect-ratio: 1/1) {
+  .fp-art { width: min(92vw, 100cqh, 540px); }
+  /* Whatever height the art doesn't need goes mostly above it, so the title stays close underneath. */
+  .fp-art-col { display: flex; flex-direction: column; align-items: center; }
+  .fp-art-col::before, .fp-art-col::after { content: ''; min-height: 0; }
+  .fp-art-col::before { flex: 3 1 0; }
+  .fp-art-col::after { flex: 1 1 0; }
+  .fp-art-tap { flex: none; }
+  .fp-side { gap: clamp(14px, 2.6vh, 28px); }
+  .full-player { padding-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px)); }
+  .fp-body { padding-bottom: 4px; }
+}
+
 /* ---------- touch screens: the extra buttons sit behind "…" and a queue icon, not under the controls ---------- */
 .fp-titlerow { display: flex; align-items: flex-start; gap: 12px; }
 .fp-titlerow .fp-now { flex: 1; min-width: 0; }
