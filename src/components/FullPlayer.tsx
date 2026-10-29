@@ -38,6 +38,8 @@ export function FullPlayer({
   const { queue, index, playing, shuffle, repeat, dataSaver, view, volume, sleep } = usePlayer();
   const p = usePlayer.getState();
   const [sleepMenu, setSleepMenu] = useState(false);
+  // On touch screens the extra buttons live in this sheet, behind the "…" next to the title.
+  const [moreOpen, setMoreOpen] = useState(false);
   const [, tick] = useState(0);
   // The minutes left on the sleep timer count down on screen.
   useEffect(() => {
@@ -187,7 +189,12 @@ export function FullPlayer({
               <Bars on={playing} /> Now playing
             </button>
           )}
-          {inApp ? <WindowControls /> : view.kind === 'now' || !track ? <span className="fp-icon" aria-hidden /> : null}
+          {view.kind === 'now' && track && (
+            <button className="fp-icon fp-queue-btn" onClick={() => setPanel('queue')} aria-label="Up next" aria-haspopup="dialog">
+              <QueueGlyph size={21} />
+            </button>
+          )}
+          {inApp ? <WindowControls /> : view.kind === 'now' && track ? null : view.kind === 'now' || !track ? <span className="fp-icon" aria-hidden /> : null}
         </span>
       </div>
 
@@ -214,17 +221,22 @@ export function FullPlayer({
         </div>
 
         <div className="fp-side">
-          <div className="fp-now">
-            <h2>{track.title}</h2>
-            <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
-            <p className="fp-album">
-              {track.album && (
-                <button className="fp-albumlink" onClick={() => p.openAlbum(track.dir)} title="Open the album">
-                  {track.album}
-                </button>
-              )}
-              <span className="fp-chip">{chip}</span>
-            </p>
+          <div className="fp-titlerow">
+            <div className="fp-now">
+              <h2>{track.title}</h2>
+              <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
+              <p className="fp-album">
+                {track.album && (
+                  <button className="fp-albumlink" onClick={() => p.openAlbum(track.dir)} title="Open the album">
+                    {track.album}
+                  </button>
+                )}
+                <span className="fp-chip">{chip}</span>
+              </p>
+            </div>
+            <button className={`fp-icon fp-more ${sleep || dataSaver ? 'on' : ''}`} onClick={() => setMoreOpen(true)} aria-label="More: sleep timer, sound quality, less data" aria-haspopup="dialog">
+              <Icon name="more" size={20} />
+            </button>
           </div>
 
           <div className="fp-time">
@@ -404,6 +416,55 @@ export function FullPlayer({
         </div>
       </div>
       )}
+      {moreOpen && track && view.kind === 'now' && (
+        <>
+          <div className="fp-sheet-backdrop" onClick={() => setMoreOpen(false)} aria-hidden />
+          <div className="fp-sheet" role="dialog" aria-label="More" onKeyDown={(e) => e.key === 'Escape' && setMoreOpen(false)}>
+            <span className="fp-sheet-grab" aria-hidden />
+            <button className="fp-sheet-row" role="switch" aria-checked={dataSaver} onClick={() => p.setDataSaver(!dataSaver)}>
+              <span>
+                Use less data
+                <small>Lossless files come as smaller AAC copies</small>
+              </span>
+              <span className={`fp-tog ${dataSaver ? 'on' : ''}`} aria-hidden />
+            </button>
+            <button
+              className="fp-sheet-row"
+              onClick={() => {
+                setMoreOpen(false);
+                setPanel('quality');
+              }}
+            >
+              <span>
+                Sound quality
+                <small>From the file to this device</small>
+              </span>
+              <Icon name="chevron" size={18} />
+            </button>
+            <div className="fp-sheet-row static">
+              <span>
+                Sleep timer
+                <small>{!sleep ? 'Off' : 'track' in sleep ? 'At the end of this track' : `${Math.max(1, Math.ceil((sleep.at - Date.now()) / 60000))} min left`}</small>
+              </span>
+            </div>
+            <div className="fp-sleep-chips" role="group" aria-label="Sleep timer">
+              {[15, 30, 45, 60].map((m) => (
+                <button key={m} className="fp-pill" onClick={() => { p.setSleep(m); setMoreOpen(false); }}>
+                  {m === 60 ? '1 hour' : `${m} min`}
+                </button>
+              ))}
+              <button className={`fp-pill ${sleep && 'track' in sleep ? 'on' : ''}`} onClick={() => { p.setSleep('track'); setMoreOpen(false); }}>
+                End of track
+              </button>
+              {sleep && (
+                <button className="fp-pill" onClick={() => { p.setSleep(null); setMoreOpen(false); }}>
+                  Turn off
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
     </>
   );
@@ -562,9 +623,9 @@ function VolumeGlyph({ level }: { level: 0 | 2 }) {
   );
 }
 
-function QueueGlyph() {
+function QueueGlyph({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6" />
     </svg>
   );
