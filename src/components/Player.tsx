@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { audioCtl, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
+import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { FullPlayer, morph } from './FullPlayer';
@@ -51,6 +51,7 @@ export function Player() {
   // The element is always there (also with nothing playing), so every control can reach it.
   useEffect(() => {
     audioCtl.el = audio.current;
+    if (audio.current && canSetVolume) audio.current.volume = usePlayer.getState().volume;
     return () => {
       audioCtl.el = null;
     };
@@ -184,7 +185,10 @@ export function Player() {
         if (el) audioCtl.el = el;
       }}
       preload="auto"
-      onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+      onTimeUpdate={(e) => {
+        setTime(e.currentTarget.currentTime);
+        usePlayer.getState().checkSleep();
+      }}
       onDurationChange={(e) => {
         if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration);
         reportPosition(e.currentTarget);

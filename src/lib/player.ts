@@ -85,9 +85,32 @@ interface PlayerState {
   jump(i: number): void;
   stop(): void;
   setDataSaver(on: boolean): void;
+  /** 0 to 1. Only some devices let a page change it (iPhones and iPads keep it on the side buttons). */
+  volume: number;
+  setVolume(v: number): void;
+  /** Stops the music later: at a moment, or when the current track ends. */
+  sleep: { at: number } | { track: true } | null;
+  /** Minutes from now, "track" for the end of the current track, null to cancel. */
+  setSleep(when: number | 'track' | null): void;
+  /** Called as the music plays: stops it when the sleep timer is up (a timeout alone may not run on a locked phone). */
+  checkSleep(): void;
 }
 
 const SAVER_KEY = 'nightjar.dataSaver';
+const VOLUME_KEY = 'nightjar.volume';
+
+/** Whether the page can change the volume at all (iPhones and iPads ignore it). */
+export const canSetVolume = (() => {
+  try {
+    const a = new Audio();
+    a.volume = 0.5;
+    return a.volume === 0.5;
+  } catch {
+    return false;
+  }
+})();
+
+let sleepTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** The one <audio> element (the Player bar hands it over) and whether a new track should start playing. */
 export const audioCtl = {
@@ -127,6 +150,15 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       return false;
     }
   })(),
+  volume: (() => {
+    try {
+      const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? '');
+      return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+    } catch {
+      return 1;
+    }
+  })(),
+  sleep: null,
   converted: false,
   loading: false,
   expanded: false,
@@ -226,8 +258,14 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   ended() {
-    const { repeat, index, queue } = get();
+    const { repeat, index, queue, sleep } = get();
     const el = audioCtl.el;
+    if (sleep && 'track' in sleep) {
+      // "End of track": this was the track; stay on it, stopped.
+      audioCtl.wantPlay = false;
+      set({ sleep: null });
+      return;
+    }
     if (repeat === 'one' && el) {
       el.currentTime = 0;
       get().play();
@@ -339,6 +377,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   stop() {
     audioCtl.wantPlay = false;
+    clearTimeout(sleepTimer);
     const el = audioCtl.el;
     if (el) {
       el.pause();
@@ -346,7 +385,35 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       el.load();
     }
     const v = get().view;
-    set({ queue: [], index: 0, playing: false, converted: false, expanded: v.kind !== 'now' && get().expanded, shuffle: false, unshuffled: null });
+    set({ queue: [], index: 0, playing: false, converted: false, expanded: v.kind !== 'now' && get().expanded, shuffle: false, unshuffled: null, sleep: null });
+  },
+
+  setVolume(v) {
+    const volume = Math.max(0, Math.min(1, v));
+    if (audioCtl.el) audioCtl.el.volume = volume;
+    try {
+      localStorage.setItem(VOLUME_KEY, String(volume));
+    } catch {
+      /* storage unavailable */
+    }
+    set({ volume });
+  },
+
+  setSleep(when) {
+    clearTimeout(sleepTimer);
+    if (when === null) return set({ sleep: null });
+    if (when === 'track') return set({ sleep: { track: true } });
+    const at = Date.now() + when * 60000;
+    sleepTimer = setTimeout(() => get().checkSleep(), when * 60000 + 50);
+    set({ sleep: { at } });
+  },
+
+  checkSleep() {
+    const { sleep } = get();
+    if (!sleep || !('at' in sleep) || Date.now() < sleep.at) return;
+    clearTimeout(sleepTimer);
+    set({ sleep: null });
+    get().pause();
   },
 
   setDataSaver(on) {

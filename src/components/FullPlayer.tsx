@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { audioCtl, fmtTime, usePlayer, type QueueItem } from '../lib/player';
+import { audioCtl, canSetVolume, fmtTime, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
 import { Mark } from './Mark';
@@ -35,8 +35,17 @@ export function FullPlayer({
   /** The short tag: "FLAC 16/44.1", "AAC 128". */
   chip: React.ReactNode;
 }) {
-  const { queue, index, playing, shuffle, repeat, dataSaver, view } = usePlayer();
+  const { queue, index, playing, shuffle, repeat, dataSaver, view, volume, sleep } = usePlayer();
   const p = usePlayer.getState();
+  const [sleepMenu, setSleepMenu] = useState(false);
+  const [, tick] = useState(0);
+  // The minutes left on the sleep timer count down on screen.
+  useEffect(() => {
+    if (!sleep || !('at' in sleep)) return;
+    const t = setInterval(() => tick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, [sleep]);
+  const sleepLabel = !sleep ? 'Sleep' : 'track' in sleep ? 'Sleep · end of track' : `Sleep · ${Math.max(1, Math.ceil((sleep.at - Date.now()) / 60000))} min`;
   const track = queue[index];
   const art = cover ?? (track ? generatedCover(track.dir) : '');
   // An album or playlist in the drawer reports its own picture, for the background colour.
@@ -275,6 +284,24 @@ export function FullPlayer({
             </button>
           </div>
 
+          {canSetVolume && (
+            <div className="fp-volume">
+              <VolumeGlyph level={0} />
+              <input
+                className="fp-seek fp-vol"
+                type="range"
+                min={0}
+                max={1}
+                step={0.02}
+                value={volume}
+                aria-label="Volume"
+                style={{ ['--p' as string]: `${volume * 100}%` }}
+                onChange={(e) => p.setVolume(parseFloat(e.target.value))}
+              />
+              <VolumeGlyph level={2} />
+            </div>
+          )}
+
           <div className="fp-options">
             <button
               className={`fp-pill ${dataSaver ? 'on' : ''}`}
@@ -293,7 +320,28 @@ export function FullPlayer({
               <QueueGlyph />
               Up next
             </button>
+            <button className={`fp-pill ${sleep ? 'on' : ''}`} onClick={() => setSleepMenu((o) => !o)} aria-expanded={sleepMenu} aria-haspopup="true">
+              <MoonGlyph />
+              {sleepLabel}
+            </button>
           </div>
+          {sleepMenu && (
+            <div className="fp-options fp-sleep" role="group" aria-label="Sleep timer">
+              {[15, 30, 45, 60].map((m) => (
+                <button key={m} className="fp-pill" onClick={() => { p.setSleep(m); setSleepMenu(false); }}>
+                  {m === 60 ? '1 hour' : `${m} min`}
+                </button>
+              ))}
+              <button className="fp-pill" onClick={() => { p.setSleep('track'); setSleepMenu(false); }}>
+                End of track
+              </button>
+              {sleep && (
+                <button className="fp-pill" onClick={() => { p.setSleep(null); setSleepMenu(false); }}>
+                  Turn off
+                </button>
+              )}
+            </div>
+          )}
 
           {details ? (
             <div className="fp-details">
@@ -488,6 +536,24 @@ function GripGlyph() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <path d="M4 8h16M4 12h16M4 16h16" />
+    </svg>
+  );
+}
+
+function MoonGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+    </svg>
+  );
+}
+
+/** A small speaker: level 0 is the quiet one, 2 the loud one. */
+function VolumeGlyph({ level }: { level: 0 | 2 }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z" />
+      {level === 2 && <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />}
     </svg>
   );
 }

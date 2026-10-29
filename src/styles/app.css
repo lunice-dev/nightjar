@@ -1636,8 +1636,9 @@ html.in-app, html.in-app body { overflow: hidden; }
 
 /* Upright (phones, an iPad held upright): one fixed screen, the queue and the sound quality open over the art. */
 .fp-body { gap: 18px; justify-content: space-between; }
-.fp-art-col { flex: 1 1 auto; min-height: 0; padding-top: 0; }
-.fp-art { width: min(86vw, 42vh, 520px); }
+/* The art takes the height that is left over, and never more: whatever sits under it always stays in view. */
+.fp-art-col { flex: 1 1 0; min-height: 140px; padding-top: 0; container-type: size; }
+.fp-art { width: min(86vw, 100cqh, 520px); }
 .fp-queue:not(.open) { display: none; }
 .fp-queue.open, .fp-details {
   position: absolute; z-index: 5; inset: 70px 0 0 0; overflow-y: auto; overscroll-behavior: contain;
@@ -1667,7 +1668,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 @media (min-aspect-ratio: 1/1) and (min-width: 700px) {
   .fp-upright-only, .fp-panel-head { display: none; }
   .fp-body { justify-content: flex-start; gap: clamp(28px, 5vw, 64px); }
-  .fp-art-col { flex: 1 1 50%; }
+  .fp-art-col { flex: 1 1 50%; container-type: normal; }
   .fp-art { width: min(100%, calc(100vh - 150px), 620px); }
   .fp-queue:not(.open) { display: block; }
   .fp-queue.open, .fp-details { position: static; inset: auto; z-index: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
@@ -1699,6 +1700,23 @@ html.in-app, html.in-app body { overflow: hidden; }
   .sheet-foot { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px 0; margin-top: 8px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-3); }
   .toasts { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* The small player floats above the tab bar as a rounded, frosted pill on a phone or an upright tablet. */
+@media (max-width: 699px), (min-width: 700px) and (pointer: coarse) and (max-aspect-ratio: 1/1) {
+  .player {
+    margin: 0 10px 8px; border-radius: 24px; background: color-mix(in srgb, var(--surface) 80%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6);
+    box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(128 128 128 / 0.14) inset;
+  }
+  .player-bar { padding: 8px 12px 12px 8px; }
+  .player-art { border-radius: 14px; }
+}
+
+/* Volume in the large player (only on devices that let a page change it). */
+.fp-volume { display: flex; align-items: center; gap: 10px; color: var(--fp-ink-3); }
+.fp-vol { height: 4px; flex: 1; }
+.fp-vol::-webkit-slider-thumb { width: 14px; height: 14px; }
+.fp-sleep { margin-top: -6px; }
 
 /* The large player is a sheet over the app on a tablet, so the app still shows around it. */
 @media (min-width: 700px) and (pointer: coarse) {
