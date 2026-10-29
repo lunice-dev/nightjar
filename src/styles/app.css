@@ -1779,6 +1779,13 @@ html.in-app, html.in-app body { overflow: hidden; }
   html.safe-top .full-player { inset: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); }
 }
 
+/* iOS can leave the page one status-bar height shorter than the screen under the translucent status bar (the empty band
+   at the bottom). viewport.ts measures it into --vp-gap; the page and the things pinned to the bottom reach the screen's edge. */
+html.vp-gap { height: calc(100% + var(--vp-gap, 0px)); overflow: hidden; }
+html.vp-gap .full-player { bottom: calc(var(--vp-gap, 0px) * -1); }
+html.vp-gap .fp-backdrop, html.vp-gap .sheet-backdrop, html.vp-gap .modal-backdrop { bottom: calc(var(--vp-gap, 0px) * -1); }
+html.vp-gap .toasts { translate: 0 var(--vp-gap, 0px); }
+
 /* ---------- touch screens: the extra buttons sit behind "…" and a queue icon, not under the controls ---------- */
 .fp-titlerow { display: flex; align-items: flex-start; gap: 12px; }
 .fp-titlerow .fp-now { flex: 1; min-width: 0; }
