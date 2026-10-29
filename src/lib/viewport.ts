@@ -1,30 +1,24 @@
 /**
- * How this page sits on the device's screen. On an installed iPhone or iPad app with the translucent status bar,
- * the page draws under the status bar, and iOS can leave the page about one status-bar height shorter than the
- * screen, with an empty band at the bottom. These helpers measure that and tell the stylesheet.
+ * How this page sits on the device's screen. An installed iPhone or iPad app with the translucent status bar draws
+ * under the status bar. Measuring the page's own height is unreliable there (it can come out shorter than the
+ * screen, and anything anchored to its bottom edge stops short), so the stylesheet is given the screen's real
+ * height instead.
  */
 
 export interface ViewportInfo {
   /** Safe-area insets in px: what the status bar / Dynamic Island and the home indicator take. */
   top: number;
   bottom: number;
-  /** Size of the page and of the screen (the screen's height in the orientation the page is in). */
   innerWidth: number;
   innerHeight: number;
+  /** The screen's height in the orientation the page is in. */
   screenHeight: number;
   standalone: boolean;
-  /** How much shorter the page is than the screen, when it looks like the status-bar quirk (else 0). */
-  gap: number;
+  portrait: boolean;
 }
 
-/**
- * How much shorter the page is than the screen, if that looks like the status-bar quirk: an installed app under a
- * status bar of height `top`, short by about that much. Anything else (a keyboard, a split view) counts as 0.
- */
-export const quirkGap = (screenHeight: number, innerHeight: number, top: number, standalone: boolean) => {
-  const raw = screenHeight - innerHeight;
-  return standalone && top > 0 && raw >= 20 && raw <= top + 10 ? raw : 0;
-};
+/** Whether the page should be given the screen's full height: an installed app, upright, drawing under the status bar. */
+export const wantsFullScreen = (i: Pick<ViewportInfo, 'top' | 'standalone' | 'portrait'>) => i.standalone && i.portrait && i.top > 0;
 
 export function viewportInfo(): ViewportInfo {
   const probe = document.createElement('div');
@@ -37,20 +31,20 @@ export function viewportInfo(): ViewportInfo {
   probe.remove();
 
   const portrait = window.innerHeight >= window.innerWidth;
+  // iOS reports the screen's size in its upright orientation whichever way it is held.
   const screenHeight = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
   const standalone = (navigator as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches;
-  const gap = quirkGap(screenHeight, window.innerHeight, top, standalone);
-  return { top, bottom, innerWidth: window.innerWidth, innerHeight: window.innerHeight, screenHeight, standalone, gap };
+  return { top, bottom, innerWidth: window.innerWidth, innerHeight: window.innerHeight, screenHeight, standalone, portrait };
 }
 
-/** Keeps <html> marked ("safe-top", "vp-gap" and --vp-gap) so the stylesheet can use the whole screen. */
+/** Keeps <html> marked ("safe-top", "full-screen" and --screen-h) so the stylesheet can use the whole screen. */
 export function watchViewport() {
   const update = () => {
     const i = viewportInfo();
     const root = document.documentElement;
     root.classList.toggle('safe-top', i.top > 0);
-    root.classList.toggle('vp-gap', i.gap > 0);
-    root.style.setProperty('--vp-gap', `${i.gap}px`);
+    root.classList.toggle('full-screen', wantsFullScreen(i));
+    root.style.setProperty('--screen-h', `${i.screenHeight}px`);
   };
   update();
   window.addEventListener('resize', update);

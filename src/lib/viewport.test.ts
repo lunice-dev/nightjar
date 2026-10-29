@@ -1,22 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { quirkGap } from './viewport';
+import { wantsFullScreen } from './viewport';
 
-describe('the status-bar gap on an installed iPhone app', () => {
-  it('measures a page that is one status bar shorter than the screen', () => {
-    expect(quirkGap(932, 873, 59, true)).toBe(59);
+describe('giving the page the screen\'s full height', () => {
+  it('applies to an installed app held upright under the status bar', () => {
+    expect(wantsFullScreen({ top: 59, standalone: true, portrait: true })).toBe(true);
   });
 
-  it('sees nothing when the page fills the screen', () => {
-    expect(quirkGap(932, 932, 59, true)).toBe(0);
-  });
-
-  it('ignores anything that is not the size of the status bar (a keyboard, a split view)', () => {
-    expect(quirkGap(932, 620, 59, true)).toBe(0);
-    expect(quirkGap(932, 925, 59, true)).toBe(0);
-  });
-
-  it('only applies to an installed app drawing under the status bar', () => {
-    expect(quirkGap(932, 873, 59, false)).toBe(0);
-    expect(quirkGap(932, 873, 0, true)).toBe(0);
+  it('does not apply in a browser tab, sideways, or when nothing is drawn under the status bar', () => {
+    expect(wantsFullScreen({ top: 59, standalone: false, portrait: true })).toBe(false);
+    expect(wantsFullScreen({ top: 59, standalone: true, portrait: false })).toBe(false);
+    expect(wantsFullScreen({ top: 0, standalone: true, portrait: true })).toBe(false);
   });
 });

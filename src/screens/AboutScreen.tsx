@@ -5,12 +5,12 @@ import { Mark } from '../components/Mark';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { shownChanges } from '../lib/changes';
-import { viewportInfo } from '../lib/viewport';
+import { viewportInfo, wantsFullScreen } from '../lib/viewport';
 
 /** One line about how the page sits on the screen, for reports of layout problems on a phone or tablet. */
 const screenNote = () => {
   const v = viewportInfo();
-  return `Page ${v.innerWidth}×${v.innerHeight} · screen height ${v.screenHeight} · top ${v.top}, bottom ${v.bottom}${v.standalone ? ' · installed app' : ''}${v.gap ? ` · gap ${v.gap}` : ''}`;
+  return `Page ${v.innerWidth}×${v.innerHeight} · screen height ${v.screenHeight} · top ${v.top}, bottom ${v.bottom}${v.standalone ? ' · installed app' : ''}${wantsFullScreen(v) ? ' · full screen' : ''}`;
 };
 
 declare const __APP_VERSION__: string;
