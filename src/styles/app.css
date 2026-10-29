@@ -1759,7 +1759,7 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-art-col { display: flex; flex-direction: column; align-items: center; }
   .fp-art-col::before, .fp-art-col::after { content: ''; min-height: 0; }
   .fp-art-col::before { flex: 3 1 0; }
-  .fp-art-col::after { flex: 1 1 0; }
+  .fp-art-col::after { flex: 2 1 0; }
   .fp-art-tap { flex: none; }
   .fp-side { gap: clamp(14px, 2.6vh, 28px); }
   .full-player { padding-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px)); }
