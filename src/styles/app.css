@@ -1828,3 +1828,20 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 @media (min-aspect-ratio: 1/1) and (min-width: 700px) and (max-height: 520px) {
   .fp-queue-btn { visibility: visible; }
 }
+
+/* ---------- a phone held sideways: edge to edge, a big cover on the left, the controls centred on the right ---------- */
+/* Last in the file so it wins over the tablet sheet rules above. The island and the home bar are cleared with padding, not with an inset. */
+@media (min-aspect-ratio: 1/1) and (min-width: 700px) and (max-height: 520px) {
+  .full-player {
+    inset: 0; border-radius: 0; box-shadow: none;
+    --fp-px-l: max(28px, env(safe-area-inset-left, 0px)); --fp-px-r: max(28px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+  .fp-backdrop, .fp-grab { display: none; }
+  .fp-top { min-height: 48px; padding-top: 8px; }
+  .fp-body.np { padding: 0 var(--fp-px-r) 4px var(--fp-px-l); }
+  .fp-body.np .fp-art-col { padding: 0; }
+  .fp-body.np .fp-art { width: min(100%, calc(100vh - 100px), 400px); }
+  .fp-body.np .fp-side { justify-content: center; gap: 14px; max-width: 520px; }
+  .fp-now h2 { font-size: 24px; }
+}
