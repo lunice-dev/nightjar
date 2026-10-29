@@ -1626,3 +1626,40 @@ html.in-app, html.in-app body { overflow: hidden; }
 .confirm.wrong-album { background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
 .sources td .user-link + .fake-note, .sources td .user-link + .muted { margin-left: 8px; }
 .engine-credit { text-decoration: none; }
+
+/* ---------- the large player, Apple Music style ---------- */
+/* The cover, blurred and enlarged, behind everything (the drawer is its own stacking context). */
+.fp-bg { position: absolute; z-index: -1; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(56px) saturate(1.5); opacity: 0.5; pointer-events: none; animation: fp-fade 0.7s ease; }
+/* Opened from the small player: the drawer fades in while the art grows out of the small cover. */
+.full-player.morph { animation: fp-fade 0.3s ease; }
+
+/* Upright (phones, an iPad held upright): one fixed screen, the queue and the sound quality open over the art. */
+.fp-body { gap: 18px; justify-content: space-between; }
+.fp-art-col { flex: 1 1 auto; min-height: 0; padding-top: 0; }
+.fp-art { width: min(86vw, 42vh, 520px); }
+.fp-queue:not(.open) { display: none; }
+.fp-queue.open, .fp-details {
+  position: absolute; z-index: 5; inset: 70px 0 0 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 var(--fp-px-r) max(12px, env(safe-area-inset-bottom, 0px)) var(--fp-px-l);
+  border-radius: 18px 18px 0 0; background: color-mix(in srgb, var(--fp-tint) 55%, #0b0a09);
+  box-shadow: 0 -1px 0 rgb(255 255 255 / 0.08); animation: fp-rise 0.32s var(--fp-ease);
+}
+.fp-queue-head, .fp-panel-head { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 1; padding: 14px 4px 10px; background: inherit; border-bottom: 1px solid var(--fp-line); font-size: 15px; }
+.fp-panel-head { margin-bottom: 12px; }
+.fp-details { display: block; }
+.fp-details .pq { margin-bottom: 12px; }
+@keyframes fp-rise { from { transform: translateY(28px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fp-bg, .full-player.morph, .fp-queue.open, .fp-details { animation: none; } }
+
+/* Wide screens keep the queue beside the art, as before. */
+@media (min-aspect-ratio: 1/1) and (min-width: 700px) {
+  .fp-upright-only, .fp-panel-head { display: none; }
+  .fp-body { justify-content: flex-start; gap: clamp(28px, 5vw, 64px); }
+  .fp-art-col { flex: 1 1 50%; }
+  .fp-art { width: min(100%, calc(100vh - 150px), 620px); }
+  .fp-queue:not(.open) { display: block; }
+  .fp-queue.open, .fp-details { position: static; inset: auto; z-index: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
+  .fp-queue { padding-bottom: 12px; }
+  .fp-details { display: grid; gap: 14px; padding: 4px 0 12px; }
+  .fp-queue-head { position: static; padding: 4px 4px 8px; background: none; }
+}

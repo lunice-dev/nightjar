@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { audioCtl, fmtTime, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
@@ -8,6 +8,9 @@ import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 import { useScrub } from '../lib/scrub';
 import { LONG_TRACK, seekBy, useDoubleTapSeek, useHoldToScan } from '../lib/seek';
+
+/** Where the small player's cover was when the large player was opened: the big art grows out of it. */
+export const morph: { rect: DOMRect | null } = { rect: null };
 
 /**
  * The large player, over the whole app: big album art, the time bar, the buttons and what plays
@@ -40,9 +43,17 @@ export function FullPlayer({
   const [viewArt, setViewArt] = useState<string | null>(null);
   const onArt = useCallback((u: string | null) => setViewArt(u), []);
   useEffect(() => setViewArt(null), [view]);
-  const tint = useArtColour(view.kind === 'now' ? art || null : viewArt);
-  const [details, setDetails] = useState(false);
+  const backdropArt = (view.kind === 'now' ? art || null : viewArt) || null;
+  const tint = useArtColour(backdropArt);
+  // Upright, the queue and the sound quality open over the art (like Apple Music); on wide screens the queue is always beside it.
+  const [panel, setPanel] = useState<'none' | 'queue' | 'quality'>('none');
+  const details = panel === 'quality';
   const [editing, setEditing] = useState(false);
+  const [grown] = useState(() => {
+    const from = morph.rect;
+    morph.rect = null;
+    return from;
+  });
   const [drag, setDrag] = useState(0);
   const [closing, setClosing] = useState(false);
   const startY = useRef<number | null>(null);
@@ -75,6 +86,39 @@ export function FullPlayer({
     if (list && row && list.scrollHeight > list.clientHeight + 4) list.scrollTop = Math.max(0, row.offsetTop - list.offsetTop - 60);
     return () => window.removeEventListener('keydown', onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opened from the small player: the art grows out of the small cover into its place.
+  const artImg = useRef<HTMLImageElement>(null);
+  useLayoutEffect(() => {
+    const img = artImg.current;
+    if (!grown || !img || !grown.width || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    img.style.transition = 'none';
+    img.style.transform = 'none';
+    const to = img.getBoundingClientRect();
+    img.style.transform = '';
+    if (!to.width) {
+      img.style.transition = '';
+      return;
+    }
+    const end = getComputedStyle(img).transform;
+    const dx = grown.left + grown.width / 2 - (to.left + to.width / 2);
+    const dy = grown.top + grown.height / 2 - (to.top + to.height / 2);
+    const s = grown.width / to.width;
+    const run = img.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${s})` }, { transform: end }], {
+      duration: 460,
+      easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+    });
+    const done = () => (img.style.transition = '');
+    run.onfinish = done;
+    run.oncancel = done;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opening the queue shows the track that is playing.
+  useEffect(() => {
+    if (panel !== 'queue') return;
+    const list = queueRef.current, row = current.current;
+    if (list && row) list.scrollTop = Math.max(0, row.offsetTop - list.offsetTop - 60);
+  }, [panel]);
 
   const scrub = useScrub(time, duration, (t) => {
     if (audioCtl.el) audioCtl.el.currentTime = t;
@@ -114,7 +158,8 @@ export function FullPlayer({
   return (
     <>
       <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
-      <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''}`} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
+      <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
+      {backdropArt && <img key={backdropArt} className="fp-bg" src={backdropArt} alt="" aria-hidden />}
       <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <span className="fp-grab" aria-hidden />
         <button className="fp-icon" onClick={close} aria-label="Close the player">
@@ -145,7 +190,7 @@ export function FullPlayer({
       <div className="fp-body">
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
-            <img className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
+            <img ref={artImg} className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
             {tap.shown && (
               <span className={`fp-jump-flash ${tap.shown.side > 0 ? 'right' : 'left'}`} aria-live="polite">
                 {tap.shown.side > 0 ? '+' : '−'}
@@ -237,15 +282,28 @@ export function FullPlayer({
               <span className="fp-switch" aria-hidden />
               Use less data
             </button>
-            <button className={`fp-pill ${details ? 'on' : ''}`} onClick={() => setDetails((d) => !d)} aria-pressed={details}>
+            <button className={`fp-pill ${details ? 'on' : ''}`} onClick={() => setPanel(details ? 'none' : 'quality')} aria-pressed={details}>
               {details ? 'Show the queue' : 'Sound quality'}
+            </button>
+            <button className={`fp-pill fp-upright-only ${panel === 'queue' ? 'on' : ''}`} onClick={() => setPanel('queue')} aria-haspopup="dialog">
+              <QueueGlyph />
+              Up next
             </button>
           </div>
 
           {details ? (
-            <div className="fp-details">{quality}</div>
+            <div className="fp-details">
+              <div className="fp-panel-head">
+                <strong>Sound quality</strong>
+                <span className="fp-gap" />
+                <button className="fp-edit" onClick={() => setPanel('none')}>
+                  Done
+                </button>
+              </div>
+              {quality}
+            </div>
           ) : (
-            <div className="fp-queue" ref={queueRef}>
+            <div className={`fp-queue ${panel === 'queue' ? 'open' : ''}`} ref={queueRef}>
               <div className="fp-queue-head">
                 <strong>Up next</strong>
                 {shuffle && <span className="dim">Shuffled</span>}
@@ -256,6 +314,9 @@ export function FullPlayer({
                     {editing ? 'Done' : 'Edit'}
                   </button>
                 )}
+                <button className="fp-edit fp-upright-only" onClick={() => setPanel('none')} aria-label="Close the queue">
+                  Close
+                </button>
               </div>
               <ol className={editing ? 'editing' : undefined}>
                 {played.map(({ q, i }) => (
@@ -308,6 +369,14 @@ function QueueRow({ q, state, editing, album, onPlay, onRemove }: { q: QueueItem
         </button>
       )}
     </li>
+  );
+}
+
+function QueueGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h12M4 12h12M4 17h8M19 14v6M16 17h6" />
+    </svg>
   );
 }
 

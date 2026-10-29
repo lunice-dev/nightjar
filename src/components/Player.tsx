@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { audioCtl, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
-import { FullPlayer } from './FullPlayer';
+import { FullPlayer, morph } from './FullPlayer';
 import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
@@ -230,16 +230,21 @@ export function Player() {
 
   const p = usePlayer.getState();
   const progress = duration > 0 ? Math.min(100, (scrub.shown / duration) * 100) : 0;
+  // The large player's art grows out of this cover, so say where the cover is.
+  const openLarge = () => {
+    morph.rect = document.querySelector('.player-art')?.getBoundingClientRect() ?? null;
+    p.setExpanded(true);
+  };
 
   return (
     <>
     <div className="player" role="region" aria-label="Now playing">
       {element}
       <div className="player-bar">
-        <button className="player-art" onClick={() => p.setExpanded(true)} aria-label="Open the player">
+        <button className="player-art" onClick={openLarge} aria-label="Open the player">
           <img src={cover ?? generatedCover(track.dir)} alt="" />
         </button>
-        <button className="player-text" onClick={() => p.setExpanded(true)}>
+        <button className="player-text" onClick={openLarge}>
           <strong>{track.title}</strong>
           <span>
             <QualityChip />
