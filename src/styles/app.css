@@ -1642,19 +1642,24 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* The art takes the height that is left over, and never more: whatever sits under it always stays in view. */
 .fp-body.np .fp-art-col { flex: 1 1 0; min-height: 140px; padding-top: 0; container-type: size; }
 .fp-body.np .fp-art { width: min(86vw, 100cqh, 520px); }
-.fp-queue.np:not(.open) { display: none; }
-.fp-queue.open, .fp-details {
+/* The queue is always there, parked below the screen: opening slides it up, closing slides it down, and dragging its header
+   makes it follow the finger. Only transform moves, so it stays smooth. */
+.fp-queue.np, .fp-details {
   position: absolute; z-index: 5; inset: 70px 0 0 0; overflow-y: auto; overscroll-behavior: contain;
   padding: 0 var(--fp-px-r) max(12px, env(safe-area-inset-bottom, 0px)) var(--fp-px-l);
   border-radius: 18px 18px 0 0; background: color-mix(in srgb, var(--fp-tint) 55%, #0b0a09);
-  box-shadow: 0 -1px 0 rgb(255 255 255 / 0.08); animation: fp-rise 0.32s var(--fp-ease);
+  box-shadow: 0 -1px 0 rgb(255 255 255 / 0.08);
 }
+.fp-queue.np { transform: translateY(104%); visibility: hidden; transition: transform 0.44s var(--fp-ease), visibility 0s linear 0.44s; will-change: transform; }
+.fp-queue.np.open { transform: none; visibility: visible; transition: transform 0.44s var(--fp-ease), visibility 0s; }
+.fp-details { animation: fp-rise 0.44s var(--fp-ease); }
 .fp-queue-head, .fp-panel-head { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 1; padding: 14px 4px 10px; background: inherit; border-bottom: 1px solid var(--fp-line); font-size: 15px; }
 .fp-panel-head { margin-bottom: 12px; }
 .fp-details { display: block; }
 .fp-details .pq { margin-bottom: 12px; }
-@keyframes fp-rise { from { transform: translateY(28px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .fp-bg, .full-player.morph, .fp-queue.open, .fp-details { animation: none; } }
+@keyframes fp-rise { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .fp-bg, .full-player.morph, .fp-details { animation: none; } .fp-queue.np { transition: none !important; } }
+.fp-queue-head { touch-action: none; }
 
 /* Queue rows: swipe left to remove, grip to drag (while editing). */
 .fp-row.played, .fp-row.next { display: block; position: relative; overflow: hidden; touch-action: pan-y; }
@@ -1673,8 +1678,10 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-body.np { justify-content: flex-start; gap: clamp(28px, 5vw, 64px); }
   .fp-body.np .fp-art-col { flex: 1 1 50%; container-type: normal; }
   .fp-body.np .fp-art { width: min(100%, calc(100vh - 150px), 620px); }
-  .fp-queue.np:not(.open) { display: block; }
-  .fp-queue.open, .fp-details { position: static; inset: auto; z-index: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
+  .fp-queue.np, .fp-queue.np.open, .fp-details {
+    position: static; inset: auto; z-index: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; animation: none;
+    transform: none; visibility: visible; transition: none; will-change: auto;
+  }
   .fp-queue { padding-bottom: 12px; }
   .fp-details { display: grid; gap: 14px; padding: 4px 0 12px; }
   .fp-queue-head { position: static; padding: 4px 4px 8px; background: none; }
@@ -1714,12 +1721,14 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-play { width: 58px; height: 58px; }
   .fp-upright-only { display: inline-flex; }
   .fp-panel-head { display: flex; }
-  .fp-queue.np:not(.open) { display: none; }
-  .fp-queue.open, .fp-details {
-    position: absolute; z-index: 5; inset: 58px 0 0 0; display: block; overflow-y: auto; overscroll-behavior: contain;
+  .fp-queue.np, .fp-queue.np.open, .fp-details {
+    position: absolute; z-index: 5; inset: 52px 0 0 0; display: block; overflow-y: auto; overscroll-behavior: contain;
     padding: 0 var(--fp-px-r) max(12px, env(safe-area-inset-bottom, 0px)) var(--fp-px-l);
-    border-radius: 18px 18px 0 0; background: color-mix(in srgb, var(--fp-tint) 55%, #0b0a09); box-shadow: 0 -1px 0 rgb(255 255 255 / 0.08); animation: fp-rise 0.32s var(--fp-ease);
+    border-radius: 18px 18px 0 0; background: color-mix(in srgb, var(--fp-tint) 55%, #0b0a09); box-shadow: 0 -1px 0 rgb(255 255 255 / 0.08);
   }
+  .fp-queue.np { transform: translateY(104%); visibility: hidden; transition: transform 0.44s var(--fp-ease), visibility 0s linear 0.44s; will-change: transform; }
+  .fp-queue.np.open { transform: none; visibility: visible; transition: transform 0.44s var(--fp-ease), visibility 0s; }
+  .fp-details { animation: fp-rise 0.44s var(--fp-ease); }
   .fp-queue-head { position: sticky; padding: 12px 4px 8px; background: inherit; }
 }
 

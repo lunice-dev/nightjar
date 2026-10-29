@@ -41,7 +41,23 @@ export function FullPlayer({
   const queueSwipe = useSwipe(() => {
     if (queueIsPanel()) setPanel('queue');
   });
-  const closeSwipe = useSwipe(undefined, () => setPanel('none'));
+  // Dragging the queue's header down pulls the whole panel with the finger; letting go past a short distance closes it.
+  const [qDrag, setQDrag] = useState(0);
+  const qStart = useRef<number | null>(null);
+  const qHead = {
+    onTouchStart: (e: React.TouchEvent) => {
+      qStart.current = e.touches[0].clientY;
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      if (qStart.current != null) setQDrag(Math.max(0, e.touches[0].clientY - qStart.current));
+    },
+    onTouchEnd: () => {
+      const far = qDrag > 90;
+      qStart.current = null;
+      setQDrag(0);
+      if (far) setPanel('none');
+    },
+  };
   const [sleepMenu, setSleepMenu] = useState(false);
   // On touch screens the extra buttons live in this sheet, behind the "…" next to the title.
   const [moreOpen, setMoreOpen] = useState(false);
@@ -381,8 +397,12 @@ export function FullPlayer({
               {quality}
             </div>
           ) : (
-            <div className={`fp-queue np ${panel === 'queue' ? 'open' : ''}`} ref={queueRef}>
-              <div className="fp-queue-head" {...closeSwipe}>
+            <div
+              className={`fp-queue np ${panel === 'queue' ? 'open' : ''}`}
+              ref={queueRef}
+              style={qDrag ? { transform: `translateY(${qDrag}px)`, transition: 'none' } : undefined}
+            >
+              <div className="fp-queue-head" {...qHead}>
                 <strong>Up next</strong>
                 {shuffle && <span className="dim">Shuffled</span>}
                 {repeat !== 'off' && <span className="dim">{repeat === 'one' ? 'Repeating this track' : 'Repeating the queue'}</span>}
