@@ -37,6 +37,11 @@ export function FullPlayer({
 }) {
   const { queue, index, playing, shuffle, repeat, dataSaver, view, volume, sleep } = usePlayer();
   const p = usePlayer.getState();
+  // Swipe up on the cover or the title to open the queue; swipe down on the queue's header to put it away.
+  const queueSwipe = useSwipe(() => {
+    if (queueIsPanel()) setPanel('queue');
+  });
+  const closeSwipe = useSwipe(undefined, () => setPanel('none'));
   const [sleepMenu, setSleepMenu] = useState(false);
   // On touch screens the extra buttons live in this sheet, behind the "…" next to the title.
   const [moreOpen, setMoreOpen] = useState(false);
@@ -208,7 +213,12 @@ export function FullPlayer({
         </div>
       ) : (
       <div className="fp-body np">
-        <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div
+          className="fp-art-col"
+          onTouchStart={(e) => { onTouchStart(e); queueSwipe.onTouchStart(e); }}
+          onTouchMove={(e) => { onTouchMove(e); queueSwipe.onTouchMove(e); }}
+          onTouchEnd={() => { onTouchEnd(); queueSwipe.onTouchEnd(); }}
+        >
           <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
             <img ref={artImg} className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
             {tap.shown && (
@@ -221,7 +231,7 @@ export function FullPlayer({
         </div>
 
         <div className="fp-side">
-          <div className="fp-titlerow">
+          <div className="fp-titlerow" {...queueSwipe}>
             <div className="fp-now">
               <h2>{track.title}</h2>
               <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
@@ -372,7 +382,7 @@ export function FullPlayer({
             </div>
           ) : (
             <div className={`fp-queue np ${panel === 'queue' ? 'open' : ''}`} ref={queueRef}>
-              <div className="fp-queue-head">
+              <div className="fp-queue-head" {...closeSwipe}>
                 <strong>Up next</strong>
                 {shuffle && <span className="dim">Shuffled</span>}
                 {repeat !== 'off' && <span className="dim">{repeat === 'one' ? 'Repeating this track' : 'Repeating the queue'}</span>}
@@ -468,6 +478,37 @@ export function FullPlayer({
     </div>
     </>
   );
+}
+
+/** Whether the queue is a panel over the player (upright, or a phone held sideways) rather than a list beside the cover. */
+const queueIsPanel = () => !matchMedia('(min-aspect-ratio: 1/1) and (min-width: 700px)').matches || matchMedia('(max-height: 520px)').matches;
+
+/** A clear vertical swipe (at least 70 px, mostly up or down): calls `up` or `down`. A slip of the finger or a sideways drag does nothing. */
+function useSwipe(up?: () => void, down?: () => void) {
+  const t = useRef<{ x: number; y: number; lx: number; ly: number } | null>(null);
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      const p = e.touches[0];
+      t.current = { x: p.clientX, y: p.clientY, lx: p.clientX, ly: p.clientY };
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const p = e.touches[0];
+      if (t.current) {
+        t.current.lx = p.clientX;
+        t.current.ly = p.clientY;
+      }
+    },
+    onTouchEnd: () => {
+      const s = t.current;
+      t.current = null;
+      if (!s) return;
+      const dy = s.ly - s.y;
+      const dx = s.lx - s.x;
+      if (Math.abs(dy) < 70 || Math.abs(dx) > Math.abs(dy) * 0.6) return;
+      if (dy < 0) up?.();
+      else down?.();
+    },
+  };
 }
 
 /** How far a swipe pulls a row open: the width of its Remove button. */
