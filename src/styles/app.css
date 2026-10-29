@@ -1734,6 +1734,9 @@ html.in-app, html.in-app body { overflow: hidden; }
   .player-art { border-radius: 14px; }
 }
 
+/* iOS can enlarge the text inside these scrolling panels (the queue came out about a third bigger than designed on an iPhone), so ask it not to. */
+.fp-queue.np, .fp-details, .fp-sheet { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 /* The album's name under the artist opens the album's page. */
 .fp-albumlink { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; cursor: pointer; transition: text-decoration-color 0.15s; }
 .fp-albumlink:hover, .fp-albumlink:focus-visible { text-decoration-color: currentColor; }
