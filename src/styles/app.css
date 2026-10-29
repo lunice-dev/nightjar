@@ -833,7 +833,8 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 
 @media (max-width: 699px) {
   .shell { padding: 0; gap: 0; }
-  .topbar { border-radius: 0; height: 56px; padding: 0 12px; }
+  /* Under the translucent status bar the bar grows by its height, so its colour reaches the top edge and its content clears the island. */
+  .topbar { border-radius: 0; height: calc(56px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 12px 0; }
   .topnav, .brand-name, .shell-foot { display: none; }
   .topbar-search, .topbar-search:focus-within { flex: 1; width: auto; }
   .main { border-radius: 0; }
