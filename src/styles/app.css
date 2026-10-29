@@ -1766,6 +1766,17 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-body { padding-bottom: 4px; }
 }
 
+/* ---------- under the status bar (installed iPhone/iPad app with the translucent status bar) ---------- */
+/* iOS draws the time and battery in white there. On the light theme that needs a dark band behind it; on the dark theme the page already is. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) body::before { content: ''; position: fixed; z-index: 200; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: #121110; pointer-events: none; }
+}
+:root[data-theme='light'] body::before { content: ''; position: fixed; z-index: 200; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: #121110; pointer-events: none; }
+/* On a phone the large player runs edge to edge, its own top bar clearing the status bar. */
+@media (max-width: 699px) {
+  html.safe-top .full-player { inset: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); }
+}
+
 /* ---------- touch screens: the extra buttons sit behind "…" and a queue icon, not under the controls ---------- */
 .fp-titlerow { display: flex; align-items: flex-start; gap: 12px; }
 .fp-titlerow .fp-now { flex: 1; min-width: 0; }
