@@ -207,7 +207,7 @@ export function FullPlayer({
           <p>Nothing is playing. Tap an album’s cover, then a track.</p>
         </div>
       ) : (
-      <div className="fp-body">
+      <div className="fp-body np">
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
             <img ref={artImg} className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
@@ -371,7 +371,7 @@ export function FullPlayer({
               {quality}
             </div>
           ) : (
-            <div className={`fp-queue ${panel === 'queue' ? 'open' : ''}`} ref={queueRef}>
+            <div className={`fp-queue np ${panel === 'queue' ? 'open' : ''}`} ref={queueRef}>
               <div className="fp-queue-head">
                 <strong>Up next</strong>
                 {shuffle && <span className="dim">Shuffled</span>}
