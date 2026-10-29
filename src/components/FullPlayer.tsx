@@ -218,7 +218,11 @@ export function FullPlayer({
             <h2>{track.title}</h2>
             <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
             <p className="fp-album">
-              {track.album && <span>{track.album}</span>}
+              {track.album && (
+                <button className="fp-albumlink" onClick={() => p.openAlbum(track.dir)} title="Open the album">
+                  {track.album}
+                </button>
+              )}
               <span className="fp-chip">{chip}</span>
             </p>
           </div>

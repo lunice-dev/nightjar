@@ -1712,6 +1712,10 @@ html.in-app, html.in-app body { overflow: hidden; }
   .player-art { border-radius: 14px; }
 }
 
+/* The album's name under the artist opens the album's page. */
+.fp-albumlink { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; cursor: pointer; transition: text-decoration-color 0.15s; }
+.fp-albumlink:hover, .fp-albumlink:focus-visible { text-decoration-color: currentColor; }
+
 /* Volume in the large player (only on devices that let a page change it). */
 .fp-volume { display: flex; align-items: center; gap: 10px; color: var(--fp-ink-3); }
 .fp-vol { height: 4px; flex: 1; }

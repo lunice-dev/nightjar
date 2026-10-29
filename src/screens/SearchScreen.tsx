@@ -312,7 +312,7 @@ function YourShares() {
           <li key={f.key} className={`shelf-item t-${f.tier}`}>
             <span className="shelf-art">
               {localShareDir(f.folder, roots) ? (
-                <button className="cover-open" onClick={() => usePlayer.getState().openAlbum(localShareDir(f.folder, roots)!)} aria-label={`Open ${f.title}`}>
+                <button className="cover-open" onClick={() => void usePlayer.getState().openOrPlayAlbum(localShareDir(f.folder, roots)!)} aria-label={`Open ${f.title}`}>
                   <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
                 </button>
               ) : (

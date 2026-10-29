@@ -259,7 +259,7 @@ function AlbumRow({ a }: { a: LibAlbum }) {
   const c = check.saved;
   return (
     <div className="lib-row">
-      <button className="cover-open" onClick={() => usePlayer.getState().openAlbum(a.dir)} aria-label={`Open ${a.album}`}>
+      <button className="cover-open" onClick={() => void usePlayer.getState().openOrPlayAlbum(a.dir)} aria-label={`Open ${a.album}`}>
         <Cover className="lib-cover" dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} online={false} />
       </button>
       <div className="lib-main">

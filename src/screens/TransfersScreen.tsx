@@ -687,7 +687,7 @@ function TransferRow({
   return (
     <section className="dl with-cover" aria-label={g.title}>
       {direction === 'download' && finished && albumDir && canFiles && !gone ? (
-        <button className="cover-open" onClick={() => usePlayer.getState().openAlbum(albumDir)} aria-label={`Open ${g.title}`}>
+        <button className="cover-open" onClick={() => void usePlayer.getState().openOrPlayAlbum(albumDir)} aria-label={`Open ${g.title}`}>
           <Cover className="dl-cover" dir={coverDir} artist={g.parent} album={g.title} seed={g.key} />
         </button>
       ) : (

@@ -73,6 +73,15 @@ export function AlbumPlay({ dir, title, variant = 'buttons' }: { dir: string; ti
           </button>
           <button
             role="menuitem"
+            onClick={() => {
+              setMenu(false);
+              usePlayer.getState().openAlbum(dir);
+            }}
+          >
+            <Icon name="folder" size={15} /> Open album
+          </button>
+          <button
+            role="menuitem"
             onClick={async () => {
               setMenu(false);
               const backend = useStore.getState().backend;

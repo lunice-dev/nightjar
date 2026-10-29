@@ -70,6 +70,8 @@ interface PlayerState {
   setExpanded(open: boolean): void;
   /** Opens the drawer on an album (nothing starts playing). */
   openAlbum(dir: string): void;
+  /** Tapping a cover: with nothing playing, plays the album and opens the player; otherwise opens the album's page so the queue isn't replaced. */
+  openOrPlayAlbum(dir: string): Promise<void>;
   openPlaylist(id: string): void;
   /** Back to what's playing. */
   showNow(): void;
@@ -285,6 +287,12 @@ export const usePlayer = create<PlayerState>((set, get) => ({
 
   openAlbum(dir) {
     set({ expanded: true, closeRequested: false, view: { kind: 'album', dir } });
+  },
+
+  async openOrPlayAlbum(dir) {
+    if (get().queue.length > 0) return get().openAlbum(dir);
+    await get().playAlbum(dir);
+    if (get().queue.length > 0) set({ expanded: true, closeRequested: false, view: { kind: 'now' } });
   },
 
   openPlaylist(id) {

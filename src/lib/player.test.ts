@@ -63,6 +63,23 @@ describe('the sleep timer', () => {
   });
 });
 
+describe('tapping an album cover', () => {
+  it('opens the album page, leaving the queue alone, while something is queued', async () => {
+    usePlayer.setState({ queue: ['a', 'b'].map(item), index: 0, expanded: false, view: { kind: 'now' } });
+    await usePlayer.getState().openOrPlayAlbum('some/dir');
+    const s = usePlayer.getState();
+    expect(s.expanded).toBe(true);
+    expect(s.view).toEqual({ kind: 'album', dir: 'some/dir' });
+    expect(order()).toEqual(['a', 'b']);
+  });
+
+  it('does not open the player when nothing could be played', async () => {
+    usePlayer.setState({ queue: [], index: 0, expanded: false, view: { kind: 'now' } });
+    await usePlayer.getState().openOrPlayAlbum('some/dir'); // no backend: nothing to play
+    expect(usePlayer.getState().expanded).toBe(false);
+  });
+});
+
 describe('the volume', () => {
   it('stays between 0 and 1', () => {
     usePlayer.getState().setVolume(1.7);
