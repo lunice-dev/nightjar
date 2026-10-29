@@ -101,9 +101,10 @@ interface PlayerState {
 const SAVER_KEY = 'nightjar.dataSaver';
 const VOLUME_KEY = 'nightjar.volume';
 
-/** Whether the page can change the volume at all (iPhones and iPads ignore it). */
+/** Whether the page can change the volume. iPhones accept the value but ignore it (the side buttons rule), so no slider there. */
 export const canSetVolume = (() => {
   try {
+    if (/iPhone|iPod/.test(navigator.userAgent)) return false;
     const a = new Audio();
     a.volume = 0.5;
     return a.volume === 0.5;
