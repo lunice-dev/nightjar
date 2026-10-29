@@ -1660,6 +1660,9 @@ html.in-app, html.in-app body { overflow: hidden; }
 @keyframes fp-rise { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) { .fp-bg, .full-player.morph, .fp-details { animation: none; } .fp-queue.np { transition: none !important; } }
 .fp-queue-head { touch-action: none; }
+/* The cover and the title are where you pull the queue up from, so the browser must not scroll or bounce under the finger. */
+.fp-body.np .fp-art-col { touch-action: none; }
+@media (max-aspect-ratio: 1/1) { .fp-body.np .fp-titlerow { touch-action: none; } }
 
 /* Queue rows: swipe left to remove, grip to drag (while editing). */
 .fp-row.played, .fp-row.next { display: block; position: relative; overflow: hidden; touch-action: pan-y; }

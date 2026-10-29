@@ -37,10 +37,38 @@ export function FullPlayer({
 }) {
   const { queue, index, playing, shuffle, repeat, dataSaver, view, volume, sleep } = usePlayer();
   const p = usePlayer.getState();
-  // Swipe up on the cover or the title to open the queue; swipe down on the queue's header to put it away.
-  const queueSwipe = useSwipe(() => {
-    if (queueIsPanel()) setPanel('queue');
-  });
+  // Swipe up on the cover or the title: the queue rises with the finger and opens if pulled far (or flicked) enough.
+  const [qPeek, setQPeek] = useState(0);
+  const peekNow = useRef(0); // the same number, readable the instant the finger lifts
+  const pull = useRef<{ x: number; y: number; t: number } | null>(null);
+  const setPeek = (v: number) => {
+    peekNow.current = v;
+    setQPeek(v);
+  };
+  const queueSwipe = {
+    onTouchStart: (e: React.TouchEvent) => {
+      const p = e.touches[0];
+      pull.current = { x: p.clientX, y: p.clientY, t: Date.now() };
+      peekNow.current = 0;
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const s = pull.current;
+      if (!s || !queueIsPanel()) return;
+      const p = e.touches[0];
+      const dy = s.y - p.clientY;
+      if (dy > 8 && Math.abs(p.clientX - s.x) < dy * 0.8) setPeek(Math.min(dy, queueRef.current?.offsetHeight ?? 600));
+      else if (dy <= 0 && peekNow.current) setPeek(0);
+    },
+    onTouchEnd: () => {
+      const s = pull.current;
+      pull.current = null;
+      const peek = peekNow.current;
+      setPeek(0);
+      if (!s || !peek || !queueIsPanel()) return;
+      const flick = peek > 35 && peek / Math.max(1, Date.now() - s.t) > 0.45;
+      if (peek > 80 || flick) setPanel('queue');
+    },
+  };
   // Dragging the queue's header down pulls the whole panel with the finger; letting go past a short distance closes it.
   const [qDrag, setQDrag] = useState(0);
   const qStart = useRef<number | null>(null);
@@ -400,7 +428,13 @@ export function FullPlayer({
             <div
               className={`fp-queue np ${panel === 'queue' ? 'open' : ''}`}
               ref={queueRef}
-              style={qDrag ? { transform: `translateY(${qDrag}px)`, transition: 'none' } : undefined}
+              style={
+                qDrag
+                  ? { transform: `translateY(${qDrag}px)`, transition: 'none' }
+                  : qPeek
+                    ? { transform: `translateY(${(queueRef.current?.offsetHeight ?? 600) - qPeek}px)`, visibility: 'visible', transition: 'none' }
+                    : undefined
+              }
             >
               <div className="fp-queue-head" {...qHead}>
                 <strong>Up next</strong>
@@ -502,34 +536,6 @@ export function FullPlayer({
 
 /** Whether the queue is a panel over the player (upright, or a phone held sideways) rather than a list beside the cover. */
 const queueIsPanel = () => !matchMedia('(min-aspect-ratio: 1/1) and (min-width: 700px)').matches || matchMedia('(max-height: 520px)').matches;
-
-/** A clear vertical swipe (at least 70 px, mostly up or down): calls `up` or `down`. A slip of the finger or a sideways drag does nothing. */
-function useSwipe(up?: () => void, down?: () => void) {
-  const t = useRef<{ x: number; y: number; lx: number; ly: number } | null>(null);
-  return {
-    onTouchStart: (e: React.TouchEvent) => {
-      const p = e.touches[0];
-      t.current = { x: p.clientX, y: p.clientY, lx: p.clientX, ly: p.clientY };
-    },
-    onTouchMove: (e: React.TouchEvent) => {
-      const p = e.touches[0];
-      if (t.current) {
-        t.current.lx = p.clientX;
-        t.current.ly = p.clientY;
-      }
-    },
-    onTouchEnd: () => {
-      const s = t.current;
-      t.current = null;
-      if (!s) return;
-      const dy = s.ly - s.y;
-      const dx = s.lx - s.x;
-      if (Math.abs(dy) < 70 || Math.abs(dx) > Math.abs(dy) * 0.6) return;
-      if (dy < 0) up?.();
-      else down?.();
-    },
-  };
-}
 
 /** How far a swipe pulls a row open: the width of its Remove button. */
 const SWIPE_OPEN = 88;
