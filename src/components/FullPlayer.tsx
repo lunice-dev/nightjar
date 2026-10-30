@@ -227,11 +227,7 @@ export function FullPlayer({
     <>
       <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
       <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
-      {backdropArt && (
-        <div className="fp-bgbox" aria-hidden>
-          <img key={backdropArt} className="fp-bg" src={backdropArt} alt="" />
-        </div>
-      )}
+      <Backdrop src={backdropArt} />
       <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <span className="fp-grab" aria-hidden />
         <button className="fp-icon" onClick={close} aria-label="Close the player">
@@ -534,6 +530,38 @@ export function FullPlayer({
       )}
     </div>
     </>
+  );
+}
+
+/**
+ * The blurred cover behind the player. A new cover is decoded off screen first and then fades in over the old one, and only then
+ * is the old one dropped, so the background never blinks when the cover changes (the placeholder gives way to the real cover a
+ * moment after the player opens).
+ */
+function Backdrop({ src }: { src: string | null }) {
+  const [layers, setLayers] = useState<{ src: string; id: number }[]>([]);
+  useEffect(() => {
+    if (!src) return;
+    let alive = true;
+    const img = new Image();
+    img.src = src;
+    const show = () => {
+      if (!alive) return;
+      setLayers((l) => (l[l.length - 1]?.src === src ? l : [...l.slice(-1), { src, id: Date.now() + Math.random() }]));
+      // the older layer is only needed while the new one fades in
+      setTimeout(() => alive && setLayers((l) => l.slice(-1)), 900);
+    };
+    (img.decode ? img.decode() : Promise.resolve()).then(show, show);
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  return (
+    <div className="fp-bgbox" aria-hidden>
+      {layers.map((l, i) => (
+        <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''}`} src={l.src} alt="" />
+      ))}
+    </div>
   );
 }
 
