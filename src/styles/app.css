@@ -117,14 +117,14 @@
   color-scheme: dark;
 }
 
-/* The large player on OLED: the cover's colour fades out to true black instead of settling on a brown, and so do its panels. */
+/* The large player on OLED: the blurred cover stays behind all of it, over black, so the colour is there but never a flat brown; its panels are very dark tints. */
 :root[data-theme='oled'] .full-player {
   --fp-panel: color-mix(in srgb, var(--fp-tint) 16%, #000);
   background:
     radial-gradient(120% 70% at 25% 0%, color-mix(in srgb, var(--fp-tint) 90%, #fff 6%), transparent 62%),
     linear-gradient(180deg, color-mix(in srgb, var(--fp-tint) 55%, #000) 0%, #000 74%);
 }
-:root[data-theme='oled'] .fp-bgbox { -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 72%); mask-image: linear-gradient(to bottom, #000 0%, transparent 72%); }
+:root[data-theme='oled'] .fp-bg { opacity: 0.62; }
 
 /* On true black, edges are drawn with a thin line instead of a lighter panel behind them. */
 :root[data-theme='oled'] .sheet { background: var(--surface); border-top: 1px solid var(--rule-strong); }
