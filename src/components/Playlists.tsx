@@ -4,6 +4,7 @@ import type { PlaylistSummary, Track } from '../api/library';
 import { usePlayer } from '../lib/player';
 import { useStore } from '../store';
 import { Cover } from './Cover';
+import { Icon } from './Icon';
 
 /** Tells every list of playlists on screen to read them again. */
 export const playlistsChanged = () => window.dispatchEvent(new Event('nightjar-playlists'));
@@ -210,52 +211,45 @@ export function PlaylistShelf() {
   };
 
   return (
-    <section className="your-shares playlists-home" aria-labelledby="pl-h">
-      <div className="activity-head">
-        <div>
-          <h2 id="pl-h">Playlists</h2>
-          <p className="hint-text">
-            {list.length
-              ? `${list.length} ${list.length === 1 ? 'playlist' : 'playlists'}, kept on your computer for all your devices.`
-              : 'Open an album and use … → Add to playlist on any track or on the whole album.'}
-          </p>
-        </div>
+    <section className="your-shares playlists-home compact" aria-labelledby="pl-h">
+      <div className="pl-head">
+        <h2 id="pl-h">
+          Playlists {list.length > 0 && <span className="dim">{list.length}</span>}
+        </h2>
+        {naming ? (
+          <form className="pl-new-form" onSubmit={create}>
+            <input className="input" autoFocus placeholder="Name" aria-label="Playlist name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} onKeyDown={(e) => e.key === 'Escape' && setNaming(false)} />
+            <button className="btn small" disabled={!name.trim()}>
+              Create
+            </button>
+          </form>
+        ) : (
+          <button className="btn quiet small" onClick={() => setNaming(true)}>
+            <span aria-hidden>+</span> New playlist
+          </button>
+        )}
       </div>
-      <ul className="shelf pl-shelf">
-        {list.map((p) => (
-          <li key={p.id} className="shelf-item">
-            <button className="pl-card" onClick={() => openPlaylist(p.id)} aria-label={`Open ${p.name}`}>
-              <PlaylistCover p={p} className="shelf-cover" />
-            </button>
-            <span className="shelf-title" title={p.name}>
-              {p.name}
-            </span>
-            <span className="shelf-artist">
-              {p.count} {p.count === 1 ? 'track' : 'tracks'}
-              {p.seconds ? ` · ${fmtLength(p.seconds)}` : ''}
-            </span>
-          </li>
-        ))}
-        <li className="shelf-item">
-          {naming ? (
-            <form className="pl-card new naming" onSubmit={create}>
-              <input className="input" autoFocus placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} onKeyDown={(e) => e.key === 'Escape' && setNaming(false)} />
-              <button className="btn small" disabled={!name.trim()}>
-                Create
-              </button>
-            </form>
-          ) : (
-            <button className="pl-card new" onClick={() => setNaming(true)}>
-              <span className="pl-cover empty shelf-cover">
-                <span className="pl-plus" aria-hidden>
-                  +
+      {list.length === 0 ? (
+        <p className="hint-text">Open an album and use … → Add to playlist on any track or on the whole album.</p>
+      ) : (
+        <ul className="pl-list">
+          {list.map((p) => (
+            <li key={p.id}>
+              <button className="pl-row" onClick={() => openPlaylist(p.id)} aria-label={`Open ${p.name}`}>
+                <PlaylistCover p={p} className="pl-thumb" />
+                <span className="pl-row-t">
+                  <strong title={p.name}>{p.name}</strong>
+                  <span>
+                    {p.count} {p.count === 1 ? 'track' : 'tracks'}
+                    {p.seconds ? ` · ${fmtLength(p.seconds)}` : ''}
+                  </span>
                 </span>
-              </span>
-            </button>
-          )}
-          <span className="shelf-title">New playlist</span>
-        </li>
-      </ul>
+                <Icon name="chevron" size={18} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
