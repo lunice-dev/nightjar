@@ -319,13 +319,10 @@ function YourShares() {
                 <Cover className="shelf-cover" dir={localShareDir(f.folder, roots)} artist={f.parent} album={f.title} seed={f.key} />
               )}
               {localShareDir(f.folder, roots) && <AlbumPlay variant="overlay" dir={localShareDir(f.folder, roots)!} title={f.title} />}
+              <span className="shelf-q format" title={`${f.format}, ${f.audio.length} ${f.audio.length === 1 ? 'track' : 'tracks'}`}>{f.format}</span>
             </span>
             <span className="shelf-title" title={f.title}>{f.title}</span>
             <span className="shelf-artist">{[f.parent, f.year].filter(Boolean).join(', ')}</span>
-            <span className="shelf-meta">
-              <span className="format">{f.format}</span>
-              <span className="dim">{f.audio.length} tracks</span>
-            </span>
           </li>
         ))}
       </ul>
