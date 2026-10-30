@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
-import { FullPlayer, morph } from './FullPlayer';
+import { FullPlayer, morph, warmArt } from './FullPlayer';
 import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
@@ -108,6 +108,11 @@ export function Player() {
       alive = false;
     };
   }, [track?.dir, backend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // With the cover in hand, get what the large player draws from it ready now, so it opens complete.
+  useEffect(() => {
+    if (cover) void warmArt(cover);
+  }, [cover]);
 
   // What the lock screen shows, and its buttons. The info changes only when the track or its cover really
   // changes, so it doesn't blink; the buttons are handed over again with it, as iOS expects (without them it

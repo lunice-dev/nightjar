@@ -1699,7 +1699,9 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* The cover, blurred and enlarged, behind everything (the drawer is its own stacking context). */
 .fp-bgbox { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; }
 .fp-bg { --bg-op: 0.5; position: absolute; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(34px) saturate(1.5); opacity: var(--bg-op); pointer-events: none; }
+.fp-bg { transform: translateZ(0); } /* its own layer, so the blur is drawn once and not again as the player slides up */
 .fp-bg.in { animation: fp-bg-in 0.7s ease both; }
+.fp-bg.instant { animation: none; }
 @keyframes fp-bg-in { from { opacity: 0; } to { opacity: var(--bg-op); } }
 /* A faint dark veil over the blurred cover, so the white text stays readable where the cover is bright. */
 .fp-bgbox::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0.22), rgb(0 0 0 / 0.06) 38%, rgb(0 0 0 / 0.18)); }

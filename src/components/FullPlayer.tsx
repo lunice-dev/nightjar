@@ -539,7 +539,8 @@ export function FullPlayer({
  * moment after the player opens).
  */
 function Backdrop({ src }: { src: string | null }) {
-  const [layers, setLayers] = useState<{ src: string; id: number }[]>([]);
+  // A cover that is already decoded is there on the first frame, with no fade; a new one fades in over the old.
+  const [layers, setLayers] = useState<{ src: string; id: number; instant?: boolean }[]>(() => (src && warmBackdrop.has(src) ? [{ src, id: 0, instant: true }] : []));
   useEffect(() => {
     if (!src) return;
     let alive = true;
@@ -547,6 +548,7 @@ function Backdrop({ src }: { src: string | null }) {
     img.src = src;
     const show = () => {
       if (!alive) return;
+      warmBackdrop.add(src);
       setLayers((l) => (l[l.length - 1]?.src === src ? l : [...l.slice(-1), { src, id: Date.now() + Math.random() }]));
       // the older layer is only needed while the new one fades in
       setTimeout(() => alive && setLayers((l) => l.slice(-1)), 900);
@@ -559,7 +561,7 @@ function Backdrop({ src }: { src: string | null }) {
   return (
     <div className="fp-bgbox" aria-hidden>
       {layers.map((l, i) => (
-        <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''}`} src={l.src} alt="" />
+        <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''} ${l.instant ? 'instant' : ''}`} src={l.src} alt="" />
       ))}
     </div>
   );
@@ -751,50 +753,90 @@ function RepeatGlyph({ one }: { one: boolean }) {
  * so white text stays readable. Null while it isn't known (or the picture can't be read).
  */
 function useArtColour(src: string | null) {
-  const [colour, setColour] = useState<string | null>(null);
+  // A cover that was prepared while the small player was showing gives its colour on the very first frame.
+  const [colour, setColour] = useState<string | null>(() => (src ? warmColour.get(src) ?? null : null));
   useEffect(() => {
     if (!src) {
       setColour(null);
       return;
     }
     let alive = true;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const c = document.createElement('canvas');
-        c.width = c.height = 24;
-        const g = c.getContext('2d', { willReadFrequently: true });
-        if (!g) return;
-        g.drawImage(img, 0, 0, 24, 24);
-        const d = g.getImageData(0, 0, 24, 24).data;
-        let r = 0, gr = 0, b = 0, w = 0;
-        for (let i = 0; i < d.length; i += 4) {
-          const R = d[i], G = d[i + 1], B = d[i + 2];
-          const max = Math.max(R, G, B), min = Math.min(R, G, B);
-          const sat = max === 0 ? 0 : (max - min) / max;
-          const weight = 0.15 + sat * 2; // colourful pixels count more than greys
-          r += R * weight;
-          gr += G * weight;
-          b += B * weight;
-          w += weight;
-        }
-        if (!w) return;
-        r /= w;
-        gr /= w;
-        b /= w;
-        // Keep it deep: scale so the brightest channel is at most ~92, so white text always reads well.
-        const k = Math.min(1, 92 / Math.max(r, gr, b, 1));
-        if (alive) setColour(`rgb(${Math.round(r * k)} ${Math.round(gr * k)} ${Math.round(b * k)})`);
-      } catch {
-        if (alive) setColour(null); // a picture from a server that doesn't allow reading it
-      }
-    };
-    img.onerror = () => alive && setColour(null);
-    img.src = src;
+    if (warmColour.has(src)) setColour(warmColour.get(src) ?? null);
+    else void warmArt(src).then((c) => alive && setColour(c));
     return () => {
       alive = false;
     };
   }, [src]);
   return colour;
+}
+
+/** The deep colour of a picture: the average of its colourful pixels, darkened so white text always reads. Null if it can't be read. */
+function colourOf(img: HTMLImageElement): string | null {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 24;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    if (!g) return null;
+    g.drawImage(img, 0, 0, 24, 24);
+    const d = g.getImageData(0, 0, 24, 24).data;
+    let r = 0, gr = 0, b = 0, w = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const R = d[i], G = d[i + 1], B = d[i + 2];
+      const max = Math.max(R, G, B), min = Math.min(R, G, B);
+      const sat = max === 0 ? 0 : (max - min) / max;
+      const weight = 0.15 + sat * 2; // colourful pixels count more than greys
+      r += R * weight;
+      gr += G * weight;
+      b += B * weight;
+      w += weight;
+    }
+    if (!w) return null;
+    r /= w;
+    gr /= w;
+    b /= w;
+    // Keep it deep: scale so the brightest channel is at most ~92, so white text always reads well.
+    const k = Math.min(1, 92 / Math.max(r, gr, b, 1));
+    return `rgb(${Math.round(r * k)} ${Math.round(gr * k)} ${Math.round(b * k)})`;
+  } catch {
+    return null; // a picture from a server that doesn't allow reading it
+  }
+}
+
+/** Covers whose colour is known (null: unreadable), and covers already decoded for the blurred background. */
+const warmColour = new Map<string, string | null>();
+const warmBackdrop = new Set<string>();
+const warming = new Map<string, Promise<string | null>>();
+
+/**
+ * Gets a cover ready ahead of time (decoded for the blurred background, its colour worked out), so the large player
+ * opens with both already in place instead of finishing them after it is on screen.
+ */
+export function warmArt(src: string): Promise<string | null> {
+  if (warmColour.has(src)) return Promise.resolve(warmColour.get(src) ?? null);
+  const running = warming.get(src);
+  if (running) return running;
+  const plain = new Image();
+  plain.src = src;
+  void (plain.decode ? plain.decode() : Promise.resolve()).then(() => warmBackdrop.add(src), () => undefined);
+  const job = new Promise<string | null>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = async () => {
+      try {
+        await img.decode?.();
+      } catch {
+        /* the colour can still be read */
+      }
+      const colour = colourOf(img);
+      warmColour.set(src, colour);
+      resolve(colour);
+    };
+    img.onerror = () => {
+      warmColour.set(src, null);
+      resolve(null);
+    };
+    img.src = src;
+  }).finally(() => warming.delete(src));
+  warming.set(src, job);
+  return job;
 }
