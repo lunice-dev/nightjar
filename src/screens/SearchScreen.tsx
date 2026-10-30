@@ -329,13 +329,43 @@ function YourShares() {
           </li>
         ))}
       </ul>
-      {shown.length > limit && (
-        <button className="btn quiet small" onClick={() => setLimit((l) => l + 48)}>
-          Show {Math.min(48, shown.length - limit)} more
-        </button>
-      )}
+      {shown.length > limit && <LoadMore remaining={shown.length - limit} onMore={() => setLimit((l) => l + 48)} />}
       {shown.length === 0 && <p className="hint-text">Nothing matches.</p>}
     </section>
+  );
+}
+
+/**
+ * The end of a long list: when it scrolls close to the screen it asks for the next batch, so the list keeps going
+ * by itself. Where the browser can't tell (very old ones), it stays a "Show more" button.
+ */
+function LoadMore({ remaining, onMore }: { remaining: number; onMore: () => void }) {
+  const end = useRef<HTMLDivElement>(null);
+  const more = useRef(onMore);
+  more.current = onMore;
+  const canWatch = typeof IntersectionObserver !== 'undefined';
+  useEffect(() => {
+    const el = end.current;
+    if (!el || !canWatch) return;
+    // The page scrolls inside its own container, and only that container's edge counts, so watch that one: the next batch
+    // is asked for while the end of the list is still about a screen and a half away.
+    let box: HTMLElement | null = el.parentElement;
+    while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+    // It is created again after every batch, so an end that is still near asks again at once.
+    const watcher = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && more.current(), { root: box, rootMargin: '0px 0px 900px 0px' });
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, [remaining, canWatch]);
+  if (!canWatch)
+    return (
+      <button className="btn quiet small" onClick={onMore}>
+        Show {Math.min(48, remaining)} more
+      </button>
+    );
+  return (
+    <div ref={end} className="load-more" role="status">
+      <span className="spinner" aria-hidden /> Loading more albums…
+    </div>
   );
 }
 
