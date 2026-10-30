@@ -1336,14 +1336,11 @@ html.in-app, html.in-app body { overflow: hidden; }
 .album-play.overlay { position: absolute; right: 8px; bottom: 16px; gap: 6px; opacity: 0; transform: translateY(4px); transition: opacity 0.15s, transform 0.15s; }
 .shelf-item:hover .album-play.overlay, .album-play.overlay:focus-within { opacity: 1; transform: none; }
 @media (hover: none) { .album-play.overlay { opacity: 1; transform: none; } }
-.ap-play, .ap-more { display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 10px rgb(0 0 0 / 0.3); }
-.ap-play { width: 40px; height: 40px; background: #f4f1ea; color: #161513; }
-.ap-play:hover { transform: scale(1.06); }
+.ap-more { display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 10px rgb(0 0 0 / 0.3); }
 .ap-more { width: 30px; height: 30px; background: rgb(22 21 19 / 0.7); color: #f4f1ea; backdrop-filter: blur(6px); }
 /* On a cover, "…" is just the dots in the top corner: there when you need it, out of the way of the art. */
 .shelf-art .album-play.overlay { position: absolute; inset: 0 0 8px 0; pointer-events: none; }
 .shelf-art .album-play.overlay > * { pointer-events: auto; }
-.shelf-art .ap-play { position: absolute; right: 10px; bottom: 10px; }
 .shelf-art .ap-more { position: absolute; top: 6px; right: 6px; width: 28px; height: 22px; border-radius: 999px; background: none; box-shadow: none; backdrop-filter: none; color: #fff; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.7)); opacity: 0.8; }
 .shelf-art .ap-more:hover { opacity: 1; background: rgb(0 0 0 / 0.35); }
 .shelf-art .album-play.overlay .ap-menu { top: 32px; bottom: auto; right: 6px; }

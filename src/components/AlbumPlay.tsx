@@ -25,18 +25,21 @@ export function AlbumPlay({ dir, title, variant = 'buttons' }: { dir: string; ti
 
   return (
     <span ref={ref} className={`album-play ${variant}`}>
-      <button
-        className={variant === 'overlay' ? 'ap-play' : variant === 'icon' ? 'btn quiet small icon-only' : 'btn quiet small'}
-        onClick={(e) => {
-          e.stopPropagation();
-          void playAlbum(dir);
-        }}
-        aria-label={`Play ${title}`}
-        title="Play"
-      >
-        <Icon name="play" size={variant === 'overlay' ? 18 : 16} />
-        {variant === 'buttons' && ' Play'}
-      </button>
+      {/* On a cover there is no play button: a tap on the cover plays or opens it, and "Play" is in the menu. */}
+      {variant !== 'overlay' && (
+        <button
+          className={variant === 'icon' ? 'btn quiet small icon-only' : 'btn quiet small'}
+          onClick={(e) => {
+            e.stopPropagation();
+            void playAlbum(dir);
+          }}
+          aria-label={`Play ${title}`}
+          title="Play"
+        >
+          <Icon name="play" size={16} />
+          {variant === 'buttons' && ' Play'}
+        </button>
+      )}
       {(
         <button
           className={variant === 'overlay' ? 'ap-more' : 'btn quiet small icon-only'}
@@ -53,6 +56,17 @@ export function AlbumPlay({ dir, title, variant = 'buttons' }: { dir: string; ti
       )}
       {menu && (
         <span className="ap-menu" role="menu">
+          {variant === 'overlay' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMenu(false);
+                void playAlbum(dir);
+              }}
+            >
+              <Icon name="play" size={15} /> Play
+            </button>
+          )}
           <button
             role="menuitem"
             onClick={() => {
