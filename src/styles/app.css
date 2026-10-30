@@ -124,7 +124,7 @@
     radial-gradient(120% 70% at 25% 0%, color-mix(in srgb, var(--fp-tint) 90%, #fff 6%), transparent 62%),
     linear-gradient(180deg, color-mix(in srgb, var(--fp-tint) 55%, #000) 0%, #000 74%);
 }
-:root[data-theme='oled'] .fp-bg { opacity: 0.62; }
+:root[data-theme='oled'] .fp-bg { opacity: 0.56; }
 
 /* On true black, edges are drawn with a thin line instead of a lighter panel behind them. */
 :root[data-theme='oled'] .sheet { background: var(--surface); border-top: 1px solid var(--rule-strong); }
@@ -1698,7 +1698,9 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* ---------- the large player, Apple Music style ---------- */
 /* The cover, blurred and enlarged, behind everything (the drawer is its own stacking context). */
 .fp-bgbox { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; }
-.fp-bg { position: absolute; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(56px) saturate(1.5); opacity: 0.5; pointer-events: none; animation: fp-fade 0.7s ease; }
+.fp-bg { position: absolute; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(34px) saturate(1.5); opacity: 0.5; pointer-events: none; animation: fp-fade 0.7s ease; }
+/* A faint dark veil over the blurred cover, so the white text stays readable where the cover is bright. */
+.fp-bgbox::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0.22), rgb(0 0 0 / 0.06) 38%, rgb(0 0 0 / 0.18)); }
 /* Opened from the small player: the drawer fades in while the art grows out of the small cover. */
 .full-player.morph { animation: fp-fade 0.3s ease; }
 
