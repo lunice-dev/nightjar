@@ -1416,7 +1416,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .seek-bubble.fp { left: 50%; background: rgb(0 0 0 / 0.6); color: #fff; }
 .fp-times { display: flex; justify-content: space-between; margin-top: 7px; font-size: 12px; color: var(--fp-ink-3); font-variant-numeric: tabular-nums; }
 .fp-controls { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
-.fp-play { width: 74px; height: 74px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--fp-ink); color: #141312; cursor: pointer; box-shadow: 0 8px 24px rgb(0 0 0 / 0.3); }
+.fp-play { width: 74px; height: 74px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--fp-ink); color: #141312; cursor: pointer; box-shadow: 0 6px 18px rgb(0 0 0 / 0.28); }
 .fp-play:active { transform: scale(0.95); }
 .fp-details { display: grid; gap: 14px; padding: 4px 0 12px; }
 .fp-details .pq { background: rgb(0 0 0 / 0.22); color: var(--fp-ink-2); }
@@ -1660,9 +1660,8 @@ html.in-app, html.in-app body { overflow: hidden; }
 @keyframes fp-rise { from { transform: translateY(100%); } }
 @media (prefers-reduced-motion: reduce) { .fp-bg, .full-player.morph, .fp-details { animation: none; } .fp-queue.np { transition: none !important; } }
 .fp-queue-head { touch-action: none; }
-/* The cover and the title are where you pull the queue up from, so the browser must not scroll or bounce under the finger. */
-.fp-body.np .fp-art-col { touch-action: none; }
-@media (max-aspect-ratio: 1/1) { .fp-body.np .fp-titlerow { touch-action: none; } }
+/* The whole player is where you pull the queue up from, so the browser must not scroll or bounce under the finger. */
+.fp-body.np { touch-action: none; }
 
 /* Queue rows: swipe left to remove, grip to drag (while editing). */
 .fp-row.played, .fp-row.next { display: block; position: relative; overflow: hidden; touch-action: pan-y; }
@@ -1780,8 +1779,9 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-body.np .fp-art-col::after { flex: 2 1 0; }
   .fp-body.np .fp-art-tap { flex: none; }
   .fp-body.np .fp-side { gap: clamp(14px, 2.6vh, 28px); }
-  .full-player { padding-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px)); }
-  .fp-body.np { padding-bottom: 4px; }
+  /* The play button's shadow reaches about 30px below it and the scrolling area clips it, so that room is inside the area. */
+  .full-player { padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+  .fp-body.np { padding-bottom: 28px; }
 }
 
 /* ---------- under the status bar (installed iPhone/iPad app with the translucent status bar) ---------- */

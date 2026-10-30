@@ -37,26 +37,32 @@ export function FullPlayer({
 }) {
   const { queue, index, playing, shuffle, repeat, dataSaver, view, volume, sleep } = usePlayer();
   const p = usePlayer.getState();
-  // Swipe up on the cover or the title: the queue rises with the finger and opens if pulled far (or flicked) enough.
+  // Swipe up anywhere on the player (except the seek bar and the volume, which are dragged sideways): the queue rises as the
+  // finger moves, and is fully up once the finger has travelled most of the way from where it started to the top of the panel.
+  // It opens when let go past about a quarter of the way, or after a quick flick; otherwise it slides back down.
   const [qPeek, setQPeek] = useState(0);
   const peekNow = useRef(0); // the same number, readable the instant the finger lifts
-  const pull = useRef<{ x: number; y: number; t: number } | null>(null);
+  const pull = useRef<{ x: number; y: number; t: number; reach: number } | null>(null);
   const setPeek = (v: number) => {
     peekNow.current = v;
     setQPeek(v);
   };
   const queueSwipe = {
     onTouchStart: (e: React.TouchEvent) => {
-      const p = e.touches[0];
-      pull.current = { x: p.clientX, y: p.clientY, t: Date.now() };
       peekNow.current = 0;
+      if ((e.target as Element).closest('.fp-seek-wrap, .fp-volume, .fp-queue, .fp-details, .fp-sheet')) {
+        pull.current = null;
+        return;
+      }
+      const p = e.touches[0];
+      pull.current = { x: p.clientX, y: p.clientY, t: Date.now(), reach: Math.min(520, Math.max(220, p.clientY - 70)) };
     },
     onTouchMove: (e: React.TouchEvent) => {
       const s = pull.current;
       if (!s || !queueIsPanel()) return;
       const p = e.touches[0];
       const dy = s.y - p.clientY;
-      if (dy > 8 && Math.abs(p.clientX - s.x) < dy * 0.8) setPeek(Math.min(dy, queueRef.current?.offsetHeight ?? 600));
+      if (dy > 8 && Math.abs(p.clientX - s.x) < dy * 0.8) setPeek(Math.min(1, dy / s.reach) * (queueRef.current?.offsetHeight ?? 600));
       else if (dy <= 0 && peekNow.current) setPeek(0);
     },
     onTouchEnd: () => {
@@ -65,8 +71,10 @@ export function FullPlayer({
       const peek = peekNow.current;
       setPeek(0);
       if (!s || !peek || !queueIsPanel()) return;
-      const flick = peek > 35 && peek / Math.max(1, Date.now() - s.t) > 0.45;
-      if (peek > 80 || flick) setPanel('queue');
+      const progress = peek / (queueRef.current?.offsetHeight ?? 600);
+      const dy = progress * s.reach;
+      const flick = dy > 35 && dy / Math.max(1, Date.now() - s.t) > 0.45;
+      if (progress > 0.28 || flick) setPanel('queue');
     },
   };
   // Dragging the queue's header down pulls the whole panel with the finger; letting go past a short distance closes it.
@@ -256,13 +264,8 @@ export function FullPlayer({
           <p>Nothing is playing. Tap an album’s cover, then a track.</p>
         </div>
       ) : (
-      <div className="fp-body np">
-        <div
-          className="fp-art-col"
-          onTouchStart={(e) => { onTouchStart(e); queueSwipe.onTouchStart(e); }}
-          onTouchMove={(e) => { onTouchMove(e); queueSwipe.onTouchMove(e); }}
-          onTouchEnd={() => { onTouchEnd(); queueSwipe.onTouchEnd(); }}
-        >
+      <div className="fp-body np" {...queueSwipe}>
+        <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
             <img ref={artImg} className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
             {tap.shown && (
@@ -275,7 +278,7 @@ export function FullPlayer({
         </div>
 
         <div className="fp-side">
-          <div className="fp-titlerow" {...queueSwipe}>
+          <div className="fp-titlerow">
             <div className="fp-now">
               <h2>{track.title}</h2>
               <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
