@@ -1784,6 +1784,17 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-body.np { padding-bottom: 28px; }
 }
 
+/* A phone held upright: the cover, the title and the controls stay together near the top, the cover with only a little room
+   around it (a bit more under it than above), and the height that is left over goes below the controls. Tablets keep the spread above. */
+@media (max-aspect-ratio: 1/1) and (max-width: 520px) {
+  .fp-body.np { justify-content: flex-start; padding-top: 18px; }
+  .fp-body.np .fp-art-col { flex: 100 1 0; max-height: calc(min(92vw, 540px) + 66px); }
+  .fp-body.np .fp-art-col::before { flex: 2 1 0; }
+  .fp-body.np .fp-art-col::after { flex: 3 1 0; }
+  .fp-body.np::after { content: ''; flex: 1 1 0; min-height: 0; }
+  .fp-body.np .fp-side { gap: clamp(16px, 3.2vh, 32px); }
+}
+
 /* ---------- under the status bar (installed iPhone/iPad app with the translucent status bar) ---------- */
 /* iOS draws the time and battery in white there. On the light theme that needs a dark band behind it; on the dark theme the page already is. */
 @media (prefers-color-scheme: light) {
