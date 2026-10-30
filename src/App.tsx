@@ -163,13 +163,14 @@ function LinkStatus({ demo, me }: { demo: boolean; me?: string }) {
   );
 }
 
-const THEMES = ['system', 'light', 'dark'] as const;
+const THEMES = ['system', 'light', 'dark', 'oled'] as const;
 type Theme = (typeof THEMES)[number];
 
 function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return (localStorage.getItem('ssk-lite.theme') as Theme) || 'system';
+      const saved = localStorage.getItem('ssk-lite.theme') as Theme | null;
+      return saved && THEMES.includes(saved) ? saved : 'system';
     } catch {
       return 'system';
     }
@@ -177,6 +178,11 @@ function useTheme() {
   useEffect(() => {
     if (theme === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.dataset.theme = theme;
+    // The browser's own bar (outside the installed app) follows: black for OLED, the usual colours otherwise.
+    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => {
+      m.dataset.original ??= m.content;
+      m.content = theme === 'oled' ? '#000000' : m.dataset.original;
+    });
     try {
       localStorage.setItem('ssk-lite.theme', theme);
     } catch {
@@ -199,7 +205,7 @@ function useSystemDark() {
   return dark;
 }
 
-const THEME_LABEL: Record<Theme, string> = { light: 'Light', dark: 'Dark', system: 'Auto' };
+const THEME_LABEL: Record<Theme, string> = { light: 'Light', dark: 'Dark', oled: 'OLED (true black)', system: 'Auto' };
 
 function ThemeSwitch({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
   const systemDark = useSystemDark();
@@ -208,12 +214,14 @@ function ThemeSwitch({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="3.2" fill="currentColor" /><g stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M3.2 12.8l1.1-1.1M11.7 4.3l1.1-1.1" /></g></svg>
     ) : t === 'dark' ? (
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z" fill="currentColor" /></svg>
+    ) : t === 'oled' ? (
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6.4" fill="currentColor" /><path d="M11 10.2A3.4 3.4 0 0 1 5.8 5a3.4 3.4 0 1 0 5.2 5.2z" fill="#000" /></svg>
     ) : (
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" /></svg>
     );
   return (
     <div className="theme-switch" role="radiogroup" aria-label="Theme">
-      {(['light', 'dark', 'system'] as const).map((t) => (
+      {(['light', 'dark', 'oled', 'system'] as const).map((t) => (
         <button
           key={t}
           role="radio"
