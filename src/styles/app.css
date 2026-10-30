@@ -1458,7 +1458,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 @keyframes fp-bar { 0%, 100% { height: 3px; } 50% { height: 12px; } }
 
 /* Wide screens (the PC, an iPad held sideways): art on the left, the rest on the right. */
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) {
   .full-player { --fp-px-l: max(28px, env(safe-area-inset-left, 0px)); --fp-px-r: max(28px, env(safe-area-inset-right, 0px)); }
   .fp-body { flex-direction: row; align-items: stretch; gap: clamp(28px, 5vw, 72px); overflow: hidden; padding: 8px 0 4px; }
   .fp-art-col { flex: 1 1 50%; padding: 0; }
@@ -1487,7 +1487,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-chip .pq-chip { margin: 0; background: rgb(0 0 0 / 0.25); color: var(--fp-ink); }
 .fp-chip .pq-chip.aac { background: color-mix(in srgb, var(--t-mid) 45%, transparent); }
 
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) {
   .fp-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; gap: clamp(28px, 5vw, 64px); padding: 6px 4px 6px; }
   .fp-art-col { align-self: stretch; display: grid; place-items: center; padding: 0 0 24px; height: 100%; }
   .fp-art { width: min(100%, calc(100vh - 150px), 620px); }
@@ -1530,7 +1530,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .dv-handle:active { cursor: grabbing; color: var(--fp-ink); }
 .dv-pl-art { display: block; overflow: hidden; }
 .dv-pl-art.pl-cover { width: min(86vw, 46vh, 520px); }
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) { .dv-pl-art.pl-cover { width: min(100%, calc(100vh - 150px), 620px); } }
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) { .dv-pl-art.pl-cover { width: min(100%, calc(100vh - 150px), 620px); } }
 
 /* "…" menus in the drawer */
 .dv-menu { position: relative; display: inline-flex; flex: none; }
@@ -1640,7 +1640,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* These layout rules are for Now Playing only (.np); an album or playlist page keeps its art on top and its track list below. */
 .fp-body.np { gap: 18px; justify-content: space-between; }
 /* The art takes the height that is left over, and never more: whatever sits under it always stays in view. */
-.fp-body.np .fp-art-col { flex: 1 1 0; min-height: 140px; padding-top: 0; container-type: size; }
+.fp-body.np .fp-art-col { flex: 1 1 0; min-height: 100px; padding-top: 0; container-type: size; }
 .fp-body.np .fp-art { width: min(86vw, 100cqh, 520px); }
 /* The queue is always there, parked below the screen: opening slides it up, closing slides it down, and dragging its header
    makes it follow the finger. Only transform moves, so it stays smooth. */
@@ -1675,7 +1675,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-row.lifted .fp-row-slide { transition: none; }
 
 /* Wide screens keep the queue beside the art, as before. */
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) {
   .fp-upright-only, .fp-panel-head { display: none; }
   .fp-body.np { justify-content: flex-start; gap: clamp(28px, 5vw, 64px); }
   .fp-body.np .fp-art-col { flex: 1 1 50%; container-type: normal; }
@@ -1714,7 +1714,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 }
 
 /* A phone held sideways is short: the right-hand column scrolls instead of being cut off, a bit smaller, and the queue opens over it. */
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) and (max-height: 520px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) and (max-height: 520px) {
   .fp-body.np .fp-side { overflow-y: auto; min-height: 0; scrollbar-width: none; gap: 12px; padding-bottom: 8px; }
   .fp-body.np .fp-side::-webkit-scrollbar { display: none; }
   .fp-now h2 { font-size: 22px; }
@@ -1764,7 +1764,7 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-backdrop { background: rgb(8 7 6 / 0.55); }
   .shelf { grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: 26px 22px; }
 }
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) and (pointer: coarse) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) and (pointer: coarse) {
   .fp-body.np .fp-art { width: min(100%, calc(100vh - 230px), 560px); }
 }
 
@@ -1833,20 +1833,20 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .fp-queue-btn { visibility: visible; }
 }
 /* Sideways on a tablet the queue is already beside the art; the sound quality panel needs its Done button there. */
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) {
   .fp-queue-btn { visibility: hidden; }
 }
-@media (pointer: coarse) and (min-aspect-ratio: 1/1) and (min-width: 700px) {
+@media (pointer: coarse) and (min-aspect-ratio: 1/1) and (min-width: 560px) {
   .fp-panel-head { display: flex; position: static; background: none; padding: 4px 4px 10px; margin-bottom: 0; }
 }
 /* ...but a phone held sideways is short, so the queue is a panel there again. */
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) and (max-height: 520px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) and (max-height: 520px) {
   .fp-queue-btn { visibility: visible; }
 }
 
 /* ---------- a phone held sideways: edge to edge, a big cover on the left, the controls centred on the right ---------- */
 /* Last in the file so it wins over the tablet sheet rules above. The island and the home bar are cleared with padding, not with an inset. */
-@media (min-aspect-ratio: 1/1) and (min-width: 700px) and (max-height: 520px) {
+@media (min-aspect-ratio: 1/1) and (min-width: 560px) and (max-height: 520px) {
   .full-player {
     inset: 0; border-radius: 0; box-shadow: none;
     --fp-px-l: max(28px, env(safe-area-inset-left, 0px)); --fp-px-r: max(28px, env(safe-area-inset-right, 0px));

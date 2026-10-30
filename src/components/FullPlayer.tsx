@@ -538,7 +538,7 @@ export function FullPlayer({
 }
 
 /** Whether the queue is a panel over the player (upright, or a phone held sideways) rather than a list beside the cover. */
-const queueIsPanel = () => !matchMedia('(min-aspect-ratio: 1/1) and (min-width: 700px)').matches || matchMedia('(max-height: 520px)').matches;
+const queueIsPanel = () => !matchMedia('(min-aspect-ratio: 1/1) and (min-width: 560px)').matches || matchMedia('(max-height: 520px)').matches;
 
 /** How far a swipe pulls a row open: the width of its Remove button. */
 const SWIPE_OPEN = 88;
