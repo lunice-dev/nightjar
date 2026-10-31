@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { audioCtl, canSetVolume, fmtTime, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
-import { Mark } from './Mark';
 import { WindowControls } from './WindowControls';
 import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
@@ -234,7 +233,7 @@ export function FullPlayer({
           <Icon name="chevron" size={22} />
         </button>
         <span className="fp-brand-name">
-          <Mark size={18} /> Nightjar
+          Nightjar
         </span>
         <span className="fp-top-end">
           {view.kind !== 'now' && track && (

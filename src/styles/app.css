@@ -1526,7 +1526,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-top { position: relative; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; min-height: 58px; padding-top: 14px; }
 .fp-grab { position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 999px; background: rgb(255 255 255 / 0.3); }
 @media (hover: hover) and (pointer: fine) { .fp-grab { display: none; } .fp-top { padding-top: 6px; } }
-.fp-brand-name { justify-self: center; display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 650; letter-spacing: 0.01em; color: var(--fp-ink); opacity: 0.92; }
+.fp-brand-name { position: absolute; inset: 0; padding-top: inherit; display: flex; align-items: center; justify-content: center; pointer-events: none; font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-indent: 0.14em; text-transform: uppercase; color: var(--fp-ink); opacity: 0.7; white-space: nowrap; }
 .fp-top > .fp-icon:last-child, .fp-top > .win-controls { justify-self: end; }
 .fp-now { display: grid; gap: 4px; }
 .fp-now h2 { margin: 0; font-size: 24px; font-weight: 680; letter-spacing: -0.015em; line-height: 1.15; overflow-wrap: break-word; }
