@@ -6,6 +6,8 @@ import { WindowControls } from './WindowControls';
 import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 import { useScrub } from '../lib/scrub';
+import { useLyrics } from '../lib/lyrics';
+import { LyricsView } from './LyricsView';
 import { LONG_TRACK, seekBy, useDoubleTapSeek, useHoldToScan } from '../lib/seek';
 
 /** Where the small player's cover was when the large player was opened: the big art grows out of it. */
@@ -114,6 +116,8 @@ export function FullPlayer({
   const tint = useArtColour(backdropArt);
   // Upright, the queue and the sound quality open over the art (like Apple Music); on wide screens the queue is always beside it.
   const [panel, setPanel] = useState<'none' | 'queue' | 'quality'>('none');
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const lyrics = useLyrics(track, lyricsOpen && view.kind === 'now');
   const details = panel === 'quality';
   const [editing, setEditing] = useState(false);
   const [grown] = useState(() => {
@@ -242,7 +246,12 @@ export function FullPlayer({
             </button>
           )}
           {view.kind === 'now' && track && (
-            <button className="fp-icon fp-queue-btn" onClick={() => setPanel('queue')} aria-label="Up next" aria-haspopup="dialog">
+            <button className={`fp-icon fp-lyrics-btn ${lyricsOpen ? 'on' : ''}`} onClick={() => setLyricsOpen((o) => !o)} aria-label="Lyrics" aria-pressed={lyricsOpen}>
+              <LyricsGlyph size={21} />
+            </button>
+          )}
+          {view.kind === 'now' && track && (
+            <button className="fp-icon fp-queue-btn" onClick={() => { setLyricsOpen(false); setPanel('queue'); }} aria-label="Up next" aria-haspopup="dialog">
               <QueueGlyph size={21} />
             </button>
           )}
@@ -258,6 +267,8 @@ export function FullPlayer({
         <div className="fp-body dv-loading">
           <p>Nothing is playing. Tap an album’s cover, then a track.</p>
         </div>
+      ) : lyricsOpen ? (
+        <LyricsView state={lyrics} time={time} art={art} title={track.title} artist={track.artist} playing={playing} />
       ) : (
       <div className="fp-body np" {...queueSwipe}>
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
@@ -720,6 +731,15 @@ function VolumeGlyph({ level }: { level: 0 | 2 }) {
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z" />
       {level === 2 && <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />}
+    </svg>
+  );
+}
+
+function LyricsGlyph({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+      <path d="M7.5 9h9M7.5 12.5h5.5" />
     </svg>
   );
 }

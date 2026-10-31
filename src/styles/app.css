@@ -1544,6 +1544,30 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-now h2 { font-size: 30px; }
 }
 
+/* ---------- lyrics ---------- */
+.fp-lyrics { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; width: 100%; max-width: 720px; margin: 0 auto; }
+.fp-ly-head { display: flex; align-items: center; gap: 12px; padding: 6px 4px 10px; }
+.fp-ly-head img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 10px rgb(0 0 0 / 0.3); }
+.fp-ly-head > span { display: grid; min-width: 0; }
+.fp-ly-head strong, .fp-ly-head span span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-ly-head strong { font-size: 16px; font-weight: 650; }
+.fp-ly-head span span { font-size: 14px; color: var(--fp-ink-2); }
+.fp-ly-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 30vh; position: relative; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 88%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 88%, transparent 100%); scrollbar-width: none; }
+.fp-ly-scroll::-webkit-scrollbar { display: none; }
+.fp-ly-scroll ol { list-style: none; margin: 0; padding: 0; }
+.fp-ly-scroll li { padding: 7px 0; font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; line-height: 1.22; letter-spacing: -0.01em; color: var(--fp-ink); opacity: 0.55; overflow-wrap: break-word; }
+.fp-ly-scroll ol.synced li { cursor: pointer; opacity: 0.38; transform-origin: left center; transition: opacity 0.4s ease, transform 0.4s var(--fp-ease); -webkit-tap-highlight-color: transparent; }
+.fp-ly-scroll ol.synced li.past { opacity: 0.3; }
+.fp-ly-scroll ol.synced li.now { opacity: 1; transform: scale(1.04); }
+.fp-ly-scroll li.gap { opacity: 0.25 !important; }
+.fp-ly-note { margin: 24px 4px; color: var(--fp-ink-2); font-size: 16px; }
+.fp-ly-credit { margin: 28px 4px 0; font-size: 12px; color: var(--fp-ink-3); }
+.fp-ly-foot { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 8px 0 max(14px, env(safe-area-inset-bottom, 0px)); }
+.fp-ly-foot .fp-play.small { width: 56px; height: 56px; }
+.fp-lyrics-btn.on { background: rgb(255 255 255 / 0.18); }
+@media (max-height: 520px) { .fp-ly-head, .fp-ly-foot { display: none; } .fp-ly-scroll li { font-size: 22px; padding: 5px 0; } }
+@media (prefers-reduced-motion: reduce) { .fp-ly-scroll ol.synced li { transition: none; } }
+
 /* ---------- covers open the album ---------- */
 .cover-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: var(--r-md); -webkit-tap-highlight-color: transparent; }
 .cover-open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
