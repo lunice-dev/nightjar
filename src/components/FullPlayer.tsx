@@ -117,7 +117,7 @@ export function FullPlayer({
   // Upright, the queue and the sound quality open over the art (like Apple Music); on wide screens the queue is always beside it.
   const [panel, setPanel] = useState<'none' | 'queue' | 'quality'>('none');
   const [lyricsOpen, setLyricsOpen] = useState(false);
-  const lyrics = useLyrics(track, lyricsOpen && view.kind === 'now');
+  const { state: lyrics, retry: retryLyrics } = useLyrics(track, lyricsOpen && view.kind === 'now');
   const details = panel === 'quality';
   const [editing, setEditing] = useState(false);
   const [grown] = useState(() => {
@@ -268,7 +268,7 @@ export function FullPlayer({
           <p>Nothing is playing. Tap an album’s cover, then a track.</p>
         </div>
       ) : lyricsOpen ? (
-        <LyricsView state={lyrics} time={time} art={art} title={track.title} artist={track.artist} playing={playing} />
+        <LyricsView state={lyrics} onRetry={retryLyrics} time={time} art={art} title={track.title} artist={track.artist} playing={playing} />
       ) : (
       <div className="fp-body np" {...queueSwipe}>
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>

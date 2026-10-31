@@ -12,7 +12,7 @@ export interface Lyrics {
 }
 
 /** What the lyrics for one track turned out to be. */
-export type LyricsState = { status: 'loading' } | { status: 'none' } | { status: 'ready'; lyrics: Lyrics };
+export type LyricsState = { status: 'loading' } | { status: 'none' } | { status: 'error' } | { status: 'ready'; lyrics: Lyrics };
 
 /** Reads "[mm:ss.xx] text" lines. A line may carry several stamps; tags like [ar:…] are skipped. */
 export function parseLrc(text: string): Lyrics | null {
@@ -90,11 +90,23 @@ async function fetchLrclib(t: { title: string; artist: string | null; album: str
   return null;
 }
 
+/** The service is sometimes busy (503) or slow: ask again a couple of times before giving up. */
+async function withRetries(t: Parameters<typeof fetchLrclib>[0]): Promise<Lyrics | null> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fetchLrclib(t);
+    } catch (e) {
+      if (i >= 2) throw e;
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+}
+
 export function loadLyrics(t: { path: string; title: string; artist: string | null; album: string | null; seconds: number }): Promise<Lyrics | null> {
   if (memory.has(t.path)) return Promise.resolve(memory.get(t.path) ?? null);
   let p = inflight.get(t.path);
   if (!p) {
-    p = fetchLrclib(t)
+    p = withRetries(t)
       .then((l) => {
         memory.set(t.path, l);
         return l;
@@ -106,8 +118,9 @@ export function loadLyrics(t: { path: string; title: string; artist: string | nu
 }
 
 /** The lyrics of a track, fetched only while `enabled` (the lyrics view is open). A failed lookup counts as none. */
-export function useLyrics(t: { path: string; title: string; artist: string | null; album: string | null; seconds: number } | undefined, enabled: boolean): LyricsState {
+export function useLyrics(t: { path: string; title: string; artist: string | null; album: string | null; seconds: number } | undefined, enabled: boolean): { state: LyricsState; retry: () => void } {
   const [state, setState] = useState<LyricsState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const path = t?.path;
   useEffect(() => {
     if (!enabled || !t) return;
@@ -115,12 +128,12 @@ export function useLyrics(t: { path: string; title: string; artist: string | nul
     setState(memory.has(t.path) ? stateOf(memory.get(t.path) ?? null) : { status: 'loading' });
     loadLyrics(t)
       .then((l) => alive && setState(stateOf(l)))
-      .catch(() => alive && setState({ status: 'none' }));
+      .catch(() => alive && setState({ status: 'error' }));
     return () => {
       alive = false;
     };
-  }, [path, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
-  return state;
+  }, [path, enabled, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { state, retry: () => setAttempt((n) => n + 1) };
 }
 
 const stateOf = (l: Lyrics | null): LyricsState => (l ? { status: 'ready', lyrics: l } : { status: 'none' });

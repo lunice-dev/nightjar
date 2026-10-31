@@ -7,7 +7,7 @@ import { Icon } from './Icon';
  * The lyrics, over the player's body. Synced lyrics scroll by themselves with the current line large and bright; the rest are
  * dimmed, and tapping a line jumps there. Scrolling by hand pauses the following for a few seconds.
  */
-export function LyricsView({ state, time, art, title, artist, playing }: { state: LyricsState; time: number; art: string; title: string; artist: string | null; playing: boolean }) {
+export function LyricsView({ state, onRetry, time, art, title, artist, playing }: { state: LyricsState; onRetry: () => void; time: number; art: string; title: string; artist: string | null; playing: boolean }) {
   const p = usePlayer.getState();
   const box = useRef<HTMLDivElement>(null);
   const lines = state.status === 'ready' ? state.lyrics.lines : [];
@@ -40,6 +40,11 @@ export function LyricsView({ state, time, art, title, artist, playing }: { state
       <div className="fp-ly-scroll" ref={box} onTouchStart={hold} onWheel={hold} onTouchMove={hold}>
         {state.status === 'loading' && <p className="fp-ly-note">Looking for lyrics…</p>}
         {state.status === 'none' && <p className="fp-ly-note">No lyrics found for this track.</p>}
+        {state.status === 'error' && (
+          <p className="fp-ly-note">
+            Couldn’t reach the lyrics service (it may be busy). <button className="fp-edit" onClick={onRetry}>Try again</button>
+          </p>
+        )}
         {state.status === 'ready' && (
           <ol className={synced ? 'synced' : undefined}>
             {lines.map((l, i) => (
