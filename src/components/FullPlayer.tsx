@@ -7,7 +7,7 @@ import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 import { useScrub } from '../lib/scrub';
 import { useLyrics } from '../lib/lyrics';
-import { LyricsView } from './LyricsView';
+import { LyricsScroll, LyricsView } from './LyricsView';
 import { LONG_TRACK, seekBy, useDoubleTapSeek, useHoldToScan } from '../lib/seek';
 
 /** Where the small player's cover was when the large player was opened: the big art grows out of it. */
@@ -117,6 +117,13 @@ export function FullPlayer({
   // Upright, the queue and the sound quality open over the art (like Apple Music); on wide screens the queue is always beside it.
   const [panel, setPanel] = useState<'none' | 'queue' | 'quality'>('none');
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  // Wide screens keep the art and the controls on the left with the lyrics beside them; upright ones give the lyrics the whole body.
+  const [wide, setWide] = useState(() => !queueIsPanel());
+  useEffect(() => {
+    const on = () => setWide(!queueIsPanel());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
   const { state: lyrics, retry: retryLyrics } = useLyrics(track, lyricsOpen && view.kind === 'now');
   const details = panel === 'quality';
   const [editing, setEditing] = useState(false);
@@ -267,10 +274,10 @@ export function FullPlayer({
         <div className="fp-body dv-loading">
           <p>Nothing is playing. Tap an album’s cover, then a track.</p>
         </div>
-      ) : lyricsOpen ? (
-        <LyricsView state={lyrics} onRetry={retryLyrics} time={time} art={art} title={track.title} artist={track.artist} playing={playing} />
+      ) : lyricsOpen && !wide ? (
+        <LyricsView state={lyrics} onRetry={retryLyrics} time={time} duration={duration} art={art} title={track.title} artist={track.artist} playing={playing} />
       ) : (
-      <div className="fp-body np" {...queueSwipe}>
+      <div className={`fp-body np ${lyricsOpen && wide ? 'lyrics-on' : ''}`} {...queueSwipe}>
         <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
           <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
             <img ref={artImg} className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
@@ -422,6 +429,7 @@ export function FullPlayer({
             </div>
           )}
 
+          {lyricsOpen && wide && <LyricsScroll className="fp-ly-side" state={lyrics} time={time} onRetry={retryLyrics} />}
           {details ? (
             <div className="fp-details">
               <div className="fp-panel-head">
