@@ -1832,9 +1832,10 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-vol::-webkit-slider-thumb { width: 14px; height: 14px; }
 .fp-sleep { margin-top: -6px; }
 
-/* The large player is a sheet over the app on a tablet, so the app still shows around it. */
+/* On a tablet the large player fills the screen edge to edge, like Apple Music, so nothing of the app shows around it. */
 @media (min-width: 700px) and (pointer: coarse) {
-  .full-player { inset: max(18px, calc(env(safe-area-inset-top, 0px) + 8px)) clamp(14px, 4vw, 56px) clamp(12px, 2.5vh, 26px); }
+  .full-player { inset: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); box-shadow: none; }
+  html.full-screen .full-player { bottom: auto; height: var(--screen-h); }
   .fp-backdrop { background: rgb(8 7 6 / 0.55); }
   .shelf { grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: 26px 22px; }
 }
