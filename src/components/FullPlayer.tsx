@@ -560,9 +560,11 @@ function Backdrop({ src }: { src: string | null }) {
   }, [src]);
   return (
     <div className="fp-bgbox" aria-hidden>
-      {layers.map((l, i) => (
-        <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''} ${l.instant ? 'instant' : ''}`} src={l.src} alt="" />
-      ))}
+      <div className="fp-bgimgs">
+        {layers.map((l, i) => (
+          <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''} ${l.instant ? 'instant' : ''}`} src={l.src} alt="" />
+        ))}
+      </div>
     </div>
   );
 }
