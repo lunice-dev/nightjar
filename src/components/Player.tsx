@@ -7,6 +7,7 @@ import { FullPlayer, morph, warmArt } from './FullPlayer';
 import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
+import { prefetchLyrics } from '../lib/lyrics';
 
 /**
  * Tells the lock screen exactly where the song is, at the moments its own guess would drift: a new track,
@@ -47,6 +48,13 @@ export function Player() {
   const [cover, setCover] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(false);
   const track = queue[index];
+  const upNext = queue[index + 1];
+  // Once lyrics have been opened on this device, this track's and the next one's are fetched ahead, so they are there when opened.
+  useEffect(() => {
+    prefetchLyrics(track);
+    const t = setTimeout(() => prefetchLyrics(upNext), 4000);
+    return () => clearTimeout(t);
+  }, [track?.path, upNext?.path]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The element is always there (also with nothing playing), so every control can reach it.
   useEffect(() => {

@@ -33,7 +33,7 @@ export function LyricsScroll({ state, time, onRetry, className }: { state: Lyric
       {state.status === 'none' && <p className="fp-ly-note">No lyrics found for this track.</p>}
       {state.status === 'error' && (
         <p className="fp-ly-note">
-          Couldn’t reach the lyrics service (it may be busy). <button className="fp-edit" onClick={onRetry}>Try again</button>
+          Couldn’t reach the lyrics service{state.why ? ` (${state.why})` : ''}. <button className="fp-edit" onClick={onRetry}>Try again</button>
         </p>
       )}
       {state.status === 'ready' && (
