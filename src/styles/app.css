@@ -1795,7 +1795,10 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* The strength of the blurred cover is set once, on the group (.fp-bgimgs), and the pictures inside are fully opaque. A new picture fades in over
    the old one, so the background never gets stronger and then weaker again when the old one is taken away. */
 .fp-bgimgs { --bg-op: 0.5; position: absolute; inset: 0; opacity: var(--bg-op); }
-.fp-bg { position: absolute; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; filter: blur(34px) saturate(1.5); pointer-events: none; transform: translateZ(0); } /* its own layer, so the blur is drawn once and not again as the player slides up */
+.fp-bg { position: absolute; left: -25%; top: -15%; width: 150%; height: 130%; object-fit: cover; pointer-events: none; }
+/* The picture is blurred and saturated ahead of time (softBackdrop.ts), so no big filter layer is drawn, which iOS can leave stray lines in.
+   Only a cover that can't be read that way (from another website) is still blurred here. */
+.fp-bg.raw { filter: blur(34px) saturate(1.5); transform: translateZ(0); }
 .fp-bg.in { animation: fp-bg-in 0.7s ease both; }
 .fp-bg.instant { animation: none; }
 @keyframes fp-bg-in { from { opacity: 0; } to { opacity: 1; } }

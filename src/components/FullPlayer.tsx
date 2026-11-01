@@ -8,6 +8,7 @@ import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 import { useScrub } from '../lib/scrub';
 import { useLyrics } from '../lib/lyrics';
 import { shareStoryCard } from '../lib/storyCard';
+import { softBackdrop, softBackdropNow } from '../lib/softBackdrop';
 import { useStore } from '../store';
 import { LyricsScroll, LyricsView } from './LyricsView';
 import { LONG_TRACK, seekBy, useDoubleTapSeek, useHoldToScan } from '../lib/seek';
@@ -575,21 +576,31 @@ export function FullPlayer({
  * moment after the player opens).
  */
 function Backdrop({ src }: { src: string | null }) {
-  // A cover that is already decoded is there on the first frame, with no fade; a new one fades in over the old.
-  const [layers, setLayers] = useState<{ src: string; id: number; instant?: boolean }[]>(() => (src && warmBackdrop.has(src) ? [{ src, id: 0, instant: true }] : []));
+  // A cover that is already prepared is there on the first frame, with no fade; a new one fades in over the old.
+  // `raw` is the fallback for a cover that can't be blurred by hand: the picture itself, blurred by CSS.
+  type Layer = { src: string; id: number; instant?: boolean; raw?: boolean; of: string };
+  const [layers, setLayers] = useState<Layer[]>(() => {
+    const ready = src ? softBackdropNow(src) : null;
+    if (src && ready) return [{ src: ready, of: src, id: 0, instant: true }];
+    return src && warmBackdrop.has(src) && softBackdropNow(src) === null && warmRaw.has(src) ? [{ src, of: src, id: 0, instant: true, raw: true }] : [];
+  });
   useEffect(() => {
     if (!src) return;
     let alive = true;
-    const img = new Image();
-    img.src = src;
-    const show = () => {
+    const show = (url: string, raw: boolean) => {
       if (!alive) return;
-      warmBackdrop.add(src);
-      setLayers((l) => (l[l.length - 1]?.src === src ? l : [...l.slice(-1), { src, id: Date.now() + Math.random() }]));
+      if (raw) warmRaw.add(src);
+      setLayers((l) => (l[l.length - 1]?.of === src ? l : [...l.slice(-1), { src: url, of: src, raw, id: Date.now() + Math.random() }]));
       // the older layer is only needed while the new one fades in
       setTimeout(() => alive && setLayers((l) => l.slice(-1)), 900);
     };
-    (img.decode ? img.decode() : Promise.resolve()).then(show, show);
+    void softBackdrop(src).then((url) => {
+      if (url) return show(url, false);
+      const img = new Image();
+      img.src = src;
+      const go = () => show(src, true);
+      (img.decode ? img.decode() : Promise.resolve()).then(go, go);
+    });
     return () => {
       alive = false;
     };
@@ -598,7 +609,7 @@ function Backdrop({ src }: { src: string | null }) {
     <div className="fp-bgbox" aria-hidden>
       <div className="fp-bgimgs">
         {layers.map((l, i) => (
-          <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''} ${l.instant ? 'instant' : ''}`} src={l.src} alt="" />
+          <img key={l.id} className={`fp-bg ${i === layers.length - 1 ? 'in' : ''} ${l.instant ? 'instant' : ''} ${l.raw ? 'raw' : ''}`} src={l.src} alt="" />
         ))}
       </div>
     </div>
@@ -852,6 +863,8 @@ function colourOf(img: HTMLImageElement): string | null {
 /** Covers whose colour is known (null: unreadable), and covers already decoded for the blurred background. */
 const warmColour = new Map<string, string | null>();
 const warmBackdrop = new Set<string>();
+/** Covers that can't be blurred by hand and are shown through the CSS blur instead. */
+const warmRaw = new Set<string>();
 const warming = new Map<string, Promise<string | null>>();
 
 /**
@@ -865,6 +878,7 @@ export function warmArt(src: string): Promise<string | null> {
   const plain = new Image();
   plain.src = src;
   void (plain.decode ? plain.decode() : Promise.resolve()).then(() => warmBackdrop.add(src), () => undefined);
+  void softBackdrop(src);
   const job = new Promise<string | null>((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
