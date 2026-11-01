@@ -1996,6 +1996,10 @@ html.dx-abs .full-player, html.dx-abs .fp-backdrop { position: absolute !importa
   /* iOS softens and fades the strip right under the status bar; the bars' content starts a little below it. */
   html.safe-top .topbar { height: calc(66px + env(safe-area-inset-top, 0px)); padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
 }
+/* The same on a tablet: the bar starts right under the status bar, so its content is lowered clear of the softened strip. */
+@media (min-width: 700px) {
+  html.safe-top .topbar { height: 68px; padding-top: 10px; }
+}
 
 /* An installed app held upright under the translucent status bar: the page and everything pinned to the bottom get the
    screen's real height (viewport.ts puts it in --screen-h) instead of trusting the page's own height, which iOS can report short. */
