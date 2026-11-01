@@ -1,5 +1,29 @@
 import { useEffect, useState } from 'react';
-import { inApp, onWindowState, windowAction } from '../lib/host';
+import { inApp, onWindowState, windowAction, windowResize, type WindowEdge } from '../lib/host';
+
+const EDGES: WindowEdge[] = ['left', 'right', 'top', 'bottom', 'topleft', 'topright', 'bottomleft', 'bottomright'];
+
+/** Invisible strips along the window's borders and corners: press and drag one to resize the window. */
+export function ResizeEdges() {
+  const [state, setState] = useState({ maximized: false, resizable: false });
+  useEffect(() => onWindowState(setState), []);
+  if (!inApp || state.maximized || !state.resizable) return null;
+  return (
+    <div aria-hidden>
+      {EDGES.map((edge) => (
+        <div
+          key={edge}
+          className={`resize-edge ${edge}`}
+          onMouseDown={(e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            windowResize(edge);
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 /** Minimise, maximise and close, drawn by the page in the Nightjar app's own window. */
 export function WindowControls() {

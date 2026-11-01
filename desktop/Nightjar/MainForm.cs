@@ -168,24 +168,86 @@ namespace Nightjar
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(0xe6, 0xe3, 0xdd);
             AutoScaleMode = AutoScaleMode.None;
-            // One compact size, the same every time (the maximise button fills the screen when you want more).
             var scale = DeviceDpi / 96f;
-            ClientSize = new Size((int)(1280 * scale), (int)(800 * scale));
-            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
-            if (ClientSize.Width > area.Width || ClientSize.Height > area.Height) ClientSize = new Size(Math.Min(ClientSize.Width, area.Width), Math.Min(ClientSize.Height, area.Height));
+            MinimumSize = new Size((int)(960 * scale), (int)(600 * scale));
+            // Where it was last time, or filling the screen the first time; the page's edges and buttons resize it.
+            Place(Screen.FromPoint(Cursor.Position).WorkingArea);
             Controls.Add(web);
+        }
+
+        static string StatePath => Path.Combine(Paths.Data, "window.json");
+
+        /// <summary>Puts the window where it was last time (size, place, maximised), or maximised on `area` the first time.</summary>
+        void Place(Rectangle area)
+        {
+            var scale = DeviceDpi / 96f;
+            Rectangle? saved = null;
+            bool max = true;
+            try
+            {
+                if (File.Exists(StatePath))
+                {
+                    var d = new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string, object>>(File.ReadAllText(StatePath));
+                    var r = new Rectangle(Convert.ToInt32(d["x"]), Convert.ToInt32(d["y"]), Convert.ToInt32(d["w"]), Convert.ToInt32(d["h"]));
+                    max = d.TryGetValue("maximized", out var mx) && mx is bool b && b;
+                    // Only if enough of it is still on a screen (a monitor may have been unplugged).
+                    foreach (var s in Screen.AllScreens)
+                    {
+                        var seen = Rectangle.Intersect(s.WorkingArea, r);
+                        if (seen.Width >= 160 && seen.Height >= 100 && r.Width >= MinimumSize.Width && r.Height >= MinimumSize.Height) { saved = r; area = s.WorkingArea; break; }
+                    }
+                }
+            }
+            catch { }
+            if (saved == null)
+            {
+                var w = Math.Min((int)(1280 * scale), area.Width);
+                var h = Math.Min((int)(800 * scale), area.Height);
+                saved = new Rectangle(area.Left + (area.Width - w) / 2, area.Top + (area.Height - h) / 2, w, h);
+                max = true; // the first time, the whole screen
+            }
+            StartPosition = FormStartPosition.Manual;
+            normalBounds = saved.Value;
+            maximized = max;
+            Bounds = max ? area : saved.Value;
+        }
+
+        void SaveState()
+        {
+            // Not while minimised or parked off screen: those positions mean nothing.
+            if (WindowState != FormWindowState.Normal || Location.X <= -30000) return;
+            try
+            {
+                var b = maximized ? normalBounds : Bounds;
+                File.WriteAllText(StatePath, new JavaScriptSerializer().Serialize(new { x = b.X, y = b.Y, w = b.Width, h = b.Height, maximized }));
+            }
+            catch { }
+        }
+
+        protected override void OnResizeEnd(EventArgs e)
+        {
+            base.OnResizeEnd(e);
+            if (!maximized) SaveState(); // after a move or a resize
         }
 
         protected override CreateParams CreateParams
         {
             get
             {
-                const int WS_MINIMIZEBOX = 0x20000, CS_DROPSHADOW = 0x20000;
+                const int WS_MINIMIZEBOX = 0x20000, WS_THICKFRAME = 0x40000, CS_DROPSHADOW = 0x20000;
                 var cp = base.CreateParams;
                 cp.Style |= WS_MINIMIZEBOX; // so the taskbar button can minimise it
+                cp.Style |= WS_THICKFRAME; // so Windows will resize and snap it; the frame itself is never drawn (see WndProc)
                 cp.ClassStyle |= CS_DROPSHADOW;
                 return cp;
             }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            // WM_NCCALCSIZE: the page covers the whole window, so there is no frame to make room for.
+            if (m.Msg == 0x0083 && m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; }
+            base.WndProc(ref m);
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -267,19 +329,14 @@ namespace Nightjar
         {
             Hide();
             Opacity = 1;
-            CenterOn(Screen.PrimaryScreen.WorkingArea);
+            Place(Screen.PrimaryScreen.WorkingArea);
         }
 
-        /// <summary>Brings a window that was started off screen to the middle of the screen.</summary>
+        /// <summary>Brings a window that was started off screen to where it belongs.</summary>
         public void ComeOnScreen()
         {
-            if (Location.X <= -30000) CenterOn(Screen.FromPoint(Cursor.Position).WorkingArea);
+            if (Location.X <= -30000) Place(Screen.FromPoint(Cursor.Position).WorkingArea);
             Opacity = 1;
-        }
-
-        void CenterOn(Rectangle area)
-        {
-            Location = new Point(area.Left + Math.Max(0, (area.Width - Width) / 2), area.Top + Math.Max(0, (area.Height - Height) / 2));
         }
 
         void Run(string script)
@@ -332,6 +389,25 @@ namespace Nightjar
                     Native.ReleaseCapture();
                     Native.SendMessage(Handle, 0xA1 /* WM_NCLBUTTONDOWN */, (IntPtr)2 /* HTCAPTION */, IntPtr.Zero);
                     break;
+                case "resize":
+                    // The page's invisible edges hand over a drag on a border or corner; Windows does the resizing.
+                    if (maximized || !m.TryGetValue("edge", out var edge)) return;
+                    int ht;
+                    switch (edge as string)
+                    {
+                        case "left": ht = 10; break;
+                        case "right": ht = 11; break;
+                        case "top": ht = 12; break;
+                        case "topleft": ht = 13; break;
+                        case "topright": ht = 14; break;
+                        case "bottom": ht = 15; break;
+                        case "bottomleft": ht = 16; break;
+                        case "bottomright": ht = 17; break;
+                        default: return;
+                    }
+                    Native.ReleaseCapture();
+                    Native.SendMessage(Handle, 0xA1 /* WM_NCLBUTTONDOWN */, (IntPtr)ht, IntPtr.Zero);
+                    break;
                 case "minimize": WindowState = FormWindowState.Minimized; break;
                 case "maximize": ToggleMaximize(); break;
                 case "close": Close(); break;
@@ -352,12 +428,13 @@ namespace Nightjar
                 Bounds = normalBounds;
                 maximized = false;
             }
+            SaveState();
             PostState();
         }
 
         void PostState()
         {
-            try { web.CoreWebView2?.PostWebMessageAsJson("{\"type\":\"window\",\"maximized\":" + (maximized ? "true" : "false") + "}"); } catch { }
+            try { web.CoreWebView2?.PostWebMessageAsJson("{\"type\":\"window\",\"resizable\":true,\"maximized\":" + (maximized ? "true" : "false") + "}"); } catch { }
         }
     }
 

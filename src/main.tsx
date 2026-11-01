@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ResizeEdges } from './components/WindowControls';
 import './styles/app.css';
 import { startNavHistory } from './lib/navHistory';
 import { startSwipeNav } from './lib/swipeNav';
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <App />
+      <ResizeEdges />
     </ErrorBoundary>
   </StrictMode>,
 );

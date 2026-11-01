@@ -3,7 +3,8 @@
  * Windows title bar: the page draws its own (drag area plus minimise, maximise
  * and close) and talks to the app through WebView2's message channel.
  *
- * Messages to the app: { type: 'window', action: 'drag' | 'minimize' | 'maximize' | 'close' | 'quit' }.
+ * Messages to the app: { type: 'window', action: 'drag' | 'minimize' | 'maximize' | 'close' | 'quit' },
+ * and { type: 'window', action: 'resize', edge } to start resizing from a border or corner.
  * Messages from it:    { type: 'window', maximized: boolean }.
  */
 interface WebView {
@@ -21,11 +22,19 @@ export function windowAction(action: 'minimize' | 'maximize' | 'close' | 'quit')
   webview?.postMessage({ type: 'window', action });
 }
 
-export function onWindowState(fn: (s: { maximized: boolean }) => void) {
+export type WindowEdge = 'left' | 'right' | 'top' | 'bottom' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
+
+/** Starts resizing the window from one of its borders or corners (the app takes over the drag). */
+export function windowResize(edge: WindowEdge) {
+  webview?.postMessage({ type: 'window', action: 'resize', edge });
+}
+
+/** `resizable`: this version of the app resizes from the page's edges (older ones don't say). */
+export function onWindowState(fn: (s: { maximized: boolean; resizable: boolean }) => void) {
   if (!webview) return () => {};
   const listener = (e: { data: unknown }) => {
-    const d = e.data as { type?: string; maximized?: boolean };
-    if (d?.type === 'window' && typeof d.maximized === 'boolean') fn({ maximized: d.maximized });
+    const d = e.data as { type?: string; maximized?: boolean; resizable?: boolean };
+    if (d?.type === 'window' && typeof d.maximized === 'boolean') fn({ maximized: d.maximized, resizable: d.resizable === true });
   };
   webview.addEventListener('message', listener);
   return () => webview.removeEventListener('message', listener);
