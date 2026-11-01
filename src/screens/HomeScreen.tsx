@@ -36,6 +36,11 @@ const shuffled = <T,>(a: T[]) => {
 export function Home() {
   const track = usePlayer((s) => s.queue[s.index]);
   const rgb = useCoverGlow(track?.dir);
+  // The Now column has the controls, so the player bar at the bottom steps aside while Home is open.
+  useEffect(() => {
+    document.documentElement.classList.add('on-home');
+    return () => document.documentElement.classList.remove('on-home');
+  }, []);
   const style = {
     '--g1': rgb ? `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]} / 0.32)` : 'rgb(224 164 88 / 0.14)',
     '--g2': rgb ? `rgb(${Math.round(rgb[0] * 0.55)} ${Math.round(rgb[1] * 0.55)} ${Math.round(rgb[2] * 0.7)} / 0.18)` : 'rgb(116 163 242 / 0.07)',
@@ -102,6 +107,13 @@ function Now() {
   const playing = usePlayer((s) => s.playing);
   const t = queue[index];
   const { t: pos, d } = useProgress(t?.seconds ?? 0);
+  const repeat = usePlayer((s) => s.repeat);
+  // While the position handle is being dragged it shows where it is; the music jumps when it's let go.
+  const [drag, setDrag] = useState<number | null>(null);
+  const seekTo = () => {
+    if (drag !== null && audioCtl.el) audioCtl.el.currentTime = drag;
+    setDrag(null);
+  };
   if (!t) {
     return (
       <aside className="hx-now idle" aria-label="Now playing">
@@ -131,15 +143,40 @@ function Now() {
       <div className="hx-now-meta">
         <span className={`hx-q t-${trackTier(t)}`}>{q.short}</span>
         {!playing && <span className="dim">Paused</span>}
+        <button className="hx-stop" onClick={() => usePlayer.getState().stop()} title="Stop and clear the queue">
+          Stop
+        </button>
       </div>
       <div>
-        <div className="hx-bar" role="img" aria-label={`${fmtTime(pos)} of ${fmtTime(d)}`}>
-          <i style={{ width: d ? `${Math.min(100, (pos / d) * 100)}%` : '0%' }} />
-        </div>
+        <input
+          className="hx-seek"
+          type="range"
+          min={0}
+          max={d || 0}
+          step={1}
+          value={Math.min(drag ?? pos, d || 0)}
+          aria-label="Position"
+          style={{ ['--p' as string]: `${d ? Math.min(100, ((drag ?? pos) / d) * 100) : 0}%` }}
+          onChange={(e) => setDrag(Number(e.target.value))}
+          onPointerUp={seekTo}
+          onKeyUp={seekTo}
+          onBlur={seekTo}
+        />
         <div className="hx-times">
-          <span>{fmtTime(pos)}</span>
+          <span>{fmtTime(drag ?? pos)}</span>
           <span>{d ? fmtTime(d) : ''}</span>
         </div>
+      </div>
+      <div className="hx-ctl">
+        <button onClick={() => usePlayer.getState().prev()} aria-label="Previous track" title="Previous track">
+          <Icon name="prev" size={20} />
+        </button>
+        <button className="go" onClick={() => usePlayer.getState().toggle()} aria-label={playing ? 'Pause' : 'Play'}>
+          <Icon name={playing ? 'pause' : 'play'} size={22} />
+        </button>
+        <button onClick={() => usePlayer.getState().next()} disabled={index + 1 >= queue.length && repeat !== 'all'} aria-label="Next track" title="Next track">
+          <Icon name="next" size={20} />
+        </button>
       </div>
       {next.length > 0 && (
         <div>

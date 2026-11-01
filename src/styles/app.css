@@ -2340,8 +2340,25 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .hx-now-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; }
 .hx-q { display: inline-flex; align-items: center; font-weight: 600; font-size: 13px; color: var(--tier-ink, var(--ink-2)); }
 .hx-q.t-hires::before, .hx-q.t-lossless::before { content: ''; width: 12px; height: 12px; margin-right: 6px; background: currentColor; -webkit-mask: var(--wave-mask) center / contain no-repeat; mask: var(--wave-mask) center / contain no-repeat; }
-.hx-bar { height: 3px; border-radius: 3px; background: var(--rule-strong); overflow: hidden; }
-.hx-bar i { display: block; height: 100%; background: var(--ink); border-radius: 3px; transition: width 0.5s linear; }
+.hx-seek { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 18px; margin: 0; background: none; cursor: pointer; }
+.hx-seek::-webkit-slider-runnable-track { height: 3px; border-radius: 3px; background: linear-gradient(to right, var(--ink) var(--p, 0%), var(--rule-strong) var(--p, 0%)); }
+.hx-seek::-moz-range-track { height: 3px; border-radius: 3px; background: var(--rule-strong); }
+.hx-seek::-moz-range-progress { height: 3px; border-radius: 3px; background: var(--ink); }
+.hx-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4px; border: 0; border-radius: 50%; background: var(--ink); opacity: 0; transition: opacity 0.15s; }
+.hx-seek::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: var(--ink); opacity: 0; }
+.hx-seek:hover::-webkit-slider-thumb, .hx-seek:focus-visible::-webkit-slider-thumb { opacity: 1; }
+.hx-seek:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.hx-stop { margin-left: auto; border: 0; background: none; padding: 2px 0; color: var(--ink-3); font: inherit; font-size: 13px; cursor: pointer; }
+@media (hover: hover) { .hx-stop:hover { color: var(--ink); } }
+.hx-ctl { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.hx-ctl button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--ink-2); cursor: pointer; transition: background-color 0.12s, color 0.12s, transform 0.1s; }
+.hx-ctl button.go { width: 56px; height: 56px; background: var(--ink); color: var(--on-ink); }
+.hx-ctl button:active:not(:disabled) { transform: scale(0.94); }
+.hx-ctl button:disabled { opacity: 0.35; cursor: default; }
+.hx-ctl button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (hover: hover) { .hx-ctl button:not(.go):not(:disabled):hover { background: var(--hover); color: var(--ink); } }
+/* The player bar at the bottom steps aside while Home shows the same thing. */
+.on-home .player { display: none; }
 .hx-times { display: flex; justify-content: space-between; margin-top: 6px; color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
 .hx-next { list-style: none; margin: 0; padding: 0; }
 .hx-next li { border-top: 1px solid var(--rule); }
