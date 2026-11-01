@@ -2431,3 +2431,29 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .hx-now > .hx-now-text, .hx-now > .hx-now-meta { grid-column: 2; }
 }
 @media (prefers-reduced-motion: reduce) { .hx, .hx-art, .hx-bar i { transition: none; } }
+/* ---------- the large player on a big PC window: the cover leads, the controls beside it, the queue to the right ---------- */
+@media (min-width: 1100px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  .full-player.rail { --art: clamp(300px, min(36vw, calc(100vh - 210px)), 900px); }
+  .full-player.rail .fp-body.np:not(.lyrics-on) {
+    grid-template-columns: var(--art) minmax(300px, clamp(380px, 26vw, 560px)) minmax(220px, 1fr);
+    grid-template-rows: 1fr auto auto auto auto auto auto 1fr;
+    align-content: stretch; align-items: center; column-gap: clamp(32px, 3.4vw, 64px); row-gap: 20px;
+    padding: 6px clamp(32px, 4vw, 72px) 24px;
+  }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { grid-column: 1; grid-row: 1 / -1; align-self: center; justify-self: center; width: var(--art); }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { width: var(--art); max-width: none; border-radius: 16px; box-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.65); }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-titlerow { grid-column: 2; grid-row: 2; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-time { grid-column: 2; grid-row: 3; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls { grid-column: 2; grid-row: 4; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { grid-column: 2; grid-row: 5; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-options { grid-column: 2; grid-row: 6; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-sleep { grid-column: 2; grid-row: 7; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-queue.np, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details { grid-column: 3; grid-row: 1 / -1; align-self: center; height: var(--art); min-height: 0; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-now h2 { font-size: clamp(30px, 2.6vw, 46px); font-weight: 640; font-stretch: 86%; letter-spacing: -0.01em; word-spacing: 0.1em; line-height: 1.05; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-artist { font-size: 19px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-facts { font-size: 13.5px; margin-top: 12px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-facts dt { width: 60px; }
+  .full-player.rail .fp-body.np.lyrics-on .fp-now h2 { font-size: clamp(26px, 2.2vw, 38px); font-weight: 640; font-stretch: 86%; letter-spacing: -0.01em; word-spacing: 0.1em; line-height: 1.08; }
+  /* with lyrics on, the cover can be bigger than before as well */
+  .fp-body.np.lyrics-on .fp-art { width: min(100cqw, 100cqh, 760px); }
+}
