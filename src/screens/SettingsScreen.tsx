@@ -1,9 +1,11 @@
 import { RemoteAccessSection } from '../components/RemoteAccess';
 import { GuardSection } from '../components/GuardSettings';
+import { ClassicPlayerSwitch } from '../components/ClassicPlayerSwitch';
+import { SETTINGS_TABS, lastSettingsTab, rememberSettingsTab, takeSettingsTarget, type SettingsTab } from '../lib/settingsNav';
 import { PlaylistBackupsSection } from '../components/PlaylistBackups';
 import { ReportProblem } from '../components/ReportProblem';
 import { onThisComputer } from '../api/remote';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { LeechMode, Settings, ShareStatus } from '../api/types';
 import { Icon } from '../components/Icon';
 import type { PortCheck } from '../api/backend';
@@ -49,6 +51,20 @@ export function SettingsScreen() {
   const [busyFolders, setBusyFolders] = useState(false);
   const [restartNeeded, setRestartNeeded] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [tab, setTab] = useState<SettingsTab>(lastSettingsTab);
+  // A link from elsewhere (the footer, Home) can ask for a section; checked after the first paint's layout, once.
+  useLayoutEffect(() => {
+    const wanted = takeSettingsTarget();
+    if (wanted) {
+      setTab(wanted);
+      rememberSettingsTab(wanted);
+    }
+  }, []);
+  const pick = (next: SettingsTab) => {
+    setTab(next);
+    rememberSettingsTab(next);
+    document.querySelector('.st')?.closest('.page')?.scrollTo({ top: 0 });
+  };
 
   // Shared by the sections that save on their own: reload, and say if slskd needs a restart.
   const afterSave = async () => {
@@ -219,87 +235,9 @@ export function SettingsScreen() {
 
   const shared = draft.filter((f) => !f.excluded);
 
-  return (
-    <div className="page">
-      <div className="page-inner narrow">
-        <div className="page-head">
-          <div>
-            <h1 className="page-title">Settings</h1>
-            <p className="page-sub">
-              {status
-                ? status.scanning
-                  ? `Scanning your folders, ${Math.round(status.progress * 100)}%`
-                  : status.faulted
-                    ? 'The last scan failed. Check the folder paths below, then scan again.'
-                    : `You share ${status.files.toLocaleString()} files in ${status.directories.toLocaleString()} folders`
-                : ' '}
-            </p>
-          </div>
-          <button className="btn quiet small" disabled={status?.scanning} onClick={() => backend?.rescan().then(() => toast('Scanning your shared folders'))}>
-            <Icon name="retry" size={16} /> Scan again
-          </button>
-        </div>
-        {status?.scanning && (
-          <div className="bar" role="progressbar" aria-valuenow={Math.round(status.progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Scan progress">
-            <i style={{ width: `${status.progress * 100}%` }} />
-          </div>
-        )}
-
-        {restartNeeded && (
-          <div className="callout restart" role="status">
-            <span>
-              {restarting
-                ? 'Restarting the engine. This takes a few seconds, and transfers in progress are interrupted.'
-                : 'Some saved changes, like the download folder, take effect after a restart.'}
-            </span>
-            {canPick ? (
-              <button
-                className="btn small"
-                disabled={restarting}
-                onClick={async () => {
-                  setRestarting(true);
-                  const ok = await backend!.restart();
-                  setRestarting(false);
-                  if (ok) {
-                    setRestartNeeded(false);
-                    toast('Restarted. The new settings are in use.');
-                    await load();
-                  } else {
-                    toast('Couldn’t restart from here. Quit Nightjar and open it again from the Start menu.', 'error');
-                  }
-                }}
-              >
-                {restarting ? <span className="spinner" aria-hidden /> : null} {restarting ? 'Restarting…' : 'Restart now'}
-              </button>
-            ) : (
-              <span className="dim">Quit Nightjar and open it again from the Start menu.</span>
-            )}
-          </div>
-        )}
-
-        {ro && (
-          <p className="callout">
-            You can see these settings but not change them here. To allow changes, set <code>remote_configuration: true</code> in
-            the engine’s config file (data\slskd.yml) and restart Nightjar.
-          </p>
-        )}
-
-        <RemoteAccessSection />
-
-        <SpeedSection settings={settings} readOnly={ro} onSaved={afterSave} />
-
-        <WhoGetsUploads settings={settings} readOnly={ro} onSaved={afterSave} />
-
-        <GuardSection settings={settings} readOnly={ro} onSaved={afterSave} />
-
-        <LibrarySection />
-
-        <PlaylistBackupsSection />
-
-        <Reachability />
-
-        <AccountSection />
-
+  const current = SETTINGS_TABS.find((x) => x.id === tab) ?? SETTINGS_TABS[0];
+  const panels: Record<SettingsTab, React.ReactNode> = {
+    sharing: <>
         <section className="settings-block" aria-labelledby="shared-h">
           <h2 id="shared-h">Shared folders</h2>
           <p className="hint-text">
@@ -390,7 +328,10 @@ export function SettingsScreen() {
             {shared.length > 0 && `${shared.length} of ${draft.length} folders shared.`}
           </p>
         </section>
-
+</>,
+    transfers: (
+      <>
+        
         <section className="settings-block" aria-labelledby="dl-h">
           <h2 id="dl-h">Where downloads go</h2>
           <div className="add-folder">
@@ -424,11 +365,126 @@ export function SettingsScreen() {
           )}
         </div>
 
-        <ProfileSection settings={settings} readOnly={ro} canPick={canPick} onSaved={afterSave} />
 
+        <SpeedSection settings={settings} readOnly={ro} onSaved={afterSave} />
+
+        <WhoGetsUploads settings={settings} readOnly={ro} onSaved={afterSave} />
+      </>
+    ),
+    protection: <GuardSection settings={settings} readOnly={ro} onSaved={afterSave} />,
+    library: (
+      <>
+        <LibrarySection />
+
+        <PlaylistBackupsSection />
+      </>
+    ),
+    account: (
+      <>
+        <AccountSection />
+
+        <ProfileSection settings={settings} readOnly={ro} canPick={canPick} onSaved={afterSave} />
+      </>
+    ),
+    connection: (
+      <>
+        <Reachability />
+
+        <RemoteAccessSection />
+      </>
+    ),
+    app: (
+      <>
         <Notifications />
 
+        <ClassicPlayerSwitch />
+
         <ReportProblem />
+      </>
+    ),
+  };
+
+  return (
+    <div className="page">
+      <div className="page-inner">
+        <div className="st-wrap">
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Settings</h1>
+            <p className="page-sub">
+              {status
+                ? status.scanning
+                  ? `Scanning your folders, ${Math.round(status.progress * 100)}%`
+                  : status.faulted
+                    ? 'The last scan failed. Check the folder paths below, then scan again.'
+                    : `You share ${status.files.toLocaleString()} files in ${status.directories.toLocaleString()} folders`
+                : ' '}
+            </p>
+          </div>
+          <button className="btn quiet small" disabled={status?.scanning} onClick={() => backend?.rescan().then(() => toast('Scanning your shared folders'))}>
+            <Icon name="retry" size={16} /> Scan again
+          </button>
+        </div>
+        {status?.scanning && (
+          <div className="bar" role="progressbar" aria-valuenow={Math.round(status.progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Scan progress">
+            <i style={{ width: `${status.progress * 100}%` }} />
+          </div>
+        )}
+
+        {restartNeeded && (
+          <div className="callout restart" role="status">
+            <span>
+              {restarting
+                ? 'Restarting the engine. This takes a few seconds, and transfers in progress are interrupted.'
+                : 'Some saved changes, like the download folder, take effect after a restart.'}
+            </span>
+            {canPick ? (
+              <button
+                className="btn small"
+                disabled={restarting}
+                onClick={async () => {
+                  setRestarting(true);
+                  const ok = await backend!.restart();
+                  setRestarting(false);
+                  if (ok) {
+                    setRestartNeeded(false);
+                    toast('Restarted. The new settings are in use.');
+                    await load();
+                  } else {
+                    toast('Couldn’t restart from here. Quit Nightjar and open it again from the Start menu.', 'error');
+                  }
+                }}
+              >
+                {restarting ? <span className="spinner" aria-hidden /> : null} {restarting ? 'Restarting…' : 'Restart now'}
+              </button>
+            ) : (
+              <span className="dim">Quit Nightjar and open it again from the Start menu.</span>
+            )}
+          </div>
+        )}
+
+        {ro && (
+          <p className="callout">
+            You can see these settings but not change them here. To allow changes, set <code>remote_configuration: true</code> in
+            the engine’s config file (data\slskd.yml) and restart Nightjar.
+          </p>
+        )}
+        <div className="st">
+          <nav className="st-nav" aria-label="Settings sections">
+            {SETTINGS_TABS.map((x) => (
+              <button key={x.id} className="st-tab" aria-current={x.id === tab ? 'page' : undefined} onClick={() => pick(x.id)}>
+                <b>{x.label}</b>
+                <small>{x.hint}</small>
+              </button>
+            ))}
+          </nav>
+          <div className="st-panel" key={tab}>
+            <h2 className="st-title">{current.label}</h2>
+            <p className="st-sub">{current.sub}</p>
+            {panels[tab]}
+          </div>
+        </div>
+        </div>
       </div>
     </div>
   );

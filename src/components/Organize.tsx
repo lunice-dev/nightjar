@@ -3,6 +3,7 @@ import type { OrganizePlan } from '../api/library';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { rescanSoon } from '../lib/shareVersion';
+import { openSettings } from '../lib/settingsNav';
 
 /**
  * Puts one album into the library: Library\Format\Artist\Year - Album. Shows where it will go, lets you
@@ -11,7 +12,6 @@ import { rescanSoon } from '../lib/shareVersion';
 export function OrganizeDialog({ dir, onClose, onMoved }: { dir: string; onClose: () => void; onMoved?: (to: string, id?: string) => void }) {
   const backend = useStore((s) => s.backend);
   const toast = useStore((s) => s.toast);
-  const go = useStore((s) => s.go);
   const [plan, setPlan] = useState<OrganizePlan>();
   const [error, setError] = useState<string>();
   const [format, setFormat] = useState('FLAC');
@@ -84,7 +84,7 @@ export function OrganizeDialog({ dir, onClose, onMoved }: { dir: string; onClose
               className="btn small"
               onClick={() => {
                 onClose();
-                go('settings');
+                openSettings('library');
               }}
             >
               Open Settings

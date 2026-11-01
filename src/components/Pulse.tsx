@@ -4,6 +4,7 @@ import { groupDownloads } from '../lib/transfers';
 import { uploadStats } from '../lib/uploadStats';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
+import { openSettings } from '../lib/settingsNav';
 
 const WEEK = 7 * 24 * 3600_000;
 const SHOWN: Tier[] = ['hires', 'lossless', 'high', 'mid', 'low'];
@@ -116,7 +117,7 @@ export function Pulse() {
         </p>
       </button>
 
-      <button className="pulse-tile" onClick={() => go('settings')}>
+      <button className="pulse-tile" onClick={() => openSettings('connection')}>
         <h3>Connection</h3>
         <p className={`pulse-big link-${demo ? 'online' : link.state}`}>
           <span className="pulse-dot" aria-hidden />

@@ -4,6 +4,7 @@ import { DemoBackend } from './api/demo';
 import { searchRunning } from './api/types';
 import { Icon } from './components/Icon';
 import { WindowControls } from './components/WindowControls';
+import { setSettingsTarget } from './lib/settingsNav';
 import { inApp, windowAction } from './lib/host';
 import { Mark } from './components/Mark';
 import { speed } from './lib/quality';
@@ -409,12 +410,12 @@ function Shell() {
             {active.length} {active.length === 1 ? 'album' : 'albums'} at {speed(totalSpeed)}
           </button>
         )}
-        <button className="foot-item" onClick={() => open('settings')} title="Change speed limits">
+        <button className="foot-item" onClick={() => { setSettingsTarget('transfers'); open('settings'); }} title="Change speed limits">
           <Icon name="speed" size={14} />
           {!limits?.down && !limits?.up ? 'No speed limits' : `↓ ${fmtLimit(limits?.down)} · ↑ ${fmtLimit(limits?.up)}`}
         </button>
         <LinkStatus demo={kind === 'demo'} me={me} />
-        {kind !== 'demo' && <RemoteFoot onOpen={() => open('settings')} />}
+        {kind !== 'demo' && <RemoteFoot onOpen={() => { setSettingsTarget('connection'); open('settings'); }} />}
         <ThemeSwitch theme={theme} onChange={setTheme} />
         <EngineCredit />
         <button className="foot-item" aria-current={route === 'about' ? 'page' : undefined} onClick={() => open('about')}>

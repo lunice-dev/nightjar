@@ -26,6 +26,7 @@ import { blockAndStop, setBlocked, useBlocked } from '../lib/blocking';
 import { GuardNotice } from '../components/GuardNotice';
 import { useSuspects } from '../lib/guard';
 import { keepDownloading } from '../lib/identityWatch';
+import { openSettings } from '../lib/settingsNav';
 
 const COPY = {
   download: {
@@ -132,7 +133,7 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
                 <Icon name="search" size={16} /> Start a search
               </button>
             ) : (
-              <button className="btn quiet small" onClick={() => go('settings')}>
+              <button className="btn quiet small" onClick={() => openSettings('sharing')}>
                 <Icon name="folder" size={16} /> Check what you share
               </button>
             )}

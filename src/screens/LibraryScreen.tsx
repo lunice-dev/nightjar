@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LibAlbum, LibraryInfo } from '../api/library';
 import { Icon } from '../components/Icon';
 import { AlbumsView, quality } from '../components/LibraryAlbums';
@@ -10,6 +10,7 @@ import { bytes } from '../lib/quality';
 import { rescanSoon } from '../lib/shareVersion';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
+import { openSettings } from '../lib/settingsNav';
 
 /**
  * Your music library: every album in it, a quality check for any of them (or all of them, in the
@@ -18,7 +19,6 @@ import { useStore } from '../store';
  */
 export function LibraryScreen() {
   const backend = useStore((s) => s.backend);
-  const go = useStore((s) => s.go);
   const canFiles = useFilesAvailable();
   const [info, setInfo] = useState<LibraryInfo | null>();
   const [view, setView] = useState<'albums' | 'review'>('albums');
@@ -77,7 +77,7 @@ export function LibraryScreen() {
         {canFiles && info && !info.root && (
           <div className="callout">
             <p>Choose your library folder first: the folder where your music lives, sorted by format and artist.</p>
-            <button className="btn small" onClick={() => go('settings')}>
+            <button className="btn small" onClick={() => openSettings('library')}>
               Open Settings
             </button>
           </div>

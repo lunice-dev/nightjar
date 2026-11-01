@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon';
 import { setBlocked, useBlocked } from '../lib/blocking';
 import { usePrefs, type Buddy } from '../prefs';
 import { useStore } from '../store';
+import { openSettings } from '../lib/settingsNav';
 
 const seen = (b: Buddy) => {
   if (b.presence && b.presence !== 'Offline') return b.presence;
@@ -183,7 +184,6 @@ function BuddyRow({ b }: { b: Buddy }) {
 /** Whether your people skip your upload queue, with a way to turn it on. */
 function FriendsFirstNote() {
   const backend = useStore((s) => s.backend);
-  const go = useStore((s) => s.go);
   const [on, setOn] = useState<boolean>();
   useEffect(() => {
     backend
@@ -195,7 +195,7 @@ function FriendsFirstNote() {
   return (
     <p className="hint-text small friends-note">
       {on ? 'Friends first is on: the people here skip ahead in your upload queue.' : 'Want the people here to skip ahead in your upload queue?'}{' '}
-      <button className="link" onClick={() => go('settings')}>
+      <button className="link" onClick={() => openSettings('transfers')}>
         {on ? 'Change' : 'Turn on Friends first'}
       </button>
     </p>

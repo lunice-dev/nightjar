@@ -16,6 +16,7 @@ import { uploadStats } from '../lib/uploadStats';
 import { groupCoverDir, useLocalFiles } from '../lib/useLocal';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
+import { openSettings } from '../lib/settingsNav';
 
 const GAP = 18;
 const MIN_TILE = 158;
@@ -622,7 +623,7 @@ function Activity() {
         <h2 className="hx-h small">Connection</h2>
         <ul className="hx-list">
           <li>
-            <button onClick={() => go('settings')}>
+            <button onClick={() => openSettings('connection')}>
               <b>
                 <i className={`hx-dot ${link.state === 'online' || demo ? 'ok' : link.state === 'connecting' ? 'wait' : 'bad'}`} aria-hidden />
                 {connection}
