@@ -1,7 +1,10 @@
 import { PlaylistShelf } from '../components/Playlists';
 import { usePlayer } from '../lib/player';
 import { AlbumPlay } from '../components/AlbumPlay';
-import type { LibAlbum } from '../api/library';
+import type { LibAlbum, LibraryInfo } from '../api/library';
+import { Home } from './HomeScreen';
+import { useFilesState } from '../lib/files';
+import { useLibraryReview } from '../lib/libraryReview';
 import { betterThanYours, inLibrary, libraryLabel, useLibraryIndex } from '../lib/libraryIndex';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -53,8 +56,31 @@ const focusSearch = () => {
 
 const shortDate = (t: number) => (t ? new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '');
 
-/** The home page: what you're downloading, what arrived lately, and your own library. */
+/**
+ * The home page. On the computer with a library it's the new Home (what's playing, rows of albums, activity);
+ * on a phone or other device, or before there is a library, it's the plain start page below.
+ */
 function Landing() {
+  const backend = useStore((s) => s.backend);
+  const filesState = useFilesState();
+  const { scan } = useLibraryReview();
+  const [info, setInfo] = useState<LibraryInfo | null | undefined>();
+  useEffect(() => {
+    if (!backend || !filesState) return;
+    backend.library.info().then((i) => {
+      setInfo(i);
+      if (i?.root && i.exists) void useLibraryReview.getState().load();
+    });
+  }, [backend, filesState]);
+  if (filesState === undefined) return <div className="results" />; // still asking whether this computer has the files
+  if (!filesState) return <ClassicLanding />;
+  if (info === null || (info && (!info.root || !info.exists))) return <ClassicLanding />;
+  if (scan?.albums && scan.albums.every((a) => a.status === 'skip')) return <ClassicLanding />;
+  return <Home />;
+}
+
+/** The start page: what you're downloading, what arrived lately, and your own library. */
+function ClassicLanding() {
   const search = useStore((s) => s.search);
   const go = useStore((s) => s.go);
   const demo = useStore((s) => s.backend?.kind === 'demo');
