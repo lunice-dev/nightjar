@@ -1752,7 +1752,10 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-bg.instant { animation: none; }
 @keyframes fp-bg-in { from { opacity: 0; } to { opacity: 1; } }
 /* A faint dark veil over the blurred cover, so the white text stays readable where the cover is bright. */
-.fp-bgbox::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0.22), rgb(0 0 0 / 0.06) 38%, rgb(0 0 0 / 0.18)); }
+.fp-bgbox::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0), rgb(0 0 0 / 0.04) 38%, rgb(0 0 0 / 0.18)); }
+/* On a pale cover the top bar needs help being read, without darkening the background itself. */
+.fp-top .fp-icon, .fp-top .fp-brand-name { filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.45)); }
+.fp-top .fp-brand-name { opacity: 0.9; }
 /* Opened from the small player: the drawer fades in while the art grows out of the small cover. */
 .full-player.morph { animation: fp-fade 0.3s ease; }
 
