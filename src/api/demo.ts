@@ -1,5 +1,6 @@
 import { demoLibrary } from './library';
 import { uuid } from '../lib/uuid';
+import { WORST_ALBUMS, worstCase } from './worstCase';
 import { ApiError, type Backend, type Direction, type FileAccess, type FolderAccess, type PortCheck, type SearchWatch, type Unsubscribe } from './backend';
 import type {
   BrowseResult,
@@ -49,7 +50,10 @@ const CATALOG: Album[] = [
   { artist: 'Orla Finch', title: 'Small Hours', year: 2016, tracks: ['3 AM', 'Kettle', 'Small Hours', 'Radiator Song', 'Insomniac Waltz', 'First Bird', 'Milk Float'] },
 ];
 
+if (worstCase()) CATALOG.unshift(...WORST_ALBUMS);
+
 const USERS = [
+  ...(worstCase() ? ['a', 'Aleksandra_Wisniewska-Kowalczyk_1984_official_vinyl_rips_and_more', 'bartholomew.fitzgerald@northwind-industries-holdings.example.com'] : []),
   'vinylmole', 'deepcrate', 'tapehiss', 'lossless_larry', 'bandcampfire', 'archivista',
   'needledrop', 'flac_attack', 'riverbedrecords', 'mono_mono', 'loudness_war_vet', 'b-side',
   'cassettefuturism', 'sonata_k', 'dustgroove', 'quietstorm', 'ripper99', 'lp_hoarder',

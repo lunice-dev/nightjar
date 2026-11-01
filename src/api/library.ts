@@ -3,6 +3,8 @@
  * (through its helper). On a phone, or without the app, none of this is available.
  */
 
+import { WORST_TRACKS, worstCase } from './worstCase';
+
 export interface LibraryInfo {
   root: string | null;
   formats: string[];
@@ -344,7 +346,21 @@ function demoAlbums(root: string): LibAlbum[] {
     if (a.status !== 'skip' && a.status !== 'needsYear') a.status = a.target === a.dir ? 'ok' : 'move';
     return a;
   };
+  const worst = worstCase()
+    ? [
+        mk('FLAC\\Godspeed You! Black Emperor feat. The Montreal Symphonic Chamber Ensemble\\2000 - Lift Your Skinny Fists Like Antennas to Heaven (Remastered Deluxe Anniversary Edition) [Live at the Royal Albert Hall]', { artist: 'Godspeed You! Black Emperor feat. The Montreal Symphonic Chamber Ensemble', album: 'Lift Your Skinny Fists Like Antennas to Heaven (Remastered Deluxe Anniversary Edition) [Live at the Royal Albert Hall]', year: '2000', tracks: 4, reasons: ['Renamed: Godspeed You! Black Emperor - Lift Your Skinny Fists Like Antennas to Heaven (Remastered Deluxe Anniversary Edition) [Live at the Royal Albert Hall] → 2000 - Lift Your Skinny Fists Like Antennas to Heaven (Remastered Deluxe Anniversary Edition) [Live at the Royal Albert Hall]'] }),
+        mk('FLAC\\J\\2020 - Q', { artist: 'J', album: 'Q', year: '2020', tracks: 1, size: 31_000_000 }),
+        mk('FLAC\\王菲\\2000 - 寓言', { artist: '王菲', album: '寓言', year: '2000', tracks: 4 }),
+        mk('FLAC\\نور الهدى\\2015 - ليالي القاهرة', { artist: 'نور الهدى', album: 'ليالي القاهرة', year: '2015', tracks: 2 }),
+        mk('FLAC\\Ólafur Arnalds & Nils Frahm\\Đặng Thị Ngọc Hân - Sinh nhật', { artist: 'Ólafur Arnalds & Nils Frahm', album: 'Đặng Thị Ngọc Hân: Sinh nhật', year: '2011', status: 'needsYear' }),
+        mk('FLAC\\🦊 Fox & The Moons 🌙\\2019 - 😀 Greatest Hits 🎶', { artist: '🦊 Fox & The Moons 🌙', album: '😀 Greatest Hits 🎶', year: '2019', tracks: 1200, size: 48_000_000_000 }),
+        mk('FLAC\\Various Artists\\1999 - Benachrichtigungseinstellungen Zusammenstellung Sommerhits Neunzehnhundertneunundneunzig', { artist: 'Various Artists', album: 'Benachrichtigungseinstellungen Zusammenstellung Sommerhits Neunzehnhundertneunundneunzig', year: '1999', compilation: true, kind: 'box', tracks: 0, size: 0 }),
+        mk('FLAC\\dana\\one-hit wonder', { artist: 'dana', album: 'one-hit wonder', year: '1970', format: 'MP3', bits: 0, tracks: 1, size: 4_000_000 }),
+        mk('FLAC\\Untitled', { status: 'skip', tracks: 1, artist: '', album: '', note: 'This folder has tracks of its own next to other album folders: sort it by hand.' }),
+      ]
+    : [];
   return [
+    ...worst,
     mk('FLAC\\Halvard Moss\\2019 - Low Country Lights', { artist: 'Halvard Moss', album: 'Low Country Lights', year: '2019' }),
     mk('FLAC\\Halvard Moss\\Halvard Moss - Tidewater (2021) [FLAC]', { artist: 'Halvard Moss', album: 'Tidewater', year: '2021', reasons: ['Renamed: Halvard Moss - Tidewater (2021) [FLAC] → 2021 - Tidewater'] }),
     mk('FLAC\\Halvard Moss\\Halvard Moss - Northern Rooms [24-96]', { artist: 'Halvard Moss', album: 'Northern Rooms', year: '2023', format: 'Hi-Res', bits: 24, rate: 96000, size: 1_400_000_000, reasons: ['FLAC → Hi-Res', 'Renamed: Halvard Moss - Northern Rooms [24-96] → 2023 - Northern Rooms'] }),
@@ -475,7 +491,7 @@ export function demoLibrary(): LibraryAccess {
     tracks: async (dir) => {
       // Sample data: a made-up album, so the player can be tried (it plays silence).
       const name = dir.split(/[\\/]/).pop() ?? 'Sample album';
-      const titles = ['Harbour Lights', 'Slow Tide', 'The Long Road In', 'Paper Moons', 'Northern Rooms', 'Low Country', 'Ember', 'Glass Houses'];
+      const titles = worstCase() ? WORST_TRACKS : ['Harbour Lights', 'Slow Tide', 'The Long Road In', 'Paper Moons', 'Northern Rooms', 'Low Country', 'Ember', 'Glass Houses'];
       return {
         dir,
         tracks: titles.map((title, i) => ({ path: `${dir}\\${String(i + 1).padStart(2, '0')} ${title}.flac`, title, artist: 'Halvard Moss', album: name.replace(/^\d{4} - /, ''), no: i + 1, disc: 0, seconds: 30, format: 'flac', bits: 16, rate: 44100, kbps: 900, size: 30_000_000 })),
