@@ -59,7 +59,7 @@ export function LyricsScroll({ state, time, onRetry, className }: { state: Lyric
           })}
         </ol>
       )}
-      {state.status === 'ready' && <p className="fp-ly-credit">Lyrics from LRCLIB</p>}
+      {state.status === 'ready' && <p className="fp-ly-credit">{synced ? 'Lyrics from LRCLIB' : 'Lyrics from LRCLIB · no timing available for this track, so they don’t follow the song'}</p>}
     </div>
   );
 }

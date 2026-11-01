@@ -71,7 +71,7 @@ let lastFailure = '';
 export const lyricsFailure = () => lastFailure;
 
 // Found lyrics are kept on this device, so a track asked for before is instant and works offline. "Not found" is not kept.
-const STORE = 'nightjar.lyrics.v1';
+const STORE = 'nightjar.lyrics.v2';
 const KEEP = 150;
 const readStore = (): Record<string, Lyrics> => {
   try {
@@ -109,21 +109,30 @@ async function fetchLrclib(t: { title: string; artist: string | null; album: str
   if (t.album) q.set('album_name', t.album);
   if (t.seconds > 0) q.set('duration', String(Math.round(t.seconds)));
   const exact = await ask(`${API}/get?${q}`);
-  if (exact.ok) return fromHit((await exact.json()) as LrcLibHit);
-  if (exact.status !== 404) throw new LyricsError(`error ${exact.status}`);
-  // Not found with the album and length: look by artist and title, and take the closest length.
+  if (exact.status !== 404 && !exact.ok) throw new LyricsError(`error ${exact.status}`);
+  const first = exact.ok ? fromHit((await exact.json()) as LrcLibHit) : null;
+  if (first?.synced) return first;
+  // Not found, or only plain text: look by artist and title for a timed version, taking the closest length.
   const s = new URLSearchParams({ artist_name: t.artist, track_name: t.title });
-  const res = await ask(`${API}/search?${s}`);
-  if (!res.ok) throw new LyricsError(`error ${res.status}`);
-  const hits = ((await res.json()) as LrcLibHit[]).filter((h) => !h.instrumental);
+  let hits: LrcLibHit[];
+  try {
+    const res = await ask(`${API}/search?${s}`);
+    if (!res.ok) throw new LyricsError(`error ${res.status}`);
+    hits = ((await res.json()) as LrcLibHit[]).filter((h) => !h.instrumental);
+  } catch (e) {
+    if (first) return first; // the plain lyrics are still better than none
+    throw e;
+  }
   const near = hits
     .filter((h) => t.seconds <= 0 || h.duration == null || Math.abs(h.duration - t.seconds) <= 4)
     .sort((a, b) => Number(!!b.syncedLyrics) - Number(!!a.syncedLyrics));
+  let plain: Lyrics | null = first;
   for (const h of near) {
     const l = fromHit(h);
-    if (l) return l;
+    if (l?.synced) return l;
+    plain ??= l;
   }
-  return null;
+  return plain;
 }
 
 /** The service is sometimes busy (503) or slow: ask again a couple of times before giving up. */
@@ -151,7 +160,7 @@ export function loadLyrics(t: { path: string; title: string; artist: string | nu
     p = withRetries(t)
       .then((l) => {
         memory.set(t.path, l);
-        if (l) saveStore(keyOf(t), l);
+        if (l?.synced) saveStore(keyOf(t), l); // plain text is asked about again later, in case a timed version has appeared
         return l;
       })
       .finally(() => inflight.delete(t.path));
