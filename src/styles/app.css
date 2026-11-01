@@ -1596,8 +1596,8 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; gap: clamp(28px, 5vw, 64px); padding: 6px 4px 6px; }
   .fp-art-col { align-self: stretch; display: grid; place-items: center; padding: 0 0 24px; height: 100%; }
   .fp-art { width: min(100%, calc(100vh - 150px), 620px); }
-  .fp-side { max-width: 640px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; padding-top: 4px; }
-  .fp-queue, .fp-details { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+  .fp-side { max-width: 640px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-top: 4px; }
+  .fp-queue, .fp-details { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
   .fp-now h2 { font-size: 30px; }
 }
 
