@@ -32,6 +32,29 @@ export function wrapLines(measure: (s: string) => number, text: string, maxWidth
 const W = 1080;
 const H = 1920;
 
+/** A box blur over RGBA pixels, `passes` times each way; three passes come out close to a gaussian. Edges repeat. */
+export function boxBlur(data: Uint8ClampedArray, w: number, h: number, radius: number, passes: number) {
+  const tmp = new Uint8ClampedArray(data.length);
+  const span = radius * 2 + 1;
+  const run = (src: Uint8ClampedArray, dst: Uint8ClampedArray, len: number, count: number, stride: number, lineStride: number) => {
+    for (let line = 0; line < count; line++) {
+      const base = line * lineStride;
+      for (let c = 0; c < 4; c++) {
+        let sum = 0;
+        for (let i = -radius; i <= radius; i++) sum += src[base + Math.min(len - 1, Math.max(0, i)) * stride + c];
+        for (let i = 0; i < len; i++) {
+          dst[base + i * stride + c] = sum / span;
+          sum += src[base + Math.min(len - 1, i + radius + 1) * stride + c] - src[base + Math.max(0, i - radius) * stride + c];
+        }
+      }
+    }
+  };
+  for (let p = 0; p < passes; p++) {
+    run(data, tmp, w, h, 4, w * 4);
+    run(tmp, data, h, w, w * 4, 4);
+  }
+}
+
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement | null>((resolve) => {
     const img = new Image();
@@ -73,19 +96,31 @@ async function draw(info: CardInfo, useImage: boolean): Promise<Blob> {
   const ctx = canvas.getContext('2d')!;
   const img = useImage && info.art ? await loadImage(info.art) : null;
 
-  // The backdrop: the cover shrunk to a few pixels and stretched back is a soft blur on every browser (canvas blur filters aren't everywhere).
+  // The backdrop: a small copy of the cover, blurred by hand (canvas blur filters aren't on every browser), then enlarged in
+  // steps so no blocks show.
   ctx.fillStyle = info.tint ?? '#2a2724';
   ctx.fillRect(0, 0, W, H);
   if (img) {
-    const tiny = document.createElement('canvas');
-    tiny.width = 27;
-    tiny.height = 48;
-    const t = tiny.getContext('2d')!;
-    t.imageSmoothingQuality = 'high';
-    cover(t, img, 0, 0, 27, 48);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(tiny, 0, 0, W, H);
+    const small = document.createElement('canvas');
+    small.width = 108;
+    small.height = 192;
+    const s = small.getContext('2d')!;
+    s.imageSmoothingQuality = 'high';
+    cover(s, img, 0, 0, 108, 192);
+    const px = s.getImageData(0, 0, 108, 192);
+    boxBlur(px.data, 108, 192, 7, 3);
+    s.putImageData(px, 0, 0);
+    let from: HTMLCanvasElement = small;
+    for (const [w, h] of [[270, 480], [540, 960], [W, H]] as const) {
+      const step = w === W ? canvas : document.createElement('canvas');
+      step.width = w;
+      step.height = h;
+      const c = step.getContext('2d')!;
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = 'high';
+      c.drawImage(from, 0, 0, w, h);
+      from = step;
+    }
   }
   const veil = ctx.createLinearGradient(0, 0, 0, H);
   veil.addColorStop(0, 'rgb(0 0 0 / 0.18)');
