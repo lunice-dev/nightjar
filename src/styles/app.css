@@ -2318,9 +2318,9 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 /* The night sky: the page's glow takes its colour from the cover of what's playing. */
 .hx-sky { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 55% at 14% 0%, var(--g1), transparent 70%), radial-gradient(50% 50% at 92% 100%, var(--g2), transparent 70%); }
 .hx-scroll { position: absolute; inset: 0; overflow: auto; }
-.hx-page { display: grid; grid-template-columns: var(--col-l) minmax(0, 1fr) var(--col-r); gap: clamp(28px, 3vw, 56px); max-width: 2200px; margin: 0 auto; padding: 36px clamp(20px, 2.6vw, 48px) 80px; }
+.hx-page { display: grid; grid-template-columns: var(--col-l) minmax(0, 1fr) var(--col-r); gap: clamp(28px, 3vw, 56px); max-width: 3400px; margin: 0 auto; padding: 36px clamp(20px, 2.6vw, 48px) 80px; }
 
-.hx-h { margin: 0 0 14px; display: flex; align-items: baseline; gap: 10px; font-size: 22px; font-weight: 640; font-stretch: 82%; letter-spacing: -0.015em; line-height: 1.15; }
+.hx-h { margin: 0 0 14px; display: flex; align-items: baseline; gap: 10px; font-size: 22px; font-weight: 640; font-stretch: 86%; letter-spacing: 0; word-spacing: 0.1em; line-height: 1.15; }
 .hx-h .n { color: var(--ink-3); font-weight: 500; font-stretch: 100%; font-size: 14px; letter-spacing: 0; }
 .hx-h.small { font-size: 18px; margin-bottom: 8px; }
 .hx-link { margin-left: auto; border: 0; background: none; padding: 2px 0; color: var(--ink-3); font: 500 13px var(--font); font-stretch: 100%; letter-spacing: 0; cursor: pointer; }
@@ -2335,7 +2335,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .hx-now-art:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .hx-now-art.empty { display: grid; place-items: center; cursor: default; color: var(--ink-3); font-size: 13px; background: repeating-linear-gradient(135deg, var(--sunken) 0 14px, color-mix(in srgb, var(--sunken) 92%, var(--ink)) 14px 28px); }
 .hx-now-cover { width: 100%; height: 100%; border-radius: 0; }
-.hx-now-title { margin: 0; font-size: clamp(26px, 2vw, 38px); line-height: 1.05; font-weight: 640; font-stretch: 80%; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.hx-now-title { margin: 0; font-size: clamp(26px, 2vw, 38px); line-height: 1.08; font-weight: 640; font-stretch: 86%; letter-spacing: -0.01em; word-spacing: 0.1em; overflow-wrap: anywhere; }
 .hx-now-by { margin: 5px 0 0; color: var(--ink-2); }
 .hx-now-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; }
 .hx-q { display: inline-flex; align-items: center; font-weight: 600; font-size: 13px; color: var(--tier-ink, var(--ink-2)); }
@@ -2387,7 +2387,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 
 /* right: activity */
 .hx-act { position: sticky; top: 24px; align-self: start; display: grid; gap: 30px; min-width: 0; }
-.hx-big { margin: 0; font-size: clamp(26px, 2vw, 34px); font-weight: 600; font-stretch: 80%; letter-spacing: -0.025em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.hx-big { margin: 0; font-size: clamp(26px, 2vw, 34px); font-weight: 600; font-stretch: 86%; letter-spacing: -0.015em; word-spacing: 0.1em; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .hx-statsub { margin: 5px 0 0; color: var(--ink-2); font-size: 13px; }
 .hx-spark { display: block; width: 100%; height: 44px; margin-top: 10px; color: #e0a458; }
 .hx-list { list-style: none; margin: 0; padding: 0; }

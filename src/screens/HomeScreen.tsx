@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { LibAlbum } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
-import { quality, tone } from '../components/LibraryAlbums';
+import { tone } from '../components/LibraryAlbums';
 import { PlaylistCover, fmtLength, playlistsChanged, usePlaylists } from '../components/Playlists';
 import { verdictText } from '../lib/check';
 import { coverColour } from '../lib/coverColour';
@@ -208,10 +208,18 @@ function Middle() {
   // Arrived lately: the home page's history, matched with the library for its quality.
   const recent = useMemo(() => {
     const live = new Set(coming.map((c) => c.key));
-    return history
-      .filter((h) => !live.has(h.key))
-      .slice(0, 16)
-      .map((h) => ({ h, a: h.dir ? byDir.get(h.dir.toLowerCase()) : undefined }));
+    const seen = new Set<string>();
+    const rows: { h: (typeof history)[number]; a: LibAlbum | undefined }[] = [];
+    for (const h of history) {
+      if (live.has(h.key)) continue;
+      // The same album downloaded twice (or from two people) is one tile.
+      const id = `${(h.artist ?? '').toLowerCase()}|${h.title.toLowerCase()}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      rows.push({ h, a: h.dir ? byDir.get(h.dir.toLowerCase()) : undefined });
+    }
+    // Albums that are in the library come first: the others may have been moved or deleted since.
+    return [...rows.filter((r) => r.a), ...rows.filter((r) => !r.a)].slice(0, 16);
   }, [history, coming, byDir]);
 
   const rediscover = useMemo(() => shuffled(albums).slice(0, 14), [albums, again]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -312,7 +320,7 @@ function Middle() {
             album={h.title}
             seed={h.key}
             name={h.title}
-            sub={[h.artist, a ? `${a.year ?? ''} ${quality(a)}`.trim() : ''].filter(Boolean).join(' · ')}
+            sub={[h.artist, a?.year].filter(Boolean).join(' · ')}
             tier={a ? tierClass(a.format) : ''}
             online={!a}
             onClick={() => h.dir && open(h.dir)}
