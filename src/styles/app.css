@@ -1556,9 +1556,8 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-ly-scroll::-webkit-scrollbar { display: none; }
 .fp-ly-scroll ol { list-style: none; margin: 0; padding: 0; }
 .fp-ly-scroll li { padding: 7px 0; font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; line-height: 1.22; letter-spacing: -0.01em; color: var(--fp-ink); opacity: 0.55; overflow-wrap: break-word; }
-.fp-ly-scroll ol.synced li { cursor: pointer; opacity: 0.4; transition: opacity 0.45s ease, filter 0.45s ease; -webkit-tap-highlight-color: transparent; }
-.fp-ly-scroll ol.synced li[data-far='true'] { filter: blur(0.7px); }
-.fp-ly-scroll ol.synced li.now { opacity: 1; filter: none; }
+.fp-ly-scroll ol.synced li { cursor: pointer; opacity: 0.4; transition: opacity 0.45s ease; -webkit-tap-highlight-color: transparent; }
+.fp-ly-scroll ol.synced li.now { opacity: 1; }
 .fp-ly-scroll li.gap { opacity: 0.25 !important; }
 /* three dots wait through the intro */
 .fp-ly-scroll li.dots { display: flex; gap: 9px; height: 30px; align-items: center; padding: 10px 0 14px; opacity: 0; cursor: default; }
