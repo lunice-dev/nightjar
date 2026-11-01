@@ -9,9 +9,9 @@ import { Icon } from './Icon';
 const LABELS: [Tier, string][] = [
   ['hires', 'Lossless files above CD quality: 24-bit, or more than 48 kHz. Usually genuine, but some are CD audio in a bigger file; Check quality tells.'],
   ['lossless', 'CD quality: 16-bit, 44.1 or 48 kHz, in FLAC, WAV, ALAC and the like. Nothing is lost.'],
-  ['high', 'The best MP3 or AAC: smaller files, very close to CD quality for most ears.'],
-  ['mid', 'MP3s between 192 and 300 kbps, often “V0”. Good, a step below 320.'],
-  ['low', 'Low-bitrate MP3s. The loss is often audible.'],
+  ['high', 'The best MP3 or AAC, about 320 kbps: smaller files, very close to CD quality for most ears.'],
+  ['mid', 'MP3s with a variable bitrate or between 192 and 300 kbps, often “V0”. Good, a step below High.'],
+  ['low', 'Low-bitrate MP3s, under 192 kbps. The loss is often audible.'],
   ['unknown', 'The person’s client didn’t say what the files are.'],
 ];
 

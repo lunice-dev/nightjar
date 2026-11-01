@@ -10,9 +10,9 @@ export type Tier = (typeof TIERS)[number];
 export const TIER_LABEL: Record<Tier, string> = {
   hires: 'Hi-res',
   lossless: 'Lossless',
-  high: '320 kbps',
-  mid: 'VBR / 256',
-  low: 'Under 192',
+  high: 'High',
+  mid: 'Variable',
+  low: 'Compact',
   unknown: 'Unknown',
 };
 

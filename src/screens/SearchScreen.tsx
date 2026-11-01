@@ -119,9 +119,9 @@ function Landing() {
             <ul className="scale compact" aria-label="How quality is shown">
               <li className="t-hires"><b>Hi-res</b></li>
               <li className="t-lossless"><b>Lossless</b></li>
-              <li className="t-high"><b>320</b></li>
-              <li className="t-mid"><b>VBR</b></li>
-              <li className="t-low"><b>Low</b></li>
+              <li className="t-high"><b>High</b></li>
+              <li className="t-mid"><b>Variable</b></li>
+              <li className="t-low"><b>Compact</b></li>
             </ul>
           </div>
 

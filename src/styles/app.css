@@ -134,13 +134,13 @@
 /* The search box and the logo tile need to stand out from pure black, or the top bar reads as faded and soft-edged. */
 :root[data-theme='oled'] .topbar-search .search-field .input { background: #1b1a18; box-shadow: inset 0 0 0 1px rgb(255 248 235 / 0.2); }
 :root[data-theme='oled'] .topbar-search .search-field .input::placeholder { color: var(--ink-2); opacity: 1; }
-/* Each tier knows its colour and how many of the five meter steps it lights. */
-.t-hires { --tier: var(--t-hires); --lvl: 5; }
-.t-lossless { --tier: var(--t-lossless); --lvl: 4; }
-.t-high { --tier: var(--t-high); --lvl: 3; }
-.t-mid { --tier: var(--t-mid); --lvl: 2; }
-.t-low { --tier: var(--t-low); --lvl: 1; }
-.t-unknown { --tier: var(--t-unknown); --lvl: 0; }
+/* Each tier knows its colour. Three carry an accent (Hi-res, Lossless, High); the lower ones stay quiet grey. The two lossless tiers
+   also get a badge with a wave mark wherever a format is shown (--wave-display, --badge-*). */
+.t-hires { --tier: var(--t-hires); --tier-ink: var(--t-hires); --wave-display: block; --badge-bg: color-mix(in srgb, var(--t-hires) 16%, transparent); --badge-fg: var(--t-hires); --badge-pad: 3px 10px 3px 8px; }
+.t-lossless { --tier: var(--t-lossless); --tier-ink: var(--t-lossless); --wave-display: block; --badge-bg: color-mix(in srgb, var(--t-lossless) 16%, transparent); --badge-fg: var(--t-lossless); --badge-pad: 3px 10px 3px 8px; }
+.t-high { --tier: var(--t-high); --tier-ink: var(--t-high); }
+.t-mid, .t-low, .t-unknown { --tier: var(--t-unknown); --tier-ink: var(--ink-2); }
+.t-high, .t-mid, .t-low, .t-unknown { --wave-display: none; --badge-bg: transparent; --badge-fg: var(--ink-2); --badge-pad: 0; }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
@@ -161,20 +161,16 @@ button { cursor: pointer; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* The level meter: five rising steps, lit up to the tier's level. */
+/* A file's format. Hi-res and Lossless are a tinted badge with a small waveform; the rest is quiet text. */
 .format, .sources .tier-cell, .share-row .format {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-weight: 600; color: var(--tier); white-space: nowrap; font-size: 14px; letter-spacing: 0.005em;
+  display: inline-flex; align-items: center; gap: 6px; padding: var(--badge-pad, 0); border-radius: 7px;
+  background: var(--badge-bg, transparent); color: var(--badge-fg, var(--ink-2));
+  font-weight: 600; white-space: nowrap; font-size: 14px; letter-spacing: 0.005em;
 }
 .format::before, .sources .tier-cell::before {
-  content: ''; flex: none; width: 19px; height: 12px;
-  background:
-    linear-gradient(90deg, var(--tier) calc(var(--lvl, 0) * 4px - 1.5px), transparent 0) no-repeat,
-    var(--rule-strong);
-  -webkit-mask: repeating-linear-gradient(90deg, #000 0 2.5px, transparent 2.5px 4px), linear-gradient(to top left, #000 50%, transparent 50.5%);
-  -webkit-mask-composite: source-in;
-  mask: repeating-linear-gradient(90deg, #000 0 2.5px, transparent 2.5px 4px), linear-gradient(to top left, #000 50%, transparent 50.5%);
-  mask-composite: intersect;
+  content: ''; display: var(--wave-display, none); flex: none; width: 14px; height: 14px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 /* ---------- shell ---------- */
@@ -375,17 +371,12 @@ button { cursor: pointer; }
 .suggest { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* landing for search: the tier scale as a meter */
-.scale { display: grid; gap: 4px; margin: 28px 0 0; padding: 0; list-style: none; max-width: 560px; }
-.scale li { display: grid; grid-template-columns: 30px 110px 1fr; gap: 14px; align-items: center; color: var(--ink-2); font-size: 14px; padding: 6px 0; }
-.scale li::before {
-  content: ''; width: 26px; height: 16px;
-  background: linear-gradient(90deg, var(--tier) calc(var(--lvl, 0) * 5.4px - 2px), transparent 0) no-repeat, var(--rule-strong);
-  -webkit-mask: repeating-linear-gradient(90deg, #000 0 3.4px, transparent 3.4px 5.4px), linear-gradient(to top left, #000 50%, transparent 50.5%);
-  -webkit-mask-composite: source-in;
-  mask: repeating-linear-gradient(90deg, #000 0 3.4px, transparent 3.4px 5.4px), linear-gradient(to top left, #000 50%, transparent 50.5%);
-  mask-composite: intersect;
+.scale { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+.scale li {
+  display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; font-size: 12.5px; color: var(--tier-ink);
+  background: color-mix(in srgb, var(--tier) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier) 30%, transparent);
 }
-.scale b { color: var(--tier); font-weight: 650; }
+.scale b { color: inherit; font-weight: 600; }
 
 /* ---------- pages ---------- */
 .page { flex: 1; min-height: 0; overflow: auto; position: relative; }
@@ -894,10 +885,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
 .hero-title { margin: 0; font-size: clamp(36px, 3.9vw, 58px); line-height: 1.02; font-weight: 500; letter-spacing: -0.035em; max-width: 11ch; }
 .hero-sub { margin: 0; color: var(--ink-2); font-size: 14.5px; max-width: 38ch; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.scale.compact { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; max-width: none; }
-.scale.compact li { display: inline-flex; gap: 6px; padding: 0; grid-template-columns: none; font-size: 12.5px; }
-.scale.compact li::before { width: 19px; height: 12px; }
-.scale.compact b { font-weight: 600; }
+.scale.compact { margin: 6px 0 0; }
 
 .hero-art { position: relative; display: block; padding: 0; border: 0; border-radius: var(--r-xl); overflow: hidden; background: var(--sunken); min-height: 360px; text-align: left; color: #fff; }
 .hero-art:disabled { cursor: default; }
@@ -937,7 +925,7 @@ code { font-size: 0.92em; background: var(--sunken); padding: 1px 5px; border-ra
   position: absolute; left: 8px; bottom: 16px; z-index: 1; pointer-events: none; gap: 6px; padding: 3px 9px 3px 7px; border-radius: 999px;
   background: rgb(14 13 12 / 0.62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; font-size: 11.5px; font-weight: 600; line-height: 1.3;
 }
-.shelf-art .shelf-q::before { width: 17px; height: 11px; }
+.shelf-art .shelf-q::before { width: 13px; height: 13px; background: var(--tier); }
 .load-more { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; color: var(--ink-3); font-size: 13.5px; }
 .shelf-cover { width: 100%; margin-bottom: 8px; box-shadow: 0 1px 2px rgb(20 16 10 / 0.1); }
 .shelf-title { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
