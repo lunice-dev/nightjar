@@ -248,8 +248,8 @@ export function FullPlayer({
         </span>
         <span className="fp-top-end">
           {view.kind !== 'now' && track && (
-            <button className="fp-nowbtn" onClick={() => p.showNow()} aria-label={`Now playing: ${track.title}`}>
-              <Bars on={playing} /> Now playing
+            <button className="fp-nowbtn" onClick={() => p.showNow()} aria-label={`Back to now playing: ${track.title}`} title="Now playing">
+              <Bars on={playing} />
             </button>
           )}
           {view.kind === 'now' && track && (

@@ -1591,7 +1591,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 
 /* ---------- the drawer's top: back to what's playing ---------- */
 .fp-top-end { justify-self: end; display: flex; align-items: center; gap: 8px; }
-.fp-nowbtn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.16); color: var(--fp-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.fp-nowbtn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: rgb(255 255 255 / 0.16); color: var(--fp-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .fp-nowbtn .fp-bars { height: 10px; }
 
 /* ---------- album and playlist views ---------- */
