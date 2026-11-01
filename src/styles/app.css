@@ -348,11 +348,11 @@ button { cursor: pointer; }
   height: 40px; padding: 0 16px; border-radius: var(--r-md); border: 1px solid transparent;
   background: var(--ink); color: var(--on-ink); font-weight: 600; font-size: 14.5px; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 8px; justify-content: center;
-  transition: background-color 0.12s, opacity 0.12s, box-shadow 0.12s;
+  transition: background-color 0.12s, opacity 0.12s, box-shadow 0.12s, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 @media (hover: hover) { .btn:hover { background: color-mix(in srgb, var(--ink) 86%, var(--paper)); } }
-.btn:active { translate: 0 1px; }
-.btn:disabled { opacity: 0.4; cursor: default; translate: none; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 @media (hover: hover) { .btn:disabled:hover { background: var(--ink); } }
 .btn.quiet { background: var(--surface); color: var(--ink); border-color: var(--rule-strong); font-weight: 500; box-shadow: 0 1px 1px rgb(15 20 28 / 0.04); }
 @media (hover: hover) { .btn.quiet:hover { background: var(--sunken); } }
@@ -376,8 +376,9 @@ button { cursor: pointer; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px;
   border: 1px solid var(--rule-strong); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: 13.5px; font-weight: 500;
-  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+.chip:active { transform: scale(0.97); }
 .chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--tier, var(--ink-3)); }
 .chip[aria-pressed='true']:not(.plain) { border-color: color-mix(in srgb, var(--tier) 55%, var(--rule-strong)); background: color-mix(in srgb, var(--tier) 9%, var(--surface)); }
 .chip.plain { padding-left: 12px; }
@@ -426,7 +427,17 @@ button { cursor: pointer; }
 .track .dim { color: var(--ink-3); }
 .icon-btn {
   width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink-2);
+  transition: background-color 0.12s, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
+.icon-btn:active:not(:disabled) { background: var(--hover); transform: scale(0.95); }
+/* Press feedback and a bigger tap area on touch, where the tab bar and small controls had neither. */
+.tab { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+.tab:active { transform: scale(0.96); }
+@media (pointer: coarse) {
+  .icon-btn, .chip, .btn.small { position: relative; }
+  .icon-btn::after, .chip::after, .btn.small::after { content: ''; position: absolute; inset: -7px; }
+}
+.track, .lib-meta, .release-side, .pill-count { font-variant-numeric: tabular-nums; }
 @media (hover: hover) { .icon-btn:hover { background: var(--hover); color: var(--ink); } }
 .icon-btn:disabled { color: var(--ink-3); cursor: default; background: none; }
 
