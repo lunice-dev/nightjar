@@ -2171,3 +2171,105 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .full-player.hush .fp-titlerow { position: relative; justify-content: center; }
 .full-player.hush .fp-titlerow .fp-now { padding: 0 52px; }
 .full-player.hush .fp-more { position: absolute; right: 0; top: 0; }
+/* ---------- Library, album view: shape bar, cover wall / list, details beside ---------- */
+.page-inner.wide { max-width: 2200px; }
+.lx-bar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 28px; margin-bottom: 18px; }
+.lx-shape { flex: 1 1 420px; min-width: 0; display: grid; gap: 10px; }
+.lx-ribbon { display: flex; gap: 2px; height: 10px; }
+.lx-ribbon button { all: unset; box-sizing: border-box; flex: 1 1 0; min-width: 6px; cursor: pointer; background: var(--tier); transition: opacity 0.15s; }
+.lx-ribbon button:first-child { border-radius: 999px 0 0 999px; }
+.lx-ribbon button:last-child { border-radius: 0 999px 999px 0; }
+.lx-ribbon button:only-child { border-radius: 999px; }
+.lx-ribbon button.off { opacity: 0.22; }
+.lx-legend { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.lx-key { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 0; border-radius: 999px; background: none; color: var(--ink-2); font: inherit; font-size: 13.5px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.lx-key b { color: var(--ink); font-weight: 650; }
+.lx-key[aria-pressed='true'] { background: var(--sunken); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule-strong); }
+.lx-key:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+@media (hover: hover) { .lx-key:hover { background: var(--hover); color: var(--ink); } }
+.lx-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tier); flex: none; }
+.lx-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 36px; }
+.lx-running { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; }
+.lx-running-name { max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-fails { flex: 1 1 100%; margin: 0; font-size: 13px; color: var(--ink-2); max-width: 90ch; }
+
+.lx-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 20px; }
+.lx-search { width: min(300px, 100%); height: 36px; }
+.lx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lx-sort { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.lx-sort select { height: 36px; padding: 0 10px; }
+.lx-seg { display: inline-flex; padding: 3px; border-radius: var(--r-md); background: var(--sunken); }
+.lx-seg button { border: 0; background: none; padding: 5px 14px; border-radius: 9px; font: inherit; font-size: 13.5px; font-weight: 550; color: var(--ink-2); cursor: pointer; }
+.lx-seg button[aria-pressed='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(15 20 28 / 0.1); }
+.lx-seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.lx-wrap { container-type: inline-size; }
+.lx-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; }
+.lx-split.open { grid-template-columns: minmax(0, 1fr) 380px; }
+.lx-main { min-width: 0; }
+.lx-group { margin-bottom: 28px; }
+.lx-artist { margin: 0 0 12px; font-size: 15px; font-weight: 650; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(150px, 11vw, 220px), 1fr)); gap: 22px 18px; }
+
+.lx-tile { min-width: 0; }
+.lx-art { position: relative; border-radius: var(--r-md); overflow: hidden; background: var(--sunken); }
+.lx-art::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--tier); pointer-events: none; }
+.lx-art-hit { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+.lx-art-hit:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-md); }
+.lx-cover { width: 100%; border-radius: 0; }
+.lx-tile.selected .lx-art { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
+.lx-flags { position: absolute; left: 8px; top: 8px; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.lx-flags .lib-flag { background: color-mix(in srgb, var(--t-mid) 30%, rgb(0 0 0 / 0.55)); color: #fff; backdrop-filter: blur(6px); }
+.lx-check { position: absolute; right: 8px; top: 8px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 13px; pointer-events: none; box-shadow: 0 0 0 2px rgb(0 0 0 / 0.35); background-color: var(--paper); }
+.lx-play { position: absolute; right: 10px; bottom: 14px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgb(0 0 0 / 0.66); color: #fff; cursor: pointer; opacity: 0; transform: translateY(4px) scale(0.96); transition: opacity 0.14s, transform 0.14s; }
+.lx-tile:hover .lx-play, .lx-tile:focus-within .lx-play { opacity: 1; transform: none; }
+@media (pointer: coarse) { .lx-play { opacity: 1; transform: none; } }
+.lx-play:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.lx-play:active { transform: scale(0.94); }
+.lx-caption { display: grid; gap: 1px; margin-top: 9px; min-width: 0; }
+.lx-name { font-weight: 600; font-size: 14.5px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.lx-sub { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lx-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.lx-table th { position: sticky; top: 0; z-index: 1; padding: 8px 12px; text-align: left; font-size: 12.5px; font-weight: 600; color: var(--ink-2); background: var(--paper); border-bottom: 1px solid var(--rule-strong); white-space: nowrap; }
+.lx-table td { padding: 6px 12px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.lx-table .num { text-align: right; }
+.lx-table th.num { text-align: right; }
+.lx-table tbody tr { cursor: pointer; }
+@media (hover: hover) { .lx-table tbody tr:hover td { background: var(--hover); } }
+.lx-table tr.selected td { background: var(--sunken); }
+.lx-th { all: unset; cursor: pointer; }
+.lx-th[aria-pressed='true'] { color: var(--ink); }
+.lx-th:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.lx-c-art { width: 52px; padding-right: 0 !important; }
+.lx-mini { width: 36px; height: 36px; border-radius: 5px; display: block; }
+.lx-c-name { min-width: 0; max-width: 520px; }
+.lx-row-title { all: unset; cursor: pointer; font-weight: 600; margin-right: 10px; }
+.lx-row-title:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.lx-row-artist { color: var(--ink-2); margin-right: 8px; }
+.lx-table .lib-flag { margin-right: 4px; }
+
+.lx-detail { position: sticky; top: 0; display: grid; gap: 14px; align-content: start; padding: 18px; max-height: calc(100vh - 48px); overflow: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg); animation: lx-in 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes lx-in { from { opacity: 0; transform: translateX(10px); } }
+.lx-detail > .lx-close { position: absolute; right: 10px; top: 10px; z-index: 2; background: var(--sunken); color: var(--ink); }
+.lx-detail-cover { width: 100%; border-radius: var(--r-md); }
+.lx-detail-head h2 { margin: 0; font-size: 24px; font-weight: 640; font-stretch: 82%; letter-spacing: -0.015em; line-height: 1.12; overflow-wrap: anywhere; }
+.lx-detail-head p { margin: 4px 0 0; color: var(--ink-2); }
+.lx-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lx-detail-actions .album-play { display: inline-flex; }
+.lx-path { display: block; padding: 0 !important; background: none !important; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+.lx-tracks { list-style: none; margin: 0; padding: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.lx-tracks li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; gap: 8px; padding: 5px 0; border-top: 1px solid var(--rule); }
+.lx-no { color: var(--ink-3); text-align: right; }
+.lx-track-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Not enough room beside the grid: the details open above it instead. */
+@container (max-width: 880px) {
+  .lx-split.open { grid-template-columns: minmax(0, 1fr); }
+  .lx-detail { position: relative; order: -1; max-height: none; grid-template-columns: 120px minmax(0, 1fr); column-gap: 16px; }
+  .lx-detail > * { grid-column: 1 / -1; }
+  .lx-detail > .lx-detail-cover { grid-column: 1; grid-row: 1 / span 2; }
+  .lx-detail > .lx-detail-head { grid-column: 2; grid-row: 1; padding-right: 36px; }
+  .lx-detail > .lib-meta { grid-column: 2; grid-row: 2; margin-top: 0; align-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .lx-detail { animation: none; } .lx-play { transition: none; } }

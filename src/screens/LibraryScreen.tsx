@@ -1,12 +1,8 @@
-import { usePlayer } from '../lib/player';
-import { AlbumPlay } from '../components/AlbumPlay';
-import { onThisComputer } from '../api/remote';
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import type { LibAlbum, LibraryInfo } from '../api/library';
-import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
+import { AlbumsView, quality } from '../components/LibraryAlbums';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
-import { useCheckAll, verdictText } from '../lib/check';
 import { QualityGuide } from '../components/QualityGuide';
 import { useFilesAvailable } from '../lib/files';
 import { placeOf, useLibraryReview, type AlbumEdit } from '../lib/libraryReview';
@@ -14,14 +10,6 @@ import { bytes } from '../lib/quality';
 import { rescanSoon } from '../lib/shareVersion';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
-
-const tone = (sev: number) => (sev < 0 ? 'none' : sev >= 7 ? 'bad' : sev >= 3 ? 'warn' : 'ok');
-
-/** "FLAC 16/44.1", "Hi-Res 24/96", "MP3". */
-function quality(a: LibAlbum) {
-  if (a.format === 'MP3' || !a.bits) return a.format;
-  return `${a.format} ${a.bits}/${(a.rate / 1000).toFixed(a.rate % 1000 ? 1 : 0)}`;
-}
 
 /**
  * Your music library: every album in it, a quality check for any of them (or all of them, in the
@@ -48,7 +36,7 @@ export function LibraryScreen() {
 
   return (
     <div className="page">
-      <div className="page-inner">
+      <div className={`page-inner${view === 'albums' ? ' wide' : ''}`}>
         <div className="page-head">
           <div>
             <h1 className="page-title">{view === 'review' ? 'Tidy your library' : 'Library'}</h1>
@@ -108,205 +96,6 @@ export function LibraryScreen() {
   );
 }
 
-// ------------------------------------------------------------------ every album
-
-type Filter = 'all' | 'tidy' | 'copies' | 'unchecked' | 'wrong';
-
-function AlbumsView({ albums, onReview }: { albums: LibAlbum[]; onReview: () => void }) {
-  const checks = usePrefs((s) => s.checks);
-  const all = useCheckAll();
-  const [filter, setFilter] = useState<Filter>('all');
-  const [q, setQ] = useState('');
-  const list = albums.filter((a) => a.status !== 'skip');
-  const checkOf = (a: LibAlbum) => checks[a.dir.toLowerCase()];
-  const counts = {
-    all: list.length,
-    tidy: list.filter((a) => a.status === 'move' || a.status === 'needsYear').length,
-    copies: list.filter((a) => a.dupKey).length,
-    unchecked: list.filter((a) => !checkOf(a)).length,
-    wrong: list.filter((a) => (checkOf(a)?.severity ?? 0) >= 3).length,
-  };
-  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = list
-    .filter((a) =>
-      filter === 'tidy' ? a.status === 'move' || a.status === 'needsYear' : filter === 'copies' ? !!a.dupKey : filter === 'unchecked' ? !checkOf(a) : filter === 'wrong' ? (checkOf(a)?.severity ?? 0) >= 3 : true,
-    )
-    .filter((a) => words.every((w) => `${a.artist} ${a.album} ${a.year ?? ''} ${a.rel}`.toLowerCase().includes(w)))
-    .sort((a, b) => a.artist.localeCompare(b.artist, undefined, { sensitivity: 'base' }) || (a.year ?? '').localeCompare(b.year ?? '') || a.album.localeCompare(b.album));
-
-  // Group by artist, as the folders will be.
-  const groups: [string, LibAlbum[]][] = [];
-  for (const a of shown) {
-    const last = groups[groups.length - 1];
-    if (last && last[0].toLowerCase() === a.artist.toLowerCase()) last[1].push(a);
-    else groups.push([a.artist, [a]]);
-  }
-
-  const startAll = (again: boolean) => all.start(list.filter((a) => again || !checkOf(a)).map((a) => a.dir));
-  const FILTERS: [Filter, string][] = [
-    ['all', 'All'],
-    ['tidy', 'To tidy'],
-    ['copies', 'Copies'],
-    ['unchecked', 'Not checked'],
-    ['wrong', 'Look wrong'],
-  ];
-
-  return (
-    <>
-      <CheckAllBar onStart={startAll} unchecked={counts.unchecked} total={list.length} />
-      {counts.tidy > 0 && (
-        <div className="callout lib-tidy-callout">
-          <span>
-            <b>{counts.tidy}</b> {counts.tidy === 1 ? 'album isn’t' : 'albums aren’t'} in Format\Artist\Year - Album yet
-            {counts.copies > 0 && (
-              <>
-                , and <b>{counts.copies}</b> are copies of the same album
-              </>
-            )}
-            .
-          </span>
-          <button className="btn small" onClick={onReview}>
-            Review and tidy…
-          </button>
-        </div>
-      )}
-      <div className="filters lib-filters">
-        <input className="input lib-search" placeholder="Find an artist or album" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find in your library" />
-        {FILTERS.map(([f, label]) => (
-          <button key={f} className="chip plain" aria-pressed={filter === f} disabled={f !== 'all' && counts[f] === 0} onClick={() => setFilter(f)}>
-            {label} <span className="n">{counts[f]}</span>
-          </button>
-        ))}
-      </div>
-      {groups.length === 0 && <p className="hint-text">Nothing here.</p>}
-      {groups.map(([artist, items]) => (
-        <section key={artist} className="lib-artist" aria-label={artist}>
-          <h2 className="lib-artist-name">{artist}</h2>
-          {items.map((a) => (
-            <AlbumRow key={a.dir} a={a} />
-          ))}
-        </section>
-      ))}
-    </>
-  );
-}
-
-function CheckAllBar({ onStart, unchecked, total }: { onStart: (again: boolean) => void; unchecked: number; total: number }) {
-  const all = useCheckAll();
-  if (all.running) {
-    const name = all.current?.split(/[\\/]/).pop();
-    return (
-      <div className="lib-checkall running" role="status">
-        <span className="spinner" aria-hidden />
-        <span className="lib-checkall-text">
-          Checking {Math.min(all.done + 1, all.total)} of {all.total}
-          {name && <span className="dim"> · {name}{all.currentTracks?.total ? ` (${all.currentTracks.done}/${all.currentTracks.total})` : ''}</span>}
-        </span>
-        <span className="foot-gap" />
-        <button className="btn quiet small" onClick={all.stop}>
-          Stop
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="lib-checkall">
-      <span className="lib-checkall-text">
-        {all.total > 0 && all.done > 0 ? (
-          <>
-            Checked {all.done} {all.done === 1 ? 'album' : 'albums'}.{' '}
-            {all.failed.length > 0 && (
-              <>
-                {all.failed.length === 1 ? 'One couldn’t be checked' : `${all.failed.length} couldn’t be checked`}:{' '}
-                {all.failed.slice(0, 3).map((f, i) => (
-                  <span key={f.dir}>
-                    {i > 0 && '; '}
-                    <b>{f.dir.split(/[\\/]/).slice(-2).join(' — ')}</b> ({f.error.replace(/\.$/, '')})
-                  </span>
-                ))}
-                {all.failed.length > 3 && `; and ${all.failed.length - 3} more`}. They won’t be tried again unless you press Check again.{' '}
-              </>
-            )}
-          </>
-        ) : null}
-        {unchecked > 0 ? `${unchecked} of ${total} albums haven’t been checked.` : 'Every album has been checked.'}
-        <span className="dim"> A check reads every file: real lossless, real hi-res, honest bitrate, damaged files. About half a minute per album; it carries on while you use Nightjar.</span>
-      </span>
-      <span className="foot-gap" />
-      {unchecked > 0 && (
-        <button className="btn small" onClick={() => onStart(false)}>
-          Check {unchecked === total ? 'all' : `the ${unchecked} left`}
-        </button>
-      )}
-      {unchecked < total && (
-        <button className="btn quiet small" onClick={() => onStart(true)}>
-          Check all again
-        </button>
-      )}
-    </div>
-  );
-}
-
-function AlbumRow({ a }: { a: LibAlbum }) {
-  const backend = useStore((s) => s.backend);
-  const toast = useStore((s) => s.toast);
-  const searchFor = useStore((s) => s.search);
-  const check = useQualityCheck(a.dir);
-  const [open, setOpen] = useState(false);
-  const reveal = async () => {
-    if (!(await backend?.files.reveal(a.dir))) toast('Couldn’t open Explorer. The folder may have been moved.', 'error');
-  };
-  const c = check.saved;
-  return (
-    <div className="lib-row">
-      <button className="cover-open" onClick={() => void usePlayer.getState().openOrPlayAlbum(a.dir)} aria-label={`Open ${a.album}`}>
-        <Cover className="lib-cover" dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} online={false} />
-      </button>
-      <div className="lib-main">
-        <button className="lib-title" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          {a.album}
-          {a.year && <span className="dim"> · {a.year}</span>}
-        </button>
-        <div className="lib-meta">
-          <span className={`lib-q format ${a.format === 'Hi-Res' ? 't-hires' : a.format === 'FLAC' ? 't-lossless' : 't-unknown'}`}>{quality(a)}</span>
-          <span>
-            {a.tracks.toLocaleString()} {a.tracks === 1 ? 'track' : 'tracks'}
-            {a.size > 0 && <> · {bytes(a.size)}</>}
-          </span>
-          {a.kind === 'discs' && <span>several discs</span>}
-          {a.kind === 'box' && <span>box set</span>}
-          {a.status === 'move' && <span className="lib-flag">not tidy</span>}
-          {a.status === 'needsYear' && <span className="lib-flag">no year</span>}
-          {a.dupKey && <span className="lib-flag">copy</span>}
-          {c && !check.running && (
-            <button className={`check-chip ${tone(c.severity)}`} onClick={() => setOpen((o) => !o)}>
-              {tone(c.severity) === 'ok' ? '✓ ' : tone(c.severity) === 'warn' ? '⚠ ' : tone(c.severity) === 'none' ? '– ' : '✕ '}
-              {verdictText(c.verdict)}
-            </button>
-          )}
-        </div>
-        {open && (
-          <div className="lib-detail">
-            <code>{a.rel}</code>
-            <CheckResult check={check} onFindAnother={() => searchFor(`${a.artist} ${a.album}`)} />
-            {!c && !check.running && <p className="hint-text">Not checked yet.</p>}
-          </div>
-        )}
-      </div>
-      <div className="lib-actions">
-        <AlbumPlay variant="icon" dir={a.dir} title={a.album} />
-        <CheckButton check={check} />
-        {onThisComputer && (
-          <button className="btn quiet small icon-only" onClick={reveal} title="Show in folder" aria-label="Show in folder">
-            <Icon name="reveal" size={16} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------ the review
 
 function ReviewView({ albums, root }: { albums: LibAlbum[]; root: string }) {
   const backend = useStore((s) => s.backend);
