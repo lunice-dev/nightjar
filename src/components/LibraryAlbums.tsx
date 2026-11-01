@@ -295,24 +295,16 @@ function LibraryBar({
 // ------------------------------------------------------------------ the cover wall
 
 const Tile = memo(function Tile({ a, c, selected, onSelect }: { a: LibAlbum; c: SavedCheck | undefined; selected: boolean; onSelect: (dir: string) => void }) {
+  // Nothing sits on the cover: what needs a look is a line of plain text under it.
   const t = c ? tone(c.severity) : null;
+  const problem = t === 'warn' || t === 'bad' ? { text: verdictText(c!.verdict), tone: t } : null;
+  const flags = [a.status === 'needsYear' ? 'no year' : a.status === 'move' ? 'not tidy' : null, a.dupKey ? 'copy' : null].filter(Boolean);
   return (
     <div className={`lx-tile ${tierOf(a.format)}${selected ? ' selected' : ''}`}>
       <div className="lx-art">
         <button className="lx-art-hit" onClick={() => onSelect(a.dir)} onDoubleClick={() => void usePlayer.getState().openOrPlayAlbum(a.dir)} aria-pressed={selected} aria-label={`${a.album}${a.year ? `, ${a.year}` : ''}: details`}>
           <Cover className="lx-cover" dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} online={false} />
         </button>
-        {(a.status === 'move' || a.status === 'needsYear' || a.dupKey) && (
-          <span className="lx-flags">
-            {a.status === 'needsYear' ? <span className="lib-flag">no year</span> : a.status === 'move' && <span className="lib-flag">not tidy</span>}
-            {a.dupKey && <span className="lib-flag">copy</span>}
-          </span>
-        )}
-        {(t === 'warn' || t === 'bad') && (
-          <span className={`check-chip ${t} lx-check`} title={verdictText(c!.verdict)}>
-            {mark(t)}
-          </span>
-        )}
       </div>
       <div className="lx-caption">
         <span className="lx-name" title={a.album}>
@@ -322,6 +314,13 @@ const Tile = memo(function Tile({ a, c, selected, onSelect }: { a: LibAlbum; c: 
           {a.year && `${a.year} · `}
           {quality(a)}
         </span>
+        {(problem || flags.length > 0) && (
+          <span className="lx-note">
+            {problem && <span className={problem.tone}>{problem.text}</span>}
+            {problem && flags.length > 0 && ' · '}
+            {flags.join(' · ')}
+          </span>
+        )}
       </div>
     </div>
   );

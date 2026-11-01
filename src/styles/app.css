@@ -2228,9 +2228,6 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .lx-art-hit:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-md); }
 .lx-cover { width: 100%; border-radius: 0; }
 .lx-tile.selected .lx-art { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); }
-.lx-flags { position: absolute; left: 8px; top: 8px; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
-.lx-flags .lib-flag { background: color-mix(in srgb, var(--t-mid) 30%, rgb(0 0 0 / 0.55)); color: #fff; backdrop-filter: blur(6px); }
-.lx-check { position: absolute; right: 8px; top: 8px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 13px; pointer-events: none; box-shadow: 0 0 0 2px rgb(0 0 0 / 0.35); background-color: var(--paper); }
 .lx-caption { display: grid; gap: 1px; margin-top: 9px; min-width: 0; }
 .lx-name { font-weight: 600; font-size: 14.5px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .lx-sub { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2530,16 +2527,34 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .on-home .shell-sky { opacity: 1; }
   :root[data-theme='light'] .shell-sky { opacity: 0.3; }
   :root[data-theme='light'].on-home .shell-sky { opacity: 0.5; }
-  .shell > .topbar, .shell > .main, .shell > .shell-foot, .shell > .player, .shell > .update-banner { position: relative; z-index: 1; }
+  .shell > .main, .shell > .shell-foot, .shell > .player, .shell > .update-banner { position: relative; z-index: 1; }
+  .shell { --bar-h: 60px; }
 
   /* the top bar: no card, the logo, the tabs and the search sit straight on the glow, lined up with the page's columns */
-  :root .shell > .topbar { display: grid; grid-template-columns: auto minmax(0, auto) minmax(120px, 1fr) auto; gap: var(--hx-gap); align-items: center; height: 64px; padding: 0 0 0 var(--hx-edge); background: none; box-shadow: none; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .shell > .topbar .brand { padding-left: 0; }
-  .shell > .topbar .brand-name { font-family: var(--font-display); font-size: clamp(16px, 1vw, 20px); font-weight: 600; letter-spacing: -0.02em; }
-  .shell > .topbar .topnav { justify-content: flex-start; gap: clamp(18px, 1.7vw, 34px); flex: none; }
-  .shell > .topbar .topnav-item { position: relative; height: 40px; padding: 0; border-radius: 0; background: none; box-shadow: none; font-size: clamp(14px, 0.86vw, 18px); font-weight: 550; }
+  :root .shell > .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; display: grid; grid-template-columns: auto minmax(0, auto) minmax(120px, 1fr) auto; gap: var(--hx-gap); align-items: center; height: var(--bar-h); padding: 0 0 0 var(--hx-edge); background: transparent; box-shadow: none; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; transition: background-color 0.28s ease, box-shadow 0.28s ease, backdrop-filter 0.28s ease, -webkit-backdrop-filter 0.28s ease; }
+  /* Once the page has scrolled under it, the bar turns to frosted glass. */
+  :root .shell.bar-scrolled > .topbar { background: color-mix(in srgb, var(--paper) 52%, transparent); -webkit-backdrop-filter: blur(20px) saturate(1.35); backdrop-filter: blur(20px) saturate(1.35); box-shadow: 0 1px 0 var(--rule); }
+  /* Screens begin under the bar so their content can slide beneath it. */
+  .shell > .main { --pad-top: var(--bar-h); }
+  .shell > .update-banner { margin-top: var(--bar-h) !important; }
+  .shell > .update-banner ~ .main { --pad-top: 0px; }
+  .shell .tab-pane { padding-top: var(--pad-top); }
+  .shell .tab-pane > :is(.page, .results):first-child { margin-top: calc(-1 * var(--pad-top)); padding-top: var(--pad-top); }
+  .shell .tab-pane > .hx:first-child { margin-top: calc(-1 * var(--pad-top)); }
+  .hx-scroll { padding-top: var(--pad-top, 0px); }
+  .shell > .topbar .brand { padding-left: 0; gap: 9px; }
+  .shell > .topbar .brand-mark { width: 22px; height: 22px; background: none; border-radius: 0; }
+  .shell > .topbar .brand-name { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+  .shell > .topbar .topnav { justify-content: flex-start; gap: clamp(18px, 1.6vw, 30px); flex: none; }
+  .shell > .topbar .topnav-item { position: relative; height: 40px; padding: 0; border-radius: 0; background: none; box-shadow: none; font-size: clamp(13.5px, 0.8vw, 16px); font-weight: 500; color: var(--ink-2); transition: color 0.18s ease; }
+  .shell > .topbar .topnav-item:hover { background: none; color: var(--ink); }
   .shell > .topbar .topnav-item[aria-current='page'] { background: none; box-shadow: none; color: var(--ink); }
-  .shell > .topbar .topnav-item[aria-current='page']::after { content: ''; position: absolute; left: 0; right: 0; bottom: 3px; height: 2px; border-radius: 2px; background: #e0a458; }
+  .shell > .topbar .topnav-item::after { content: ''; position: absolute; left: 0; right: 0; bottom: 4px; height: 1.5px; border-radius: 2px; background: #e0a458; transform: scaleX(0); transform-origin: left; opacity: 0; transition: transform 0.22s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.18s ease; }
+  .shell > .topbar .topnav-item[aria-current='page']::after { transform: scaleX(1); opacity: 1; }
+  .shell > .topbar .pill-count { min-width: 0; height: 16px; padding: 0 5px; font-size: 10.5px; font-weight: 600; background: rgb(255 248 235 / 0.1); color: var(--ink-2); }
+  .shell > .topbar .pill-count.hot { background: color-mix(in srgb, #e0a458 20%, transparent); color: #e0a458; }
+  .shell > .topbar .topbar-search .search-field .input { height: 34px; background: color-mix(in srgb, var(--ink) 6%, transparent); box-shadow: inset 0 0 0 1px var(--rule); font-size: 13.5px; transition: background-color 0.18s ease, box-shadow 0.18s ease; }
+  .shell > .topbar .win-btn { color: var(--ink-3); transition: background-color 0.15s ease, color 0.15s ease; }
   .shell > .topbar .topbar-search { flex: none; justify-self: end; width: min(340px, 100%); min-width: 120px; margin-right: var(--hx-pad); }
   .on-home .shell > .topbar .topbar-search { visibility: hidden; }
 
@@ -2554,3 +2569,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   :root .shell > .topbar { grid-template-columns: var(--hx-col-l) minmax(0, auto) minmax(120px, 1fr) auto; }
 }
 @media (prefers-reduced-motion: reduce) { .shell, .shell-sky { transition: none; } }
+/* Under a cover: what needs a look, as plain coloured text (nothing is drawn on the cover itself). */
+.lx-note { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -1px; }
+.lx-note .warn { color: var(--t-mid); }
+.lx-note .bad { color: var(--t-low); }

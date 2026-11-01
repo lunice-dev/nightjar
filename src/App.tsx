@@ -266,6 +266,24 @@ function Shell() {
   const [q, setQ] = useState('');
   const input = useRef<HTMLInputElement>(null);
 
+  // The top bar floats over the page and frosts once the page has scrolled under it.
+  const [barScrolled, setBarScrolled] = useState(false);
+  useEffect(() => {
+    const SCROLLERS = '.page, .results, .hx-scroll';
+    const on = (e: Event) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement) || !t.matches(SCROLLERS)) return;
+      const pane = t.closest('.tab-pane');
+      if (pane && pane.getAttribute('aria-hidden') !== 'true') setBarScrolled(t.scrollTop > 8);
+    };
+    document.addEventListener('scroll', on, true);
+    return () => document.removeEventListener('scroll', on, true);
+  }, []);
+  useEffect(() => {
+    const sc = document.querySelector<HTMLElement>(`.tab-pane[data-route="${route}"] :is(.page, .results, .hx-scroll)`);
+    setBarScrolled(!!sc && sc.scrollTop > 8);
+  }, [route]);
+
   useEffect(() => {
     const tick = () => refresh();
     tick();
@@ -339,7 +357,7 @@ function Shell() {
   const moreCurrent = NAV.some((n) => !n.primary && isCurrent(n.route));
 
   return (
-    <div className="shell" style={glow}>
+    <div className={`shell${barScrolled ? ' bar-scrolled' : ''}`} style={glow}>
       {/* The window's glow, from the cover of what's playing (drawn on a computer's window; see the shell styles). */}
       <div className="shell-sky" aria-hidden />
       <header className="topbar">
