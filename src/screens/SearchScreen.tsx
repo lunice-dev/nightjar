@@ -459,6 +459,16 @@ function Results({ id }: { id: string }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // A wide window shows the releases in two columns instead of long, mostly empty rows.
+  const inner = useRef<HTMLDivElement>(null);
+  const [lanes, setLanes] = useState(1);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setLanes(el.clientWidth >= 1500 ? 2 : 1));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const v = useVirtualizer({
     count: visible.length,
     getScrollElement: () => scroller.current,
@@ -466,6 +476,7 @@ function Results({ id }: { id: string }) {
     overscan: 6,
     getItemKey: (i) => visible[i].key,
     scrollMargin: headerHeight,
+    lanes,
   });
 
   const live = searchRunning(tab.search.state);
@@ -483,7 +494,7 @@ function Results({ id }: { id: string }) {
 
   return (
     <div className="results" ref={scroller} onScroll={(e) => (live || frozen) && e.currentTarget.scrollTop > 120 && freeze()}>
-      <div className="results-inner">
+      <div className="results-inner" ref={inner}>
         <div ref={header}>
           <div className="query-row">
             <h1 className="query">{tab.search.searchText}</h1>
@@ -611,8 +622,9 @@ function Results({ id }: { id: string }) {
                   style={{
                     position: 'absolute',
                     top: 0,
-                    left: 0,
-                    right: 0,
+                    left: `${(item.lane / lanes) * 100}%`,
+                    width: `${100 / lanes}%`,
+                    paddingInline: lanes > 1 ? 14 : 0,
                     transform: `translateY(${item.start - v.options.scrollMargin}px)`,
                   }}
                 >

@@ -2288,3 +2288,9 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .resize-edge.topleft, .resize-edge.topright, .resize-edge.bottomleft, .resize-edge.bottomright { width: 10px; height: 10px; }
 .resize-edge.topleft { left: 0; top: 0; cursor: nwse-resize; } .resize-edge.bottomright { right: 0; bottom: 0; cursor: nwse-resize; }
 .resize-edge.topright { right: 0; top: 0; cursor: nesw-resize; } .resize-edge.bottomleft { left: 0; bottom: 0; cursor: nesw-resize; }
+
+/* A wide window: transfers sit two to a row (the day and section headings stay full width). */
+@media (min-width: 1500px) {
+  .dl-section:not(:has(.dl-day-group)), .dl-day-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 56px; align-items: start; }
+  .dl-section > .dl-section-head, .dl-day-group > .dl-day { grid-column: 1 / -1; }
+}
