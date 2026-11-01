@@ -1582,7 +1582,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-top { position: relative; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; min-height: 58px; padding-top: 14px; }
 .fp-grab { position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 999px; background: rgb(255 255 255 / 0.3); }
 @media (hover: hover) and (pointer: fine) { .fp-grab { display: none; } .fp-top { padding-top: 6px; } }
-.fp-brand-name { position: absolute; inset: 0; padding-top: inherit; display: flex; align-items: center; justify-content: center; pointer-events: none; font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-indent: 0.14em; text-transform: uppercase; color: var(--fp-ink); opacity: 0.7; white-space: nowrap; }
+.fp-brand-name { position: absolute; inset: 0; padding-top: inherit; display: flex; align-items: center; justify-content: center; pointer-events: none; font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-indent: 0.14em; text-transform: uppercase; color: var(--fp-ink-2); white-space: nowrap; }
 .fp-top > .fp-icon:last-child, .fp-top > .win-controls { justify-self: end; }
 .fp-now { display: grid; gap: 4px; }
 .fp-now h2 { margin: 0; font-size: 24px; font-weight: 680; letter-spacing: -0.015em; line-height: 1.15; overflow-wrap: break-word; }
@@ -1802,8 +1802,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* A faint dark veil over the blurred cover, so the white text stays readable where the cover is bright. */
 .fp-bgbox::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0), rgb(0 0 0 / 0.04) 38%, rgb(0 0 0 / 0.18)); }
 /* On a pale cover the top bar needs help being read, without darkening the background itself. */
-.fp-top .fp-icon, .fp-top .fp-brand-name { filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.45)); }
-.fp-top .fp-brand-name { opacity: 0.9; }
+.fp-top .fp-brand-name { color: rgb(244 241 234 / 0.88); text-shadow: 0 1px 3px rgb(0 0 0 / 0.45); }
 /* Opened from the small player: the drawer fades in while the art grows out of the small cover. */
 .full-player.morph { animation: fp-fade 0.3s ease; }
 
