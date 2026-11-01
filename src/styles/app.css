@@ -1663,14 +1663,6 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-lyrics-btn.on { background: rgb(255 255 255 / 0.18); }
 @media (max-height: 520px) { .fp-ly-head, .fp-ly-foot, .fp-ly-bar { display: none; } .fp-ly-scroll li { font-size: 20px; } }
 
-/* ---------- display tests (About): each switch turns one part of the large player's drawing off ---------- */
-html.dx-nobg .fp-bgbox { display: none; }
-html.dx-notint .full-player { background: #232220 !important; }
-html.dx-nowill .full-player { will-change: auto !important; }
-html.dx-noclip .full-player { overflow: visible !important; }
-html.dx-noanim .full-player, html.dx-noanim .full-player *, html.dx-noanim .full-player *::before, html.dx-noanim .full-player *::after { animation: none !important; transition: none !important; }
-html.dx-nobrand .fp-brand-name { display: none; }
-html.dx-abs .full-player, html.dx-abs .fp-backdrop { position: absolute !important; }
 
 /* ---------- covers open the album ---------- */
 .cover-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: var(--r-md); -webkit-tap-highlight-color: transparent; }
@@ -2067,6 +2059,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   position: absolute; z-index: 21; left: 0; right: 0; bottom: 0; width: min(520px, 100%); margin: 0 auto; max-height: 82%; overflow-y: auto;
   padding: 8px var(--fp-px-r) max(18px, env(safe-area-inset-bottom, 0px)) var(--fp-px-l); border-radius: 20px 20px 0 0;
   background: var(--fp-panel); box-shadow: 0 -1px 0 rgb(255 255 255 / 0.08), 0 -16px 40px rgb(0 0 0 / 0.3); animation: fp-rise 0.3s var(--fp-ease);
+  transition: transform 0.25s var(--fp-ease); overscroll-behavior: contain;
 }
 .fp-sheet-grab { display: block; width: 36px; height: 5px; margin: 4px auto 8px; border-radius: 999px; background: rgb(255 255 255 / 0.3); }
 .fp-sheet-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 58px; padding: 6px 4px; border: 0; border-bottom: 1px solid var(--fp-line); background: none; color: var(--fp-ink); font: inherit; font-size: 16.5px; font-weight: 550; text-align: left; cursor: pointer; }

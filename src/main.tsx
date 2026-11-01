@@ -6,7 +6,6 @@ import './styles/app.css';
 import { startNavHistory } from './lib/navHistory';
 import { startSwipeNav } from './lib/swipeNav';
 import { watchViewport } from './lib/viewport';
-import { applyDisplayTests } from './components/DisplayTests';
 
 // The saved theme applies from the very first screen (the sign-in screen included), not only once the app itself has loaded.
 try {
@@ -20,7 +19,6 @@ try {
   /* storage unavailable: the system's theme it is */
 }
 
-applyDisplayTests();
 startNavHistory();
 startSwipeNav();
 watchViewport();

@@ -103,6 +103,26 @@ export function FullPlayer({
   const [sleepMenu, setSleepMenu] = useState(false);
   // On touch screens the extra buttons live in this sheet, behind the "…" next to the title.
   const [moreOpen, setMoreOpen] = useState(false);
+  // The "…" sheet follows a finger dragged down on it, and closes on a long pull or a quick flick.
+  const [sheetDrag, setSheetDrag] = useState(0);
+  const sheetStart = useRef<{ y: number; t: number } | null>(null);
+  const sheetTouch = {
+    onTouchStart: (e: React.TouchEvent<HTMLElement>) => {
+      sheetStart.current = e.currentTarget.scrollTop <= 0 ? { y: e.touches[0].clientY, t: Date.now() } : null;
+    },
+    onTouchMove: (e: React.TouchEvent<HTMLElement>) => {
+      const s = sheetStart.current;
+      if (s) setSheetDrag(Math.max(0, e.touches[0].clientY - s.y - 8));
+    },
+    onTouchEnd: () => {
+      const s = sheetStart.current;
+      sheetStart.current = null;
+      const d = sheetDrag;
+      const flick = !!s && d > 32 && (d + 8) / Math.max(1, Date.now() - s.t) > 0.3;
+      setSheetDrag(0);
+      if (d > 90 || flick) setMoreOpen(false);
+    },
+  };
   const [, tick] = useState(0);
   // The minutes left on the sleep timer count down on screen.
   useEffect(() => {
@@ -623,7 +643,14 @@ export function FullPlayer({
       {moreOpen && track && view.kind === 'now' && (
         <>
           <div className="fp-sheet-backdrop" onClick={() => setMoreOpen(false)} aria-hidden />
-          <div className="fp-sheet" role="dialog" aria-label="More" onKeyDown={(e) => e.key === 'Escape' && setMoreOpen(false)}>
+          <div
+            className="fp-sheet"
+            role="dialog"
+            aria-label="More"
+            onKeyDown={(e) => e.key === 'Escape' && setMoreOpen(false)}
+            style={sheetDrag ? { transform: `translateY(${sheetDrag}px)`, transition: 'none' } : undefined}
+            {...sheetTouch}
+          >
             <span className="fp-sheet-grab" aria-hidden />
             {hush && (
               <>

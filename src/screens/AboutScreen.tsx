@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { ReportProblem } from '../components/ReportProblem';
 import { UpdateSection } from '../components/Updates';
 import { Mark } from '../components/Mark';
-import { DisplayTests } from '../components/DisplayTests';
 import { ClassicPlayerSwitch } from '../components/ClassicPlayerSwitch';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
@@ -43,28 +42,33 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
  */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
-    version: '0.8.6',
+    version: '0.9.0',
     date: '2 Nov 2026',
     title: 'A new player, lyrics and a lighter network',
     items: [
-      'A new large player: Console on iPads and computers, Hush on phones',
+      'A new large player: a two-sided Console on iPads and computers, and Hush on phones',
+      'On phones, tap the cover to play or pause and swipe it to skip',
       'A small mark beside the artist shows when a lossless or Hi-Res file is playing',
       'Lyrics for the song playing, found online when you open them',
       'The small player takes its colour from the cover',
       'Share what you’re playing as a picture, to post as a story',
       'Two new themes: Glass, and OLED with true black',
-      'Quality labels look the same everywhere, with Variable and Compact easy to tell apart',
+      'Quality labels look the same everywhere, and Variable and Compact are easy to tell apart',
       'The queue, and your place in it, are remembered after a restart',
       'Pull the queue up, drag tracks to reorder them, swipe a track to remove it',
       'A sleep timer and a volume slider in the large player',
-      'A floating small player, and a tab bar when the iPad is held upright',
+      'On an iPad held upright, the tabs sit at the bottom and the small player floats above them',
       'Covers no longer have a play button; Play is in the cover’s menu',
       'Home shows playlists as a compact list, and albums with their quality on the cover',
-      'Swipes and taps respond to how fast you move, and touch screens feel more native',
+      'Swiping and tapping feel more natural on touch screens',
       'Dialogs, menus and messages ease in and out',
+      'About has a switch to go back to the earlier large-player layout',
+      'Swipe down to close the “…” menu in the large player',
       'Fixed the iPad leaving a bar at the bottom of the screen',
-      'Fixed hover highlights sticking on touch screens, and the page zooming into text fields',
+      'Fixed the top of the app being faded by the status bar on iPhone and iPad',
+      'Fixed buttons staying highlighted after a tap, and the page zooming into text fields',
       'Fixed counts such as “1 track” and long titles in the queue',
+      'Fixed lyrics not loading on older iPhones and iPads',
       'Your wishlist and saved people are checked from one device only, not every open one',
       'Saved people’s online status is checked every few minutes instead of every few seconds',
       'Opening an album’s tracks again doesn’t ask its owner a second time',
@@ -277,7 +281,6 @@ export function AboutScreen() {
           </ol>
         </section>
         <ClassicPlayerSwitch />
-        <DisplayTests />
         <p className="about-sig dim" style={{ whiteSpace: 'pre-line' }}>{screenNote()}</p>
         <p className="about-sig">coded by lunice</p>
       </div>

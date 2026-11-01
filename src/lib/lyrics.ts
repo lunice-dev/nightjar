@@ -96,10 +96,19 @@ const saveStore = (key: string, l: Lyrics) => {
 const keyOf = (t: { artist: string | null; title: string; seconds: number }) => `${t.artist ?? ''}|${t.title}|${Math.round(t.seconds)}`.toLowerCase();
 
 async function ask(url: string): Promise<Response> {
+  // AbortSignal.timeout is missing on iOS before 16.4, so the timer is made by hand.
+  const stop = new AbortController();
+  let late = false;
+  const timer = setTimeout(() => {
+    late = true;
+    stop.abort();
+  }, 8_000);
   try {
-    return await fetch(url, { signal: AbortSignal.timeout(8_000) });
-  } catch (e) {
-    throw new LyricsError((e as Error)?.name === 'TimeoutError' ? 'timed out' : 'no connection');
+    return await fetch(url, { signal: stop.signal });
+  } catch {
+    throw new LyricsError(late ? 'timed out' : 'no connection');
+  } finally {
+    clearTimeout(timer);
   }
 }
 
