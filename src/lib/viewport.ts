@@ -44,6 +44,8 @@ export function watchViewport() {
     const root = document.documentElement;
     root.classList.toggle('safe-top', i.top > 0);
     root.classList.toggle('full-screen', wantsFullScreen(i));
+    // Whichever way it is held: the large player is pinned to the screen's real height, not the page's (which can be short).
+    root.classList.toggle('standalone-top', i.standalone && i.top > 0);
     root.style.setProperty('--screen-h', `${i.screenHeight}px`);
   };
   update();

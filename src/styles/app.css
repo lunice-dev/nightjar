@@ -1931,7 +1931,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 /* On a tablet the large player fills the screen edge to edge, like Apple Music, so nothing of the app shows around it. */
 @media (min-width: 700px) and (pointer: coarse) {
   .full-player { inset: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); box-shadow: none; }
-  html.full-screen .full-player { bottom: auto; height: var(--screen-h); }
+  html.standalone-top .full-player { bottom: auto; height: var(--screen-h); }
   .fp-backdrop { background: rgb(8 7 6 / 0.55); }
   .shelf { grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: 26px 22px; }
 }
