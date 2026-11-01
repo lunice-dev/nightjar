@@ -7,6 +7,8 @@ import { inApp } from '../lib/host';
 import { AlbumView, Bars, PlaylistView } from './DrawerViews';
 import { useScrub } from '../lib/scrub';
 import { useLyrics } from '../lib/lyrics';
+import { shareStoryCard } from '../lib/storyCard';
+import { useStore } from '../store';
 import { LyricsScroll, LyricsView } from './LyricsView';
 import { LONG_TRACK, seekBy, useDoubleTapSeek, useHoldToScan } from '../lib/seek';
 
@@ -519,6 +521,22 @@ export function FullPlayer({
               <span>
                 Sound quality
                 <small>From the file to this device</small>
+              </span>
+              <Icon name="chevron" size={18} />
+            </button>
+            <button
+              className="fp-sheet-row"
+              onClick={() => {
+                setMoreOpen(false);
+                const toast = useStore.getState().toast;
+                shareStoryCard({ art, tint, title: track.title, artist: track.artist })
+                  .then((r) => r === 'saved' && toast('Picture saved. Post it as a story from your photos.'))
+                  .catch(() => toast('Couldn’t make the picture.', 'error'));
+              }}
+            >
+              <span>
+                Share what I’m playing
+                <small>A picture of the cover to post as a story</small>
               </span>
               <Icon name="chevron" size={18} />
             </button>

@@ -163,7 +163,7 @@ function LinkStatus({ demo, me }: { demo: boolean; me?: string }) {
   );
 }
 
-const THEMES = ['system', 'light', 'dark', 'oled'] as const;
+const THEMES = ['system', 'light', 'dark', 'oled', 'glass'] as const;
 type Theme = (typeof THEMES)[number];
 
 function useTheme() {
@@ -205,7 +205,7 @@ function useSystemDark() {
   return dark;
 }
 
-const THEME_LABEL: Record<Theme, string> = { light: 'Light', dark: 'Dark', oled: 'OLED (true black)', system: 'Auto' };
+const THEME_LABEL: Record<Theme, string> = { light: 'Light', dark: 'Dark', oled: 'OLED (true black)', glass: 'Glass', system: 'Auto' };
 
 function ThemeSwitch({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
   const systemDark = useSystemDark();
@@ -216,12 +216,14 @@ function ThemeSwitch({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z" fill="currentColor" /></svg>
     ) : t === 'oled' ? (
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6.4" fill="currentColor" /><path d="M11 10.2A3.4 3.4 0 0 1 5.8 5a3.4 3.4 0 1 0 5.2 5.2z" fill="#000" /></svg>
+    ) : t === 'glass' ? (
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><rect x="2" y="2" width="12" height="12" rx="3.4" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M5 11.5L11 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
     ) : (
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" /></svg>
     );
   return (
     <div className="theme-switch" role="radiogroup" aria-label="Theme">
-      {(['light', 'dark', 'oled', 'system'] as const).map((t) => (
+      {(['light', 'dark', 'oled', 'glass', 'system'] as const).map((t) => (
         <button
           key={t}
           role="radio"

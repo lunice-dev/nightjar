@@ -10,7 +10,7 @@ import { watchViewport } from './lib/viewport';
 // The saved theme applies from the very first screen (the sign-in screen included), not only once the app itself has loaded.
 try {
   const saved = localStorage.getItem('ssk-lite.theme');
-  if (saved === 'light' || saved === 'dark' || saved === 'oled') document.documentElement.dataset.theme = saved;
+  if (saved === 'light' || saved === 'dark' || saved === 'oled' || saved === 'glass') document.documentElement.dataset.theme = saved;
   if (saved === 'oled') document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((m) => {
     m.dataset.original ??= m.content;
     m.content = '#000000';
