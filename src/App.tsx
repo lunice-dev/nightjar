@@ -6,6 +6,7 @@ import { Icon } from './components/Icon';
 import { WindowControls } from './components/WindowControls';
 import { setSettingsTarget } from './lib/settingsNav';
 import { useShellGlow } from './lib/useCoverGlow';
+import { usePcShell } from './lib/pcShell';
 import { inApp, windowAction } from './lib/host';
 import { Mark } from './components/Mark';
 import { speed } from './lib/quality';
@@ -141,23 +142,26 @@ export function App() {
 }
 
 /** Whether the engine is signed in to Soulseek, in words, with the reason when it isn't. */
+function linkText(link: ReturnType<typeof useStore.getState>['link'], me?: string) {
+  return link.state === 'online'
+    ? `Online as ${me ?? 'you'}`
+    : link.problem === 'rejected'
+      ? 'Soulseek refused your name or password'
+      : link.problem === 'kicked'
+        ? 'Signed out: your account is open somewhere else (SoulseekQt?)'
+        : link.problem === 'no-account'
+          ? 'No Soulseek account set up'
+          : link.state === 'connecting'
+            ? 'Signing in to Soulseek…'
+            : link.state === 'offline'
+              ? 'Not signed in to Soulseek'
+              : 'The engine isn’t answering';
+}
+
 function LinkStatus({ demo, me }: { demo: boolean; me?: string }) {
   const link = useStore((s) => s.link);
   if (demo) return <span className="status">Sample data, not connected</span>;
-  const text =
-    link.state === 'online'
-      ? `Online as ${me ?? 'you'}`
-      : link.problem === 'rejected'
-        ? 'Soulseek refused your name or password'
-        : link.problem === 'kicked'
-          ? 'Signed out: your account is open somewhere else (SoulseekQt?)'
-          : link.problem === 'no-account'
-            ? 'No Soulseek account set up'
-            : link.state === 'connecting'
-        ? 'Signing in to Soulseek…'
-        : link.state === 'offline'
-          ? 'Not signed in to Soulseek'
-          : 'The engine isn’t answering';
+  const text = linkText(link, me);
   return (
     <span className={`status link-${link.state}`} role="status">
       {text}
@@ -242,6 +246,110 @@ function ThemeSwitch({ theme, onChange }: { theme: Theme; onChange: (t: Theme) =
   );
 }
 
+/**
+ * The right end of the header on a computer, in place of the footer: whether you're signed in to Soulseek, the
+ * engine's credit (the slskd licence asks for it to be shown), and a quiet menu for the rest.
+ */
+function HeaderEnd({
+  demo,
+  me,
+  kind,
+  theme,
+  onTheme,
+  active,
+  progress,
+  totalSpeed,
+  limits,
+  route,
+  openRoute,
+}: {
+  demo: boolean;
+  me?: string;
+  kind?: string;
+  theme: Theme;
+  onTheme: (t: Theme) => void;
+  active: number;
+  progress: number;
+  totalSpeed: number;
+  limits?: { down: number | null; up: number | null };
+  route: Route;
+  openRoute: (r: Route) => void;
+}) {
+  const link = useStore((s) => s.link);
+  const [menu, setMenu] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const down = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setMenu(false);
+    };
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false);
+    document.addEventListener('pointerdown', down);
+    window.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', down);
+      window.removeEventListener('keydown', key);
+    };
+  }, [menu]);
+
+  const text = demo ? 'Sample data' : linkText(link, me);
+  const tone = demo || link.state === 'online' ? 'ok' : link.state === 'connecting' ? 'wait' : 'bad';
+  const then = (fn: () => void) => () => {
+    setMenu(false);
+    fn();
+  };
+  const limitText = !limits?.down && !limits?.up ? 'None' : `↓ ${fmtLimit(limits?.down)} · ↑ ${fmtLimit(limits?.up)}`;
+
+  return (
+    <div className="topbar-end">
+      <span className="hdr-status" role="status" title={text}>
+        <i className={`hdr-dot ${tone}`} aria-hidden />
+        <span className="hdr-status-text">{text}</span>
+      </span>
+      {active > 0 && (
+        <button className="hdr-dl" onClick={() => openRoute('downloads')}>
+          <span className="meter" aria-hidden>
+            <i style={{ width: `${progress}%` }} />
+          </span>
+          {active} {active === 1 ? 'album' : 'albums'} at {speed(totalSpeed)}
+        </button>
+      )}
+      <span className="hdr-credit">
+        <EngineCredit />
+      </span>
+      <div className="hdr-more" ref={box}>
+        <button className="hdr-more-btn" aria-label="More" aria-expanded={menu} aria-haspopup="menu" onClick={() => setMenu((m) => !m)}>
+          <Icon name="more" size={18} />
+        </button>
+        {menu && (
+          <div className="hdr-menu" role="menu">
+            <button role="menuitem" onClick={then(() => { setSettingsTarget('transfers'); openRoute('settings'); })}>
+              <span>Speed limits</span>
+              <small>{limitText}</small>
+            </button>
+            {kind !== 'demo' && <RemoteFoot onOpen={then(() => { setSettingsTarget('connection'); openRoute('settings'); })} />}
+            <div className="hdr-row">
+              <span>Theme</span>
+              <ThemeSwitch theme={theme} onChange={onTheme} />
+            </div>
+            <hr />
+            <button role="menuitem" aria-current={route === 'about' ? 'page' : undefined} onClick={then(() => openRoute('about'))}>
+              <span>About Nightjar</span>
+            </button>
+            <div className="hdr-credit-menu">
+              <EngineCredit />
+            </div>
+            {onThisComputer && <QuitButton busy={active} />}
+            <p className="hdr-sig" aria-hidden>
+              coded by lunice
+            </p>
+          </div>
+        )}
+      </div>
+      <WindowControls />
+    </div>
+  );
+}
 function Shell() {
   const route = useStore((s) => s.route);
   const go = useStore((s) => s.go);
@@ -258,6 +366,7 @@ function Shell() {
   const kind = useStore((s) => s.backend?.kind);
   const me = useStore((s) => s.me);
   const [theme, setTheme] = useTheme();
+  const pc = usePcShell();
 
   // The open tab, plus the tabs either side kept ready (out of sight), so swiping shows the real page at once.
   const width = useWidth();
@@ -381,7 +490,23 @@ function Shell() {
         <div className="topbar-search">
           <SearchBox inputRef={input} value={q} onChange={setQ} onSearch={(text) => { search(text); setQ(''); }} />
         </div>
-        <WindowControls />
+        {pc ? (
+          <HeaderEnd
+            demo={kind === 'demo'}
+            me={me}
+            kind={kind}
+            theme={theme}
+            onTheme={setTheme}
+            active={active.length}
+            progress={totalSize ? (totalDone / totalSize) * 100 : 0}
+            totalSpeed={totalSpeed}
+            limits={limits}
+            route={route}
+            openRoute={open}
+          />
+        ) : (
+          <WindowControls />
+        )}
       </header>
 
       <UpdateBanner />
@@ -424,6 +549,7 @@ function Shell() {
       </div>
       <Player />
 
+      {!pc && (
       <footer className="shell-foot">
         <span className="signature" aria-hidden>coded by lunice</span>
         <span className="foot-gap" />
@@ -448,6 +574,7 @@ function Shell() {
         </button>
         {onThisComputer && <QuitButton busy={active.length} />}
       </footer>
+      )}
 
       {/* On a phone the sidebar becomes this bar; the less used screens sit behind More. */}
       <nav className="tabbar" aria-label="Main">
