@@ -1929,7 +1929,9 @@ html.in-app, html.in-app body { overflow: hidden; }
 :root[data-theme='light'] body::before { content: ''; position: fixed; z-index: 200; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: #121110; pointer-events: none; }
 /* On a phone the large player runs edge to edge, its own top bar clearing the status bar. */
 @media (max-width: 699px) {
-  html.safe-top .full-player { inset: 0; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); }
+  html.safe-top .full-player { inset: 0; border-radius: 0; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
+  /* iOS softens and fades the strip right under the status bar; the bars' content starts a little below it. */
+  html.safe-top .topbar { height: calc(66px + env(safe-area-inset-top, 0px)); padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
 }
 
 /* An installed app held upright under the translucent status bar: the page and everything pinned to the bottom get the
