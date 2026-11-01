@@ -251,6 +251,17 @@ export function FullPlayer({
     if (list && row) list.scrollTop = Math.max(0, row.offsetTop - list.offsetTop - 60);
   }, [panel]);
 
+  // The tracklist keeps the playing track in view when the music moves on by itself; a click on a visible row doesn't scroll anything.
+  useEffect(() => {
+    if (mode !== 'rail') return;
+    const list = queueRef.current, row = current.current;
+    if (!list || !row) return;
+    const top = row.offsetTop - list.offsetTop;
+    if (top < list.scrollTop + 8 || top + row.offsetHeight > list.scrollTop + list.clientHeight - 8) {
+      list.scrollTo({ top: Math.max(0, top - list.clientHeight / 2 + row.offsetHeight / 2), behavior: 'smooth' });
+    }
+  }, [index, mode]);
+
   const scrub = useScrub(time, duration, (t) => {
     if (audioCtl.el) audioCtl.el.currentTime = t;
   });
@@ -599,8 +610,17 @@ export function FullPlayer({
               }
             >
               <div className="fp-queue-head" {...qHead}>
-                <strong>Up next</strong>
-                <small className="fp-queue-count">· {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}</small>
+                {mode === 'rail' ? (
+                  <>
+                    <strong>Tracklist</strong>
+                    <small className="fp-queue-count">· {queue.length} {queue.length === 1 ? 'track' : 'tracks'}</small>
+                  </>
+                ) : (
+                  <>
+                    <strong>Up next</strong>
+                    <small className="fp-queue-count">· {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}</small>
+                  </>
+                )}
                 {shuffle && <span className="dim">Shuffled</span>}
                 {repeat !== 'off' && <span className="dim">{repeat === 'one' ? 'Repeating this track' : 'Repeating the queue'}</span>}
                 <span className="fp-gap" />
@@ -615,9 +635,19 @@ export function FullPlayer({
               </div>
               <ol className={editing ? 'editing' : undefined}>
                 {played.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="played" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} onMove={() => undefined} />
+                  <QueueRow key={q.qid} q={q} state="played" editing={editing} album={track.album} thumb={mode === 'rail' ? (q.dir === track.dir ? art : generatedCover(q.dir)) : undefined} rail={mode === 'rail'} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} onMove={() => undefined} />
                 ))}
                 <li ref={current} className="fp-row now" aria-current="true">
+                  {mode === 'rail' && (
+                    <span className="fp-row-artwrap">
+                      <img className="fp-row-art" src={art} alt="" />
+                      <span className={`fp-bars ${playing ? 'on' : ''}`} aria-hidden>
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                    </span>
+                  )}
                   <span className="fp-row-n">
                     <span className={`fp-bars ${playing ? 'on' : ''}`} aria-hidden>
                       <i />
@@ -627,7 +657,7 @@ export function FullPlayer({
                   </span>
                   <span className="fp-row-t">
                     <strong>{track.title}</strong>
-                    <span>{track.artist}</span>
+                    <span>{mode === 'rail' ? [track.artist, shortFormat(track)].filter(Boolean).join(' · ') : track.artist}</span>
                   </span>
                   <span className="fp-row-d">{fmtTime(track.seconds)}</span>
                   {editing && <span className="fp-row-x-space" aria-hidden />}

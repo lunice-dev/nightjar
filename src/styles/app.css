@@ -2159,7 +2159,15 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .full-player.rail .fp-queue-head { border-bottom: 0; padding: 0 4px 8px; background: none; }
 .full-player.rail .fp-queue-head strong { font-size: 12px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fp-ink-3); }
 .full-player.rail .fp-queue ol { display: grid; gap: 5px; }
-.full-player.rail .fp-queue .fp-row.played, .full-player.rail .fp-queue .fp-row.now, .full-player.rail .fp-queue .fp-row.empty { display: none; }
+.full-player.rail .fp-queue .fp-row.empty { display: none; }
+/* The tracklist: every track stays where it is; the playing one is lit, the ones already played are dimmer. */
+.full-player.rail .fp-queue .fp-row.played, .full-player.rail .fp-queue .fp-row.now { border: 0; border-radius: 10px; background: rgb(255 255 255 / 0.06); }
+.full-player.rail .fp-queue .fp-row.played { opacity: 0.72; }
+@media (hover: hover) { .full-player.rail .fp-queue .fp-row.played:hover { opacity: 1; } }
+.full-player.rail .fp-queue .fp-row.now { grid-template-columns: 44px minmax(0, 1fr) auto; min-height: 56px; padding: 6px 10px; gap: 12px; background: rgb(255 255 255 / 0.17); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2); }
+.full-player.rail .fp-row-artwrap { position: relative; display: block; width: 44px; height: 44px; }
+.full-player.rail .fp-row-artwrap .fp-row-art { display: block; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
+.full-player.rail .fp-row-artwrap .fp-bars { position: absolute; left: 50%; top: 50%; translate: -50% -50%; box-sizing: content-box; height: 14px; padding: 6px 7px; border-radius: 7px; background: rgb(0 0 0 / 0.55); }
 .full-player.rail .fp-queue .fp-row.next { border: 0; border-radius: 10px; background: rgb(255 255 255 / 0.06); }
 .full-player.rail .fp-queue .fp-row-main { grid-template-columns: 44px minmax(0, 1fr) auto; min-height: 56px; padding: 6px 10px; gap: 12px; }
 .full-player.rail .fp-queue .fp-row-n { display: none; }
@@ -2462,8 +2470,9 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-icon.big { width: clamp(56px, 3.1vw, 80px); height: clamp(56px, 3.1vw, 80px); }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-pill { height: clamp(34px, 2vw, 48px); padding: 0 clamp(14px, 0.9vw, 22px); font-size: clamp(13.5px, 0.8vw, 18px); }
   .full-player.rail .fp-queue-head strong { font-size: clamp(12px, 0.75vw, 16px); }
-  .full-player.rail .fp-queue .fp-row-main { grid-template-columns: clamp(44px, 2.7vw, 68px) minmax(0, 1fr) auto; min-height: clamp(56px, 3.4vw, 84px); gap: clamp(12px, 0.8vw, 18px); }
+  .full-player.rail .fp-queue .fp-row-main, .full-player.rail .fp-queue .fp-row.now { grid-template-columns: clamp(44px, 2.7vw, 68px) minmax(0, 1fr) auto; min-height: clamp(56px, 3.4vw, 84px); gap: clamp(12px, 0.8vw, 18px); }
   .full-player.rail .fp-queue .fp-row-art { width: clamp(44px, 2.7vw, 68px); height: clamp(44px, 2.7vw, 68px); }
+  .full-player.rail .fp-row-artwrap { width: clamp(44px, 2.7vw, 68px); height: clamp(44px, 2.7vw, 68px); }
   .full-player.rail .fp-queue .fp-row-t strong { font-size: clamp(14px, 0.85vw, 20px); }
   .full-player.rail .fp-queue .fp-row-t span, .full-player.rail .fp-queue .fp-row-d { font-size: clamp(12px, 0.7vw, 16px); }  /* with lyrics on, the cover can be bigger than before as well */
   .fp-body.np.lyrics-on .fp-art { width: min(100cqw, 100cqh, 760px); }
