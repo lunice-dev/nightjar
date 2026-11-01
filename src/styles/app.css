@@ -1622,7 +1622,8 @@ html.in-app, html.in-app body { overflow: hidden; }
 @media (min-aspect-ratio: 1/1) and (min-width: 560px) and (min-height: 521px) {
   .fp-body.np.lyrics-on { grid-template-rows: minmax(0, 1fr) auto auto auto auto; row-gap: 14px; }
   .fp-body.np.lyrics-on .fp-side { display: contents; }
-  .fp-body.np.lyrics-on .fp-art-col { grid-column: 1; grid-row: 1; padding-bottom: 0; }
+  .fp-body.np.lyrics-on .fp-art-col { grid-column: 1; grid-row: 1; padding-bottom: 0; min-height: 0; container-type: size; }
+  .fp-body.np.lyrics-on .fp-art { width: min(100cqw, 100cqh, 620px); }
   .fp-body.np.lyrics-on .fp-titlerow { grid-column: 1; grid-row: 2; }
   .fp-body.np.lyrics-on .fp-time { grid-column: 1; grid-row: 3; }
   .fp-body.np.lyrics-on .fp-controls { grid-column: 1; grid-row: 4; }
