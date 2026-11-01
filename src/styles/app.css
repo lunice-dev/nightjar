@@ -402,7 +402,7 @@ button { cursor: pointer; }
 @media (hover: hover) { .release-title button:hover { text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 4px; } }
 .release-title button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 .release-artist { color: var(--ink-2); font-size: 15px; }
-.release-title .year { font-weight: 400; color: var(--ink-3); margin-left: 8px; font-size: 16px; }
+.release-title .year { font-weight: 400; color: var(--ink-3); margin-left: 3px; font-size: 16px; white-space: nowrap; }
 .release-side { display: flex; align-items: center; gap: 16px; grid-row: span 2; }
 .meta { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--ink-2); font-size: 13.5px; margin-top: 6px; }
 /* The track count opens the tracklist: it reads like the rest of the line, with a small arrow. */
@@ -1553,7 +1553,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-queue { touch-action: pan-y; }
 .fp-row-n { color: var(--fp-ink-3); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
 .fp-row-t { display: grid; min-width: 0; }
-.fp-row-t strong { font-size: 14.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-row-t strong { font-size: 14.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
 .fp-row-t span { font-size: 12.5px; color: var(--fp-ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fp-row.now .fp-row-t strong { color: var(--fp-ink); font-weight: 650; }
 .fp-row-d { color: var(--fp-ink-3); font-size: 12.5px; font-variant-numeric: tabular-nums; }

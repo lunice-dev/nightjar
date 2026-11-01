@@ -270,7 +270,8 @@ function AlbumRow({ a }: { a: LibAlbum }) {
         <div className="lib-meta">
           <span className={`lib-q format ${a.format === 'Hi-Res' ? 't-hires' : a.format === 'FLAC' ? 't-lossless' : 't-unknown'}`}>{quality(a)}</span>
           <span>
-            {a.tracks} tracks · {bytes(a.size)}
+            {a.tracks.toLocaleString()} {a.tracks === 1 ? 'track' : 'tracks'}
+            {a.size > 0 && <> · {bytes(a.size)}</>}
           </span>
           {a.kind === 'discs' && <span>several discs</span>}
           {a.kind === 'box' && <span>box set</span>}
@@ -619,7 +620,8 @@ function CopyRow({ a }: { a: LibAlbum }) {
         <div className="lib-meta">
           <span className={`lib-q format ${a.format === 'Hi-Res' ? 't-hires' : a.format === 'FLAC' ? 't-lossless' : 't-unknown'}`}>{quality(a)}</span>
           <span>
-            {a.tracks} tracks · {bytes(a.size)}
+            {a.tracks.toLocaleString()} {a.tracks === 1 ? 'track' : 'tracks'}
+            {a.size > 0 && <> · {bytes(a.size)}</>}
           </span>
           {a.year && <span>{a.year}</span>}
           {a.target && a.status === 'move' && <span className="dim">if kept, goes to {a.target.slice(a.dir.length - a.rel.length)}</span>}

@@ -846,7 +846,12 @@ export const ReleaseRow = memo(function ReleaseRow({
             <button aria-expanded={open} aria-controls={panelId} onClick={() => onToggle(release.key)}>
               {r.title}
             </button>
-            {r.year && <span className="year">{r.year}</span>}
+            {r.year && (
+              <>
+                {' '}
+                <span className="year">{r.year}</span>
+              </>
+            )}
           </h2>
           {r.parent && <div className="release-artist">{r.parent}</div>}
           {have.length > 0 && (
@@ -873,7 +878,7 @@ export const ReleaseRow = memo(function ReleaseRow({
             aria-controls={`${panelId}-tracks`}
             title={r.partial ? 'Other people share more of this album. This copy sits below every complete one.' : 'Show the tracks'}
           >
-            {r.partial ? `⚠ only ${r.partial.have} of ${r.partial.of} tracks` : `${r.audio.length} tracks`}
+            {r.partial ? `⚠ only ${r.partial.have} of ${r.partial.of} tracks` : `${r.audio.length.toLocaleString()} ${r.audio.length === 1 ? 'track' : 'tracks'}`}
             <Icon name="chevron" size={12} />
           </button>
           <span>{bytes(r.size)}</span>
