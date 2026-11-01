@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, trackTier, usePlayer, type QueueItem } from '../lib/player';
+import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, savePosition, takeSavedPosition, trackTier, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { FullPlayer, morph, warmArt } from './FullPlayer';
@@ -88,7 +88,8 @@ export function Player() {
       }
       if (el.src !== url) {
         // The same track as another kind of copy ("Use less data" switched): carry on from the same moment.
-        const resumeAt = loadedPath.current === track.path && el.currentTime > 1 ? el.currentTime : 0;
+        // After a restart the track comes back where it was left (loadedPath is empty then).
+        const resumeAt = loadedPath.current === track.path && el.currentTime > 1 ? el.currentTime : loadedPath.current ? 0 : takeSavedPosition(track.path);
         el.src = url;
         if (resumeAt) el.addEventListener('loadedmetadata', () => (el.currentTime = resumeAt), { once: true });
       }
@@ -200,6 +201,7 @@ export function Player() {
       preload="auto"
       onTimeUpdate={(e) => {
         setTime(e.currentTarget.currentTime);
+        if (track && Math.floor(e.currentTarget.currentTime) % 5 === 0) savePosition(track.path, e.currentTarget.currentTime);
         usePlayer.getState().checkSleep();
       }}
       onDurationChange={(e) => {

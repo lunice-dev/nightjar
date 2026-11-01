@@ -100,6 +100,40 @@ interface PlayerState {
 
 const SAVER_KEY = 'nightjar.dataSaver';
 const VOLUME_KEY = 'nightjar.volume';
+const QUEUE_KEY = 'nightjar.queue';
+const POSITION_KEY = 'nightjar.position';
+const KEEP_TRACKS = 300;
+
+/** The queue as it was when the app was last used, so a restart shows it again (paused) instead of an empty player. */
+function savedQueue(): { queue: QueueItem[]; index: number } {
+  try {
+    const raw = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? 'null') as { queue?: QueueItem[]; index?: number } | null;
+    if (raw && Array.isArray(raw.queue) && raw.queue.length && raw.queue.every((t) => t && typeof t.path === 'string' && typeof t.qid === 'string')) {
+      const index = Number.isInteger(raw.index) ? Math.min(Math.max(0, raw.index as number), raw.queue.length - 1) : 0;
+      return { queue: raw.queue, index };
+    }
+  } catch {
+    /* nothing usable saved */
+  }
+  return { queue: [], index: 0 };
+}
+
+/** Where the current track was, saved every few seconds; read back once by the Player when it loads that track after a restart. */
+export function savePosition(path: string, seconds: number) {
+  try {
+    localStorage.setItem(POSITION_KEY, JSON.stringify({ path, t: Math.round(seconds) }));
+  } catch {
+    /* storage unavailable */
+  }
+}
+export function takeSavedPosition(path: string): number {
+  try {
+    const raw = JSON.parse(localStorage.getItem(POSITION_KEY) ?? 'null') as { path?: string; t?: number } | null;
+    return raw?.path === path && typeof raw.t === 'number' && raw.t > 1 ? raw.t : 0;
+  } catch {
+    return 0;
+  }
+}
 
 /** Whether the page can change the volume. iPhones accept the value but ignore it (the side buttons rule), so no slider there. */
 export const canSetVolume = (() => {
@@ -142,9 +176,11 @@ const startEl = () => {
   if (el?.src) el.play().catch(() => undefined);
 };
 
+const restored = savedQueue();
+
 export const usePlayer = create<PlayerState>((set, get) => ({
-  queue: [],
-  index: 0,
+  queue: restored.queue,
+  index: restored.index,
   playing: false,
   dataSaver: (() => {
     try {
@@ -436,6 +472,21 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     set({ dataSaver: on });
   },
 }));
+
+// Keep the queue and the place in it, so the next start picks up where this one left off.
+usePlayer.subscribe((s, prev) => {
+  if (s.queue === prev.queue && s.index === prev.index) return;
+  try {
+    if (!s.queue.length) localStorage.removeItem(QUEUE_KEY);
+    else {
+      const from = Math.max(0, Math.min(s.index - 20, s.queue.length - KEEP_TRACKS));
+      const queue = s.queue.slice(from, from + KEEP_TRACKS);
+      localStorage.setItem(QUEUE_KEY, JSON.stringify({ queue, index: s.index - from }));
+    }
+  } catch {
+    /* storage full or unavailable: the queue just isn't kept */
+  }
+});
 
 /** Lossless formats the computer can turn into AAC copies. */
 export const convertible = (t: Track) => ['flac', 'wav', 'aif', 'aiff'].includes(t.format);
