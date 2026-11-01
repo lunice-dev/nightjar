@@ -525,6 +525,7 @@ export class DemoBackend implements Backend {
     downloadLimit: null,
     uploadSlots: 10,
     blocked: [],
+    personLimits: { queued: 150, daily: null },
     leech: { mode: 'off', files: 1 },
     friendsFirst: false,
     friends: [],

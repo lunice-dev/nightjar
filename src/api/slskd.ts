@@ -71,7 +71,7 @@ const FRIENDS = ['transfers', 'groups', 'user_defined', 'friends'];
 
 /** Removes group sections left empty, so the config file stays tidy. */
 function pruneGroups(doc: Document) {
-  for (const path of [['transfers', 'groups', 'default', 'upload'], DEFAULT_GROUP, ['transfers', 'groups', 'user_defined'], ['transfers', 'groups']]) {
+  for (const path of [['transfers', 'groups', 'default', 'upload', 'limits', 'queued'], ['transfers', 'groups', 'default', 'upload', 'limits', 'daily'], ['transfers', 'groups', 'default', 'upload', 'limits'], ['transfers', 'groups', 'default', 'upload'], DEFAULT_GROUP, ['transfers', 'groups', 'user_defined'], ['transfers', 'groups']]) {
     const node = doc.getIn(path, true) as { items?: unknown[] } | undefined;
     if (node && Array.isArray(node.items) && node.items.length === 0) doc.deleteIn(path);
   }
@@ -85,7 +85,7 @@ interface SlskdOptions {
   transfers?: {
     upload?: { slots?: number; speedLimit?: number };
     download?: { speedLimit?: number };
-    groups?: { blacklisted?: { members?: string[] } };
+    groups?: { blacklisted?: { members?: string[] }; default?: { upload?: { limits?: { queued?: { files?: number }; daily?: { files?: number | null } | null } } } };
   };
 }
 
@@ -543,6 +543,10 @@ export class SlskdBackend implements Backend {
       downloadLimit: limitOf(o.transfers?.download?.speedLimit),
       uploadSlots: o.transfers?.upload?.slots ?? 20,
       blocked: o.transfers?.groups?.blacklisted?.members ?? [],
+      personLimits: {
+        queued: o.transfers?.groups?.default?.upload?.limits?.queued?.files ?? 150,
+        daily: o.transfers?.groups?.default?.upload?.limits?.daily?.files ?? null,
+      },
       leech: groups.leech,
       friendsFirst: groups.friendsFirst,
       friends: groups.friends,
@@ -570,6 +574,16 @@ export class SlskdBackend implements Backend {
     if (patch.downloadLimit !== undefined) set(['transfers', 'download', 'speed_limit'], patch.downloadLimit);
     if (patch.uploadSlots !== undefined) set(['transfers', 'upload', 'slots'], patch.uploadSlots);
     if (patch.blocked !== undefined) setList(doc, ['transfers', 'groups', 'blacklisted', 'members'], patch.blocked);
+    if (patch.personLimits !== undefined) {
+      // Everyone who isn't in a group of their own: slskd's default group.
+      const limits = [...DEFAULT_GROUP, 'upload', 'limits'];
+      const { queued, daily } = patch.personLimits;
+      if (queued === 150) doc.deleteIn([...limits, 'queued', 'files']);
+      else doc.setIn([...limits, 'queued', 'files'], Math.max(1, Math.round(queued)));
+      if (daily === null) doc.deleteIn([...limits, 'daily']);
+      else doc.setIn([...limits, 'daily', 'files'], Math.max(1, Math.round(daily)));
+      pruneGroups(doc);
+    }
     if (patch.leech !== undefined) {
       if (patch.leech.mode === 'off') doc.deleteIn(LEECHERS);
       else {

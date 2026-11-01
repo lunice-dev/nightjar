@@ -1,4 +1,5 @@
 import { RemoteAccessSection } from '../components/RemoteAccess';
+import { GuardSection } from '../components/GuardSettings';
 import { PlaylistBackupsSection } from '../components/PlaylistBackups';
 import { ReportProblem } from '../components/ReportProblem';
 import { onThisComputer } from '../api/remote';
@@ -288,6 +289,8 @@ export function SettingsScreen() {
         <SpeedSection settings={settings} readOnly={ro} onSaved={afterSave} />
 
         <WhoGetsUploads settings={settings} readOnly={ro} onSaved={afterSave} />
+
+        <GuardSection settings={settings} readOnly={ro} onSaved={afterSave} />
 
         <LibrarySection />
 

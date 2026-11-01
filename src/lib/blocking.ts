@@ -58,7 +58,7 @@ export async function setBlocked(username: string, blocked: boolean, quiet = fal
  * Blocks someone and stops everything they're downloading from you or waiting for.
  * Returns how many uploads were stopped, or null when blocking failed.
  */
-export async function blockAndStop(username: string): Promise<number | null> {
+export async function blockAndStop(username: string, why?: string): Promise<number | null> {
   const { backend, uploads, refreshTransfers, toast } = useStore.getState();
   if (!(await setBlocked(username, true, true))) return null;
   const files = uploads
@@ -67,6 +67,7 @@ export async function blockAndStop(username: string): Promise<number | null> {
     .filter((f) => !f.state.startsWith('Completed'));
   await Promise.all(files.map((f) => backend?.cancel('upload', f.username, f.id, false).catch(() => undefined)));
   refreshTransfers('upload');
-  toast(files.length ? `Blocked ${username} and stopped ${files.length} ${files.length === 1 ? 'upload' : 'uploads'}` : `Blocked ${username}`);
+  if (why) toast(`${username} was blocked: ${why.charAt(0).toLowerCase()}${why.slice(1)}. It looks like a program. You can undo this in Settings.`);
+  else toast(files.length ? `Blocked ${username} and stopped ${files.length} ${files.length === 1 ? 'upload' : 'uploads'}` : `Blocked ${username}`);
   return files.length;
 }

@@ -160,6 +160,8 @@ export interface Settings {
   picture: string;
   /** How people who share nothing (or very little) are treated when they download from you. */
   leech: LeechRules;
+  /** What one person can queue and take from you: files waiting at once, and files a day (null: no daily limit). */
+  personLimits: PersonLimits;
   /** People on your People list get uploads before everyone else. */
   friendsFirst: boolean;
   /** Who counts as a friend for that (kept in step with the People list). */
@@ -178,6 +180,13 @@ export interface LeechRules {
   mode: LeechMode;
   /** Sharing fewer files than this counts as sharing nothing. */
   files: number;
+}
+
+export interface PersonLimits {
+  /** Files one person can have waiting in your queue (slskd's own default is 150). */
+  queued: number;
+  /** Files one person can take in a day; null for no daily limit. */
+  daily: number | null;
 }
 
 export type SettingsPatch = Partial<Omit<Settings, 'editable'>>;

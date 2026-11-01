@@ -8,6 +8,7 @@ import { tierRank, toFolders, type FolderResult } from './quality';
 import { groupDownloads } from './transfers';
 import { groupCoverDir, useLocalFiles } from './useLocal';
 import { parseActivity, uploadsActivity } from './activity';
+import { runGuard } from './guard';
 import { manageDownloads } from './smart';
 import { watchIdentity } from './identityWatch';
 import { onThisComputer } from '../api/remote';
@@ -320,6 +321,8 @@ function useActivityRecorder() {
       try {
         const [lines, uploads] = await Promise.all([backend.activity(), backend.transfers('upload')]);
         usePrefs.getState().addActivity([...parseActivity(lines, useStore.getState().me), ...uploadsActivity(uploads)]);
+        // Anyone far beyond what a person can do is blocked (when that is switched on).
+        void runGuard();
         // Finished uploads, for the statistics on the home and Uploads pages (kept after Clear finished).
         usePrefs.getState().recordSent(
           uploads.flatMap((u) =>

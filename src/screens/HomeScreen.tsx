@@ -4,7 +4,9 @@ import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
 import { tone } from '../components/LibraryAlbums';
 import { PlaylistCover, fmtLength, playlistsChanged, usePlaylists } from '../components/Playlists';
+import { useBlocked } from '../lib/blocking';
 import { verdictText } from '../lib/check';
+import { useSuspects } from '../lib/guard';
 import { coverColour } from '../lib/coverColour';
 import { useLibraryReview } from '../lib/libraryReview';
 import { audioCtl, fmtTime, sourceQuality, trackTier, usePlayer } from '../lib/player';
@@ -530,6 +532,10 @@ function Activity() {
   const share = useMemo(() => uploadStats(uploads, sent), [uploads, sent]);
   const unread = conversations.reduce((n, c) => n + (c.unAcknowledgedMessageCount || 0), 0);
   const news = wishlist.reduce((n, w) => n + (w.unseen || 0), 0);
+  // People using your share faster than a person can, who aren't blocked yet.
+  const suspects = useSuspects();
+  const { list: blockedList } = useBlocked();
+  const programs = suspects.filter((s) => !blockedList?.includes(s.user));
 
   // The last few minutes of incoming speed, drawn as a line.
   const latest = useRef(now);
@@ -575,10 +581,20 @@ function Activity() {
           {bytes(share.week.bytes)} sent this week
         </p>
       </div>
-      {(unread > 0 || news > 0) && (
+      {(unread > 0 || news > 0 || programs.length > 0) && (
         <div>
           <h2 className="hx-h small">For you</h2>
           <ul className="hx-list">
+            {programs.length > 0 && (
+              <li>
+                <button onClick={() => go('uploads')}>
+                  <b>
+                    {programs.length === 1 ? `${programs[0].user} looks like a program` : `${programs.length} people look like programs`}
+                  </b>
+                  <span>{programs.length === 1 ? programs[0].summary : 'They use your share faster than a person can'}</span>
+                </button>
+              </li>
+            )}
             {news > 0 && (
               <li>
                 <button onClick={() => go('wishlist')}>

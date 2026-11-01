@@ -23,6 +23,8 @@ import { useFilesAvailable } from '../lib/files';
 import type { RecentMove, WaitingAlbum } from '../api/library';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
 import { blockAndStop, setBlocked, useBlocked } from '../lib/blocking';
+import { GuardNotice } from '../components/GuardNotice';
+import { useSuspects } from '../lib/guard';
 import { keepDownloading } from '../lib/identityWatch';
 
 const COPY = {
@@ -1060,6 +1062,9 @@ function UploadActivity() {
   const openProfile = useStore((s) => s.openProfile);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all');
   const [limit, setLimit] = useState(30);
+  // People who use your share faster than a person can get a mark on everything they did.
+  const suspects = useSuspects();
+  const flagged = useMemo(() => new Map(suspects.map((s) => [s.user, s])), [suspects]);
 
   const events = all.filter((e) => e.user !== me);
   const dayAgo = Date.now() - 86_400_000;
@@ -1099,6 +1104,7 @@ function UploadActivity() {
           </button>
         )}
       </div>
+      <GuardNotice />
       <div className="tiers" role="group" aria-label="Show">
         {FILTERS.map((f) => (
           <button key={f.id} className="chip plain" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
@@ -1127,6 +1133,11 @@ function UploadActivity() {
               </button>
               <span className="feed-kind">{KIND_LABEL[e.kind]}</span>
               <span className="feed-detail" title={e.detail}>
+                {flagged.has(e.user) && e.kind !== 'refused' && (
+                  <span className="feed-auto" title={`${flagged.get(e.user)!.summary}: faster than a person can`}>
+                    Looks automated
+                  </span>
+                )}
                 {e.kind === 'refused' ? humanRefusal(e.detail) : e.detail.replace(/^(Browsed|Opened|Asked for|Downloaded)\s*/, '')}
               </span>
             </li>

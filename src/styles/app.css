@@ -2484,3 +2484,14 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .fp-pos { display: none; margin: 0 0 6px; color: var(--fp-ink-2); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .full-player.rail .fp-pos { display: block; }
 @media (min-width: 1100px) and (min-height: 560px) and (hover: hover) and (pointer: fine) { .full-player.rail .fp-pos { font-size: clamp(13px, 0.8vw, 18px); } }
+/* People who use your share faster than a person can */
+.feed-auto { display: inline-block; margin-right: 8px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 650; line-height: 18px; color: var(--t-mid); background: color-mix(in srgb, var(--t-mid) 14%, transparent); vertical-align: 1px; }
+.guard-notes { list-style: none; margin: 14px 0 6px; padding: 0; display: grid; gap: 8px; max-width: 92ch; }
+.guard-notes li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 14px; border-radius: var(--r-md); background: color-mix(in srgb, var(--t-mid) 9%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t-mid) 28%, transparent); }
+.guard-notes p { margin: 0; flex: 1 1 340px; font-size: 14px; }
+.guard-notes .user-link { font-weight: 650; }
+.guard-actions { display: inline-flex; align-items: center; gap: 14px; }
+.guard-blocked { list-style: none; margin: 8px 0 0; padding: 0; max-width: 92ch; }
+.guard-blocked li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.guard-blocked li > span { display: grid; min-width: 0; }
+.guard-blocked small { overflow-wrap: anywhere; }
