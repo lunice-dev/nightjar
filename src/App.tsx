@@ -584,7 +584,7 @@ function Toasts() {
   return (
     <div className="toasts" role="status" aria-live="polite">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast ${t.tone}`}>
+        <div key={t.id} className={`toast ${t.tone} ${t.leaving ? 'leaving' : ''}`}>
           <span>{t.text}</span>
           <button aria-label="Dismiss" onClick={() => dismiss(t.id)}>
             <Icon name="close" size={14} />

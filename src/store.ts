@@ -34,6 +34,8 @@ interface Toast {
   id: number;
   text: string;
   tone: 'info' | 'error';
+  /** Fading out: it is removed a moment later. */
+  leaving?: boolean;
 }
 
 interface State {
@@ -301,7 +303,10 @@ export const useStore = create<State>((set, get) => ({
     set((s) => ({ toasts: [...s.toasts, { id, text, tone }] }));
     setTimeout(() => get().dismiss(id), tone === 'error' ? 7000 : 3500);
   },
-  dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  dismiss: (id) => {
+    set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t)) }));
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 160);
+  },
 }));
 
 /** When each queued mark was first seen: a new one may not be in the engine's list yet. */

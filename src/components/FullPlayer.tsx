@@ -77,22 +77,24 @@ export function FullPlayer({
       if (!s || !peek || !queueIsPanel()) return;
       const progress = peek / (queueRef.current?.offsetHeight ?? 600);
       const dy = progress * s.reach;
-      const flick = dy > 35 && dy / Math.max(1, Date.now() - s.t) > 0.45;
+      const flick = dy > 35 && dy / Math.max(1, Date.now() - s.t) > 0.25;
       if (progress > 0.28 || flick) setPanel('queue');
     },
   };
   // Dragging the queue's header down pulls the whole panel with the finger; letting go past a short distance closes it.
   const [qDrag, setQDrag] = useState(0);
   const qStart = useRef<number | null>(null);
+  const qTime = useRef(0);
   const qHead = {
     onTouchStart: (e: React.TouchEvent) => {
       qStart.current = e.touches[0].clientY;
+      qTime.current = Date.now();
     },
     onTouchMove: (e: React.TouchEvent) => {
       if (qStart.current != null) setQDrag(Math.max(0, e.touches[0].clientY - qStart.current));
     },
     onTouchEnd: () => {
-      const far = qDrag > 90;
+      const far = qDrag > 90 || (qDrag > 32 && qDrag / Math.max(1, Date.now() - qTime.current) > 0.3);
       qStart.current = null;
       setQDrag(0);
       if (far) setPanel('none');
@@ -138,6 +140,7 @@ export function FullPlayer({
   const [drag, setDrag] = useState(0);
   const [closing, setClosing] = useState(false);
   const startY = useRef<number | null>(null);
+  const startT = useRef(0);
   const sheet = useRef<HTMLDivElement>(null);
 
   // Closing slides the drawer back down first, then takes it away.
@@ -217,15 +220,18 @@ export function FullPlayer({
   const played = queue.map((q, i) => ({ q, i })).filter(({ i }) => i < index);
 
   // Swipe down on the art or the top bar closes it, like Apple Music.
+  // The first 8px are a dead zone (a tap on the art is not a drag), and a quick flick closes it even if short.
   const onTouchStart = (e: React.TouchEvent) => {
     startY.current = e.touches[0].clientY;
+    startT.current = Date.now();
   };
   const onTouchMove = (e: React.TouchEvent) => {
     if (startY.current == null) return;
-    setDrag(Math.max(0, e.touches[0].clientY - startY.current));
+    setDrag(Math.max(0, e.touches[0].clientY - startY.current - 8));
   };
   const onTouchEnd = () => {
-    if (drag > 110) close();
+    const flick = drag > 32 && (drag + 8) / Math.max(1, Date.now() - startT.current) > 0.3;
+    if (drag > 110 || flick) close();
     else setDrag(0);
     startY.current = null;
   };
@@ -648,11 +654,11 @@ function QueueRow({
   const [slide, setSlide] = useState(0); // how far the row is pulled left
   const [live, setLive] = useState(false); // a finger is moving it
   const [lift, setLift] = useState<number | null>(null); // dragging by the grip: how far from where it started
-  const touch = useRef<{ x: number; y: number; base: number; mode: '' | 'h' | 'v' } | null>(null);
+  const touch = useRef<{ x: number; y: number; base: number; mode: '' | 'h' | 'v'; at: number; dx: number } | null>(null);
 
   const swipeStart = (e: React.TouchEvent) => {
     if (editing) return;
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, base: slide, mode: '' };
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, base: slide, mode: '', at: Date.now(), dx: 0 };
   };
   const swipeMove = (e: React.TouchEvent) => {
     const t = touch.current;
@@ -664,8 +670,12 @@ function QueueRow({
       else if (Math.abs(dy) > 8) t.mode = 'v';
     }
     if (t.mode === 'h') {
+      t.dx = dx;
       setLive(true);
-      setSlide(Math.max(-SWIPE_OPEN - 16, Math.min(0, t.base + dx)));
+      // Past the open position the row gives a little, with growing resistance, instead of stopping dead.
+      const raw = t.base + dx;
+      const over = Math.max(0, -SWIPE_OPEN - raw);
+      setSlide(Math.min(0, raw) + (raw < -SWIPE_OPEN ? over - Math.min(16, over * 0.35) : 0));
     }
   };
   const swipeEnd = () => {
@@ -673,7 +683,9 @@ function QueueRow({
     touch.current = null;
     if (t?.mode !== 'h') return;
     setLive(false);
-    setSlide((s) => (s < -SWIPE_OPEN / 2 ? -SWIPE_OPEN : 0));
+    // A quick flick decides by its direction; a slow drag by how far the row got.
+    const v = t.dx / Math.max(1, Date.now() - t.at);
+    setSlide((s) => (v < -0.3 ? -SWIPE_OPEN : v > 0.3 ? 0 : s < -SWIPE_OPEN / 2 ? -SWIPE_OPEN : 0));
   };
 
   const grip = (e: React.PointerEvent<HTMLButtonElement>) => {
