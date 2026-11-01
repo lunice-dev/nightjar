@@ -1934,6 +1934,9 @@ html.in-app, html.in-app body { overflow: hidden; }
   /* The page can be shorter than its window (an installed iPad, under the status bar), and a window can be any size, so the player takes
      the window's real full height (100lvh), not the page's. The screen's height is only the fallback for browsers without lvh. */
   html.standalone-top .full-player { bottom: auto; height: var(--screen-h); height: 100lvh; }
+  /* The whole page too: on an installed iPad it is as tall as the window minus the status bar, which leaves a strip at the bottom. */
+  html.standalone-top { height: var(--screen-h); height: 100lvh; overflow: hidden; }
+  html.standalone-top .shell { padding-bottom: max(6px, env(safe-area-inset-bottom, 0px)); }
   .fp-backdrop { background: rgb(8 7 6 / 0.55); }
   .shelf { grid-template-columns: repeat(auto-fill, minmax(184px, 1fr)); gap: 26px 22px; }
 }
