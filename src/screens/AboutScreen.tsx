@@ -10,7 +10,23 @@ import { viewportInfo, wantsFullScreen } from '../lib/viewport';
 /** One line about how the page sits on the screen, for reports of layout problems on a phone or tablet. */
 const screenNote = () => {
   const v = viewportInfo();
-  return `Page ${v.innerWidth}×${v.innerHeight} · screen height ${v.screenHeight} · top ${v.top}, bottom ${v.bottom}${v.standalone ? ' · installed app' : ''}${wantsFullScreen(v) ? ' · full screen' : ''}`;
+  // What the page can measure about its own window, for working out why the page doesn't fill it.
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:100lvh';
+  document.body.appendChild(probe);
+  const lvh = probe.offsetHeight;
+  probe.style.height = '100dvh';
+  const dvh = probe.offsetHeight;
+  probe.style.height = '100%';
+  const fixedPct = probe.offsetHeight;
+  probe.remove();
+  const vv = window.visualViewport;
+  const root = document.documentElement;
+  return [
+    `Page ${v.innerWidth}×${v.innerHeight} · screen ${screen.width}×${screen.height} · outer ${window.outerWidth}×${window.outerHeight}`,
+    `visual ${vv ? `${Math.round(vv.width)}×${Math.round(vv.height)} at ${Math.round(vv.offsetLeft)},${Math.round(vv.offsetTop)}` : 'n/a'} · lvh ${lvh} · dvh ${dvh} · fixed 100% ${fixedPct} · html ${root.clientWidth}×${root.clientHeight}`,
+    `top ${v.top}, bottom ${v.bottom}${v.standalone ? ' · installed app' : ''}${wantsFullScreen(v) ? ' · full screen' : ''} · ${[...root.classList].join(' ') || 'no classes'}`,
+  ].join('\n');
 };
 
 declare const __APP_VERSION__: string;
@@ -240,7 +256,7 @@ export function AboutScreen() {
             ))}
           </ol>
         </section>
-        <p className="about-sig dim">{screenNote()}</p>
+        <p className="about-sig dim" style={{ whiteSpace: 'pre-line' }}>{screenNote()}</p>
         <p className="about-sig">coded by lunice</p>
       </div>
     </div>
