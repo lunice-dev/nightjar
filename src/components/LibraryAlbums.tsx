@@ -308,14 +308,11 @@ const Tile = memo(function Tile({ a, c, selected, onSelect }: { a: LibAlbum; c: 
             {a.dupKey && <span className="lib-flag">copy</span>}
           </span>
         )}
-        {t && (
+        {(t === 'warn' || t === 'bad') && (
           <span className={`check-chip ${t} lx-check`} title={verdictText(c!.verdict)}>
             {mark(t)}
           </span>
         )}
-        <button className="lx-play" onClick={() => void usePlayer.getState().playAlbum(a.dir)} aria-label={`Play ${a.album}`} title="Play">
-          <Icon name="play" size={20} />
-        </button>
       </div>
       <div className="lx-caption">
         <span className="lx-name" title={a.album}>
