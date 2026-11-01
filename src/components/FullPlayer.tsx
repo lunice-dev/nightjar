@@ -155,7 +155,7 @@ export function FullPlayer({
     if (hush) wake();
     return () => clearTimeout(dozeTimer.current);
   }, [hush, playing, wake]);
-  const dozing = hush && !awake && playing;
+  const dozing = hush && !awake;
   const { state: lyrics, retry: retryLyrics } = useLyrics(track, lyricsOpen && view.kind === 'now');
   const details = panel === 'quality';
   const [editing, setEditing] = useState(false);
@@ -407,7 +407,9 @@ export function FullPlayer({
               <h2>{track.title}</h2>
               <p className="fp-artist">
                 {track.artist ?? 'Unknown artist'}
-                {(tier === 'hires' || tier === 'lossless') && <LosslessMark hires={tier === 'hires'} />}
+                {(tier === 'hires' || tier === 'lossless') && (
+                  <LosslessMark hires={tier === 'hires'} detail={`${track.format.toUpperCase()}${track.bits ? ` ${track.bits}/${+(track.rate / 1000).toFixed(1)}` : ''}`} />
+                )}
               </p>
               <p className="fp-album">
                 {track.album && (
@@ -422,6 +424,7 @@ export function FullPlayer({
                 <div><dt>Source</dt><dd>From your library</dd></div>
                 <div><dt>Output</dt><dd>{dataSaver && (tier === 'hires' || tier === 'lossless') ? 'A smaller copy, to save data' : converted ? 'Converted for this device' : 'Original file, no conversion'}</dd></div>
               </dl>
+              {hush && <p className="fp-hint">Tap the cover to play or pause · swipe it to skip</p>}
             </div>
             <button className={`fp-icon fp-more ${sleep || dataSaver ? 'on' : ''}`} onClick={() => setMoreOpen(true)} aria-label="More: sleep timer, sound quality, less data" aria-haspopup="dialog">
               <Icon name="more" size={20} />
@@ -621,6 +624,30 @@ export function FullPlayer({
           <div className="fp-sheet-backdrop" onClick={() => setMoreOpen(false)} aria-hidden />
           <div className="fp-sheet" role="dialog" aria-label="More" onKeyDown={(e) => e.key === 'Escape' && setMoreOpen(false)}>
             <span className="fp-sheet-grab" aria-hidden />
+            {hush && (
+              <>
+                <button className="fp-sheet-row" role="switch" aria-checked={shuffle} onClick={() => p.setShuffle(!shuffle)}>
+                  <span>Shuffle</span>
+                  <span className={`fp-tog ${shuffle ? 'on' : ''}`} aria-hidden />
+                </button>
+                <button className="fp-sheet-row" onClick={() => p.cycleRepeat()}>
+                  <span>
+                    Repeat
+                    <small>{repeat === 'off' ? 'Off' : repeat === 'all' ? 'The whole queue' : 'This track'}</small>
+                  </span>
+                  <RepeatGlyph one={repeat === 'one'} />
+                </button>
+                {track.album && (
+                  <button className="fp-sheet-row" onClick={() => { setMoreOpen(false); p.openAlbum(track.dir); }}>
+                    <span>
+                      Open the album
+                      <small>{track.album}</small>
+                    </span>
+                    <Icon name="chevron" size={18} />
+                  </button>
+                )}
+              </>
+            )}
             <button className="fp-sheet-row" role="switch" aria-checked={dataSaver} onClick={() => p.setDataSaver(!dataSaver)}>
               <span>
                 Use less data
@@ -895,8 +922,8 @@ function VolumeGlyph({ level }: { level: 0 | 2 }) {
 }
 
 /** A small mark beside the artist while a lossless or Hi-Res file plays: five sound bars in the tier's colour. */
-function LosslessMark({ hires }: { hires: boolean }) {
-  const label = hires ? 'Hi-Res lossless' : 'Lossless';
+function LosslessMark({ hires, detail }: { hires: boolean; detail: string }) {
+  const label = `${hires ? 'Hi-Res lossless' : 'Lossless'} · ${detail}`;
   return (
     <span className={`fp-lossless ${hires ? 't-hires' : 't-lossless'}`} role="img" aria-label={label} title={label}>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>

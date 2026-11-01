@@ -2141,7 +2141,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { grid-column: 1 / span 2; grid-row: 4; }
 .full-player.rail .fp-body.np:not(.lyrics-on) .fp-options { grid-column: 1 / span 2; grid-row: 5; }
 .full-player.rail .fp-body.np:not(.lyrics-on) .fp-sleep { grid-column: 1 / span 2; grid-row: 6; }
-.full-player.rail .fp-body.np:not(.lyrics-on) .fp-queue.np, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details { grid-column: 3; grid-row: 1 / span 6; align-self: start; max-height: calc(100dvh - 160px); overflow-y: auto; scrollbar-width: none; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-queue.np, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details { grid-column: 3; grid-row: 1 / span 6; align-self: stretch; height: 0; min-height: 100%; overflow-y: auto; scrollbar-width: none; }
 
 /* Hush: on a phone the cover leads. Tap it to play or pause, swipe it to skip; the controls fade away while you listen and return at a touch. */
 .full-player.hush .fp-hairline { display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; height: 2px; background: rgb(255 255 255 / 0.12); opacity: 0; transition: opacity 300ms ease-out; pointer-events: none; }
@@ -2153,3 +2153,10 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .full-player.hush.dozing .fp-options, .full-player.hush.dozing .fp-volume, .full-player.hush.dozing .fp-sleep { opacity: 0; pointer-events: none; }
 .full-player.hush .fp-now { text-align: center; }
 .full-player.hush .fp-album { justify-content: center; }
+/* Hush, closer to the prototype: only the cover, the title, the artist and a time bar; the buttons stay for screen readers but are not drawn.
+   Shuffle, repeat and the album live in the "…" sheet. */
+.full-player.hush .fp-controls, .full-player.hush .fp-volume, .full-player.hush .fp-options, .full-player.hush .fp-sleep, .full-player.hush .fp-jumps, .full-player.hush .fp-album, .full-player.hush .fp-facts {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.fp-hint { margin: 8px 0 0; font-size: 12px; color: var(--fp-ink-3); transition: opacity 300ms ease-out; }
+.full-player.hush.dozing .fp-hint { opacity: 0; }
