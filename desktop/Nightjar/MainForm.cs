@@ -201,8 +201,9 @@ namespace Nightjar
             catch { }
             if (saved == null)
             {
-                var w = Math.Min((int)(1280 * scale), area.Width);
-                var h = Math.Min((int)(800 * scale), area.Height);
+                // What Restore goes back to: a normal window, clearly smaller than the screen.
+                var w = Math.Min((int)(1280 * scale), (int)(area.Width * 0.85));
+                var h = Math.Min((int)(800 * scale), (int)(area.Height * 0.85));
                 saved = new Rectangle(area.Left + (area.Width - w) / 2, area.Top + (area.Height - h) / 2, w, h);
                 max = true; // the first time, the whole screen
             }
