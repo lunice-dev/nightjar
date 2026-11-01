@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, savePosition, takeSavedPosition, trackTier, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
-import { FullPlayer, morph, warmArt } from './FullPlayer';
+import { FullPlayer, morph, useArtColour, warmArt } from './FullPlayer';
 import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
@@ -49,6 +49,8 @@ export function Player() {
   const [waiting, setWaiting] = useState(false);
   const track = queue[index];
   const upNext = queue[index + 1];
+  // The small player is washed in a deep colour from the cover, as the large one is.
+  const tint = useArtColour(track ? cover ?? generatedCover(track.dir) : null);
   // Once lyrics have been opened on this device, this track's and the next one's are fetched ahead, so they are there when opened.
   useEffect(() => {
     prefetchLyrics(track);
@@ -257,7 +259,7 @@ export function Player() {
 
   return (
     <>
-    <div className="player" role="region" aria-label="Now playing">
+    <div className={`player ${tint ? 'tinted' : ''}`} style={tint ? ({ '--tint': tint } as React.CSSProperties) : undefined} role="region" aria-label="Now playing">
       {element}
       <div className="player-bar">
         <button className="player-art" onClick={openLarge} aria-label="Open the player">

@@ -1951,6 +1951,28 @@ html.dx-abs .full-player, html.dx-abs .fp-backdrop { position: absolute !importa
   .player-art { border-radius: 14px; }
 }
 
+/* The small player takes a wash of the cover's colour, like the large one, with the quality beside the artist. */
+:root .player.tinted {
+  border-radius: 18px; color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: linear-gradient(135deg, var(--tint) 0%, color-mix(in srgb, var(--tint) 50%, #0b0a09) 100%);
+  box-shadow: 0 8px 24px -6px rgb(0 0 0 / 0.4);
+  transition: background 0.6s ease;
+}
+.player.tinted .player-text, .player.tinted .player-btn { color: #fff; }
+.player.tinted .player-text span, .player.tinted .player-time, .player.tinted .player-btn.close { color: rgb(255 255 255 / 0.72); }
+.player.tinted .player-art { border-radius: 10px; background: rgb(0 0 0 / 0.25); }
+.player.tinted .player-btn.main { background: #fff; color: #141312; }
+@media (hover: hover) {
+  .player.tinted .player-btn:hover { background: rgb(255 255 255 / 0.14); }
+  .player.tinted .player-btn.main:hover { background: rgb(255 255 255 / 0.88); }
+}
+.player.tinted .player-btn.scan.on { background: rgb(255 255 255 / 0.18); }
+.player.tinted .player-seek { background: linear-gradient(to right, #fff var(--p, 0%), rgb(255 255 255 / 0.18) var(--p, 0%)); }
+.player.tinted .player-seek::-webkit-slider-thumb { background: #fff; }
+.player.tinted .pq-chip, .player.tinted .pq-chip.t-hires, .player.tinted .pq-chip.t-lossless { background: rgb(0 0 0 / 0.28); color: #fff; }
+.player.tinted .pq-chip::before { background: var(--tier); }
+.player.tinted .pq-chip.aac { background: color-mix(in srgb, var(--t-mid) 45%, transparent); }
+
 /* iOS can enlarge the text inside these scrolling panels (the queue came out about a third bigger than designed on an iPhone), so ask it not to. */
 .fp-queue.np, .fp-details, .fp-sheet { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 

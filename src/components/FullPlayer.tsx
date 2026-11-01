@@ -810,7 +810,7 @@ function RepeatGlyph({ one }: { one: boolean }) {
  * A deep colour from the album art for the background: the average of its colourful pixels, darkened
  * so white text stays readable. Null while it isn't known (or the picture can't be read).
  */
-function useArtColour(src: string | null) {
+export function useArtColour(src: string | null) {
   // A cover that was prepared while the small player was showing gives its colour on the very first frame.
   const [colour, setColour] = useState<string | null>(() => (src ? warmColour.get(src) ?? null : null));
   useEffect(() => {
