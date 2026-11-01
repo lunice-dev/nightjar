@@ -404,6 +404,7 @@ function AlbumDetail({ a, onClose }: { a: LibAlbum; onClose: () => void }) {
   const searchFor = useStore((s) => s.search);
   const check = useQualityCheck(a.dir);
   const [tracks, setTracks] = useState<AlbumTracks | null | undefined>();
+  const playing = usePlayer((s) => s.queue[s.index]?.path);
 
   useEffect(() => {
     let gone = false;
@@ -444,10 +445,7 @@ function AlbumDetail({ a, onClose }: { a: LibAlbum; onClose: () => void }) {
         {a.dupKey && <span className="lib-flag">copy</span>}
       </div>
       <div className="lx-detail-actions">
-        <button className="btn small" onClick={() => void usePlayer.getState().playAlbum(a.dir)}>
-          <Icon name="play" size={16} /> Play
-        </button>
-        <AlbumPlay variant="icon" dir={a.dir} title={a.album} />
+        <AlbumPlay variant="buttons" dir={a.dir} title={a.album} />
         <CheckButton check={check} />
         {onThisComputer && (
           <button className="btn quiet small icon-only" onClick={reveal} title="Show in folder" aria-label="Show in folder">
@@ -464,11 +462,13 @@ function AlbumDetail({ a, onClose }: { a: LibAlbum; onClose: () => void }) {
         </p>
       ) : tracks && tracks.tracks.length > 0 ? (
         <ol className="lx-tracks">
-          {tracks.tracks.map((t) => (
+          {tracks.tracks.map((t, i) => (
             <li key={t.path}>
-              <span className="lx-no">{discs && t.disc ? `${t.disc}.` : ''}{t.no || ''}</span>
-              <span className="lx-track-title">{t.title}</span>
-              <span className="dim">{t.seconds ? mmss(t.seconds) : ''}</span>
+              <button className={`lx-track${playing === t.path ? ' now' : ''}`} onClick={() => void usePlayer.getState().playAlbum(a.dir, i)} title="Play from this track">
+                <span className="lx-no">{discs && t.disc ? `${t.disc}.` : ''}{t.no || ''}</span>
+                <span className="lx-track-title">{t.title}</span>
+                <span className="dim">{t.seconds ? mmss(t.seconds) : ''}</span>
+              </button>
             </li>
           ))}
         </ol>

@@ -2247,16 +2247,27 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .lx-detail { position: sticky; top: 0; display: grid; gap: 14px; align-content: start; padding: 18px; max-height: calc(100vh - 48px); overflow: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg); animation: lx-in 180ms cubic-bezier(0.23, 1, 0.32, 1); }
 @keyframes lx-in { from { opacity: 0; transform: translateX(10px); } }
 .lx-detail > .lx-close { position: absolute; right: 10px; top: 10px; z-index: 2; background: var(--sunken); color: var(--ink); }
-.lx-detail-cover { width: 100%; border-radius: var(--r-md); }
+.lx-detail-cover { width: 100%; align-self: start; border-radius: var(--r-md); }
 .lx-detail-head h2 { margin: 0; font-size: 20px; font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
 .lx-detail-head p { margin: 4px 0 0; color: var(--ink-2); }
 .lx-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .lx-detail-actions .album-play { display: inline-flex; }
 .lx-path { display: block; padding: 0 !important; background: none !important; font: inherit; font-size: 12.5px; color: var(--ink-3); overflow-wrap: anywhere; }
 .lx-tracks { list-style: none; margin: 0; padding: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
-.lx-tracks li { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; gap: 8px; padding: 5px 0; border-top: 1px solid var(--rule); }
+.lx-tracks li { border-top: 1px solid var(--rule); }
+.lx-track { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; gap: 8px; width: 100%; padding: 6px 6px; margin: 0; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+@media (hover: hover) { .lx-track:hover { background: var(--hover); } }
+.lx-track:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.lx-track.now { font-weight: 650; }
+.lx-track.now .lx-no { color: var(--ink); }
 .lx-no { color: var(--ink-3); text-align: right; }
 .lx-track-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lx-detail { grid-template-columns: 132px minmax(0, 1fr); column-gap: 16px; }
+.lx-detail > * { grid-column: 1 / -1; }
+.lx-detail > .lx-detail-cover { grid-column: 1; grid-row: 1 / span 2; }
+.lx-detail > .lx-detail-head { grid-column: 2; grid-row: 1; padding-right: 36px; }
+.lx-detail > .lib-meta { grid-column: 2; grid-row: 2; margin-top: 0; align-self: start; }
 
 /* Not enough room beside the grid: the details open above it instead. */
 @container (max-width: 880px) {
