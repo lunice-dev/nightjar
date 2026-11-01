@@ -2294,3 +2294,20 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .dl-section:not(:has(.dl-day-group)), .dl-day-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 56px; align-items: start; }
   .dl-section > .dl-section-head, .dl-day-group > .dl-day { grid-column: 1 / -1; }
 }
+
+/* ---------- home on a big window ---------- */
+/* The cover tile is a square, so album art isn't cropped into a strip; the text and the list share the rest of the width. */
+.home-inner { max-width: 1920px; margin-inline: auto; }
+.hero-list li:nth-child(n+5) { display: none; }
+@media (min-width: 1101px) {
+  .hero { --hero-h: clamp(380px, 44vh, 620px); grid-template-columns: minmax(0, 1fr) var(--hero-h) minmax(0, 0.85fr); min-height: var(--hero-h); }
+  .hero-art { width: var(--hero-h); height: var(--hero-h); min-height: 0; align-self: start; }
+  .hero-sub { max-width: 44ch; font-size: 15.5px; }
+}
+@media (min-width: 1101px) and (min-height: 1000px) { .hero-list li:nth-child(5) { display: block; } }
+@media (min-width: 1101px) and (min-height: 1200px) { .hero-list li:nth-child(6) { display: block; } }
+@media (min-width: 1700px) {
+  .hl-cover { width: 56px; height: 56px; border-radius: 11px; }
+  .hl-text b { font-size: 16px; }
+  .hero-copy, .hero-list { padding: 40px 40px; }
+}

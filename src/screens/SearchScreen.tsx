@@ -84,7 +84,8 @@ function Landing() {
     return [...live, ...done];
   }, [groups, history, files, where.downloadDir]);
   const featured = items.find((g) => g.phase === 'active') ?? items.find((g) => g.phase === 'queued') ?? items[0];
-  const latest = items.slice(0, 4);
+  // Four rows normally; a tall window shows more (the CSS hides the extra ones when there isn't room).
+  const latest = items.slice(0, 6);
 
   const featuredLabel = !featured
     ? null
