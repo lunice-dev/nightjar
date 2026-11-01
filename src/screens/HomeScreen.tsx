@@ -142,6 +142,9 @@ function Now() {
       </div>
       <div className="hx-now-meta">
         <span className={`hx-q t-${trackTier(t)}`}>{q.short}</span>
+        <span className="dim">
+          Track {index + 1} of {queue.length}
+        </span>
         {!playing && <span className="dim">Paused</span>}
         <button className="hx-stop" onClick={() => usePlayer.getState().stop()} title="Stop and clear the queue">
           Stop

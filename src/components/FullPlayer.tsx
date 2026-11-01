@@ -424,6 +424,9 @@ export function FullPlayer({
         <div className="fp-side">
           <div className="fp-titlerow">
             <div className="fp-now">
+              <p className="fp-pos">
+                Track {index + 1} of {queue.length}
+              </p>
               <h2>{track.title}</h2>
               <p className="fp-artist">
                 {track.artist ?? 'Unknown artist'}
