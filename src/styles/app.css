@@ -2518,3 +2518,37 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .st-tab small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .st-panel { animation: none; } }
+/* ---------- the shell on a computer: one glow for the whole window, a top bar with no box, the page edge to edge ---------- */
+.shell-sky { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  :root { --hx-pad: clamp(20px, 2.6vw, 48px); --hx-gap: clamp(28px, 3vw, 56px); --hx-col-l: clamp(300px, 19vw, 400px); --hx-edge: max(var(--hx-pad), calc((100% - 3400px) / 2 + var(--hx-pad))); }
+  .shell { padding: 0; gap: 0; position: relative; transition: --g1 1.4s ease, --g2 1.4s ease; }
+  .shell-sky { display: block; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.6; transition: opacity 0.5s;
+    background: radial-gradient(70% 60% at 12% 0%, var(--g1), transparent 72%), radial-gradient(55% 55% at 94% 100%, var(--g2), transparent 72%); }
+  .on-home .shell-sky { opacity: 1; }
+  :root[data-theme='light'] .shell-sky { opacity: 0.3; }
+  :root[data-theme='light'].on-home .shell-sky { opacity: 0.5; }
+  .shell > .topbar, .shell > .main, .shell > .shell-foot, .shell > .player, .shell > .update-banner { position: relative; z-index: 1; }
+
+  /* the top bar: no card, the logo, the tabs and the search sit straight on the glow, lined up with the page's columns */
+  :root .shell > .topbar { display: grid; grid-template-columns: auto minmax(0, auto) minmax(120px, 1fr) auto; gap: var(--hx-gap); align-items: center; height: 64px; padding: 0 0 0 var(--hx-edge); background: none; box-shadow: none; border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .shell > .topbar .brand { padding-left: 0; }
+  .shell > .topbar .brand-name { font-size: clamp(16px, 1vw, 20px); font-weight: 640; font-stretch: 88%; }
+  .shell > .topbar .topnav { justify-content: flex-start; gap: clamp(18px, 1.7vw, 34px); flex: none; }
+  .shell > .topbar .topnav-item { position: relative; height: 40px; padding: 0; border-radius: 0; background: none; box-shadow: none; font-size: clamp(14px, 0.86vw, 18px); font-weight: 550; }
+  .shell > .topbar .topnav-item[aria-current='page'] { background: none; box-shadow: none; color: var(--ink); }
+  .shell > .topbar .topnav-item[aria-current='page']::after { content: ''; position: absolute; left: 0; right: 0; bottom: 3px; height: 2px; border-radius: 2px; background: #e0a458; }
+  .shell > .topbar .topbar-search { flex: none; justify-self: end; width: min(340px, 100%); min-width: 120px; margin-right: var(--hx-pad); }
+  .on-home .shell > .topbar .topbar-search { visibility: hidden; }
+
+  /* the page fills the window; its screens sit on the glow instead of on a card of their own */
+  .shell > .main { background: none; border-radius: 0; }
+  .shell .tab-pane { background: none; }
+  .shell > .shell-foot { padding: 0 var(--hx-edge); min-height: 32px; }
+  .shell > .player { margin: 0 var(--hx-edge) 8px; }
+  .shell > .update-banner { margin: 0 var(--hx-edge) 8px; }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 1500px) {
+  :root .shell > .topbar { grid-template-columns: var(--hx-col-l) minmax(0, auto) minmax(120px, 1fr) auto; }
+}
+@media (prefers-reduced-motion: reduce) { .shell, .shell-sky { transition: none; } }

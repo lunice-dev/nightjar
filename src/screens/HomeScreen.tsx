@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { LibAlbum } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
@@ -7,7 +7,6 @@ import { PlaylistCover, fmtLength, playlistsChanged, usePlaylists } from '../com
 import { useBlocked } from '../lib/blocking';
 import { verdictText } from '../lib/check';
 import { useSuspects } from '../lib/guard';
-import { coverColour } from '../lib/coverColour';
 import { useLibraryReview } from '../lib/libraryReview';
 import { audioCtl, fmtTime, sourceQuality, trackTier, usePlayer } from '../lib/player';
 import { bytes, speed } from '../lib/quality';
@@ -33,25 +32,18 @@ const shuffled = <T,>(a: T[]) => {
 
 /**
  * The home page on the computer: what's playing, a search box with the shape of your library, rows of albums
- * (arriving, recently added, to rediscover, to look at) and the day's activity. The page's glow takes its colour
- * from the cover of whatever is playing.
+ * (arriving, recently added, to rediscover, to look at) and the day's activity. The window's glow (see the shell)
+ * takes its colour from the cover of whatever is playing.
  */
 export function Home() {
-  const track = usePlayer((s) => s.queue[s.index]);
-  const rgb = useCoverGlow(track?.dir);
   // The Now column has the controls, so the player bar at the bottom steps aside while Home is open.
   useEffect(() => {
     document.documentElement.classList.add('on-home');
     return () => document.documentElement.classList.remove('on-home');
   }, []);
-  const style = {
-    '--g1': rgb ? `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]} / 0.32)` : 'rgb(224 164 88 / 0.14)',
-    '--g2': rgb ? `rgb(${Math.round(rgb[0] * 0.55)} ${Math.round(rgb[1] * 0.55)} ${Math.round(rgb[2] * 0.7)} / 0.18)` : 'rgb(116 163 242 / 0.07)',
-  } as CSSProperties;
 
   return (
-    <div className="hx" style={style}>
-      <div className="hx-sky" aria-hidden />
+    <div className="hx">
       <div className="hx-scroll">
         <div className="hx-page">
           <Now />
@@ -62,29 +54,6 @@ export function Home() {
     </div>
   );
 }
-
-/** The main colour of the playing album's cover (null: nothing playing, or no picture to read). */
-function useCoverGlow(dir: string | undefined) {
-  const backend = useStore((s) => s.backend);
-  const [rgb, setRgb] = useState<[number, number, number] | null>(null);
-  useEffect(() => {
-    let alive = true;
-    if (!dir || !backend) {
-      setRgb(null);
-      return;
-    }
-    backend.files
-      .coverUrl(dir, 96)
-      .then((u) => (u ? coverColour(u) : null))
-      .then((c) => alive && setRgb(c))
-      .catch(() => alive && setRgb(null));
-    return () => {
-      alive = false;
-    };
-  }, [dir, backend]);
-  return rgb;
-}
-
 // ------------------------------------------------------------------ left: now playing
 
 function useProgress(fallback: number) {

@@ -5,6 +5,7 @@ import { searchRunning } from './api/types';
 import { Icon } from './components/Icon';
 import { WindowControls } from './components/WindowControls';
 import { setSettingsTarget } from './lib/settingsNav';
+import { useShellGlow } from './lib/useCoverGlow';
 import { inApp, windowAction } from './lib/host';
 import { Mark } from './components/Mark';
 import { speed } from './lib/quality';
@@ -286,8 +287,11 @@ function Shell() {
       const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
       if ((e.key === '/' && !typing) || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault();
-        input.current?.focus();
-        input.current?.select();
+        // On Home the big search box is the one on screen; the top bar's is hidden there.
+        const field = document.documentElement.classList.contains('on-home') ? document.querySelector<HTMLInputElement>('.hx-search input') : null;
+        const target = field ?? input.current;
+        target?.focus();
+        target?.select();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -310,6 +314,7 @@ function Shell() {
     return () => clearInterval(t);
   }, [refreshLimits]);
   const [moreOpen, setMoreOpen] = useState(false);
+  const glow = useShellGlow();
   useBackground();
   useFriendsSync();
   useEffect(() => backfillFakes(), []);
@@ -334,7 +339,9 @@ function Shell() {
   const moreCurrent = NAV.some((n) => !n.primary && isCurrent(n.route));
 
   return (
-    <div className="shell">
+    <div className="shell" style={glow}>
+      {/* The window's glow, from the cover of what's playing (drawn on a computer's window; see the shell styles). */}
+      <div className="shell-sky" aria-hidden />
       <header className="topbar">
         <button className="brand" onClick={() => open('search')} aria-label="Nightjar home">
           <span className="brand-mark">
