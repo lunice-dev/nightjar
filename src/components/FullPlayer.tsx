@@ -429,7 +429,7 @@ export function FullPlayer({
             </div>
           )}
 
-          {lyricsOpen && wide && <LyricsScroll className="fp-ly-side" state={lyrics} time={time} onRetry={retryLyrics} />}
+          {lyricsOpen && wide && <LyricsScroll className="fp-ly-side" state={lyrics} onRetry={retryLyrics} />}
           {details ? (
             <div className="fp-details">
               <div className="fp-panel-head">

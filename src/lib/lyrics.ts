@@ -58,7 +58,8 @@ interface LrcLibHit {
 }
 
 function fromHit(hit: LrcLibHit): Lyrics | null {
-  return (hit.syncedLyrics && parseLrc(hit.syncedLyrics)) || (hit.plainLyrics && parsePlain(hit.plainLyrics)) || null;
+  // The lyrics are shown as plain text: the untimed version when there is one, else the words of the timed one.
+  return (hit.plainLyrics && parsePlain(hit.plainLyrics)) || (hit.syncedLyrics && parseLrc(hit.syncedLyrics)) || null;
 }
 
 const API = 'https://lrclib.net/api';
@@ -71,7 +72,7 @@ let lastFailure = '';
 export const lyricsFailure = () => lastFailure;
 
 // Found lyrics are kept on this device, so a track asked for before is instant and works offline. "Not found" is not kept.
-const STORE = 'nightjar.lyrics.v2';
+const STORE = 'nightjar.lyrics.v3';
 const KEEP = 150;
 const readStore = (): Record<string, Lyrics> => {
   try {
@@ -109,30 +110,19 @@ async function fetchLrclib(t: { title: string; artist: string | null; album: str
   if (t.album) q.set('album_name', t.album);
   if (t.seconds > 0) q.set('duration', String(Math.round(t.seconds)));
   const exact = await ask(`${API}/get?${q}`);
-  if (exact.status !== 404 && !exact.ok) throw new LyricsError(`error ${exact.status}`);
-  const first = exact.ok ? fromHit((await exact.json()) as LrcLibHit) : null;
-  if (first?.synced) return first;
-  // Not found, or only plain text: look by artist and title for a timed version, taking the closest length.
+  if (exact.ok) return fromHit((await exact.json()) as LrcLibHit);
+  if (exact.status !== 404) throw new LyricsError(`error ${exact.status}`);
+  // Not found with the album and length: look by artist and title, and take the closest length.
   const s = new URLSearchParams({ artist_name: t.artist, track_name: t.title });
-  let hits: LrcLibHit[];
-  try {
-    const res = await ask(`${API}/search?${s}`);
-    if (!res.ok) throw new LyricsError(`error ${res.status}`);
-    hits = ((await res.json()) as LrcLibHit[]).filter((h) => !h.instrumental);
-  } catch (e) {
-    if (first) return first; // the plain lyrics are still better than none
-    throw e;
-  }
-  const near = hits
-    .filter((h) => t.seconds <= 0 || h.duration == null || Math.abs(h.duration - t.seconds) <= 4)
-    .sort((a, b) => Number(!!b.syncedLyrics) - Number(!!a.syncedLyrics));
-  let plain: Lyrics | null = first;
+  const res = await ask(`${API}/search?${s}`);
+  if (!res.ok) throw new LyricsError(`error ${res.status}`);
+  const hits = ((await res.json()) as LrcLibHit[]).filter((h) => !h.instrumental);
+  const near = hits.filter((h) => t.seconds <= 0 || h.duration == null || Math.abs(h.duration - t.seconds) <= 4);
   for (const h of near) {
     const l = fromHit(h);
-    if (l?.synced) return l;
-    plain ??= l;
+    if (l) return l;
   }
-  return plain;
+  return null;
 }
 
 /** The service is sometimes busy (503) or slow: ask again a couple of times before giving up. */
@@ -160,7 +150,7 @@ export function loadLyrics(t: { path: string; title: string; artist: string | nu
     p = withRetries(t)
       .then((l) => {
         memory.set(t.path, l);
-        if (l?.synced) saveStore(keyOf(t), l); // plain text is asked about again later, in case a timed version has appeared
+        if (l) saveStore(keyOf(t), l);
         return l;
       })
       .finally(() => inflight.delete(t.path));

@@ -1,34 +1,12 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { activeLine, type LyricsState } from '../lib/lyrics';
 import { audioCtl, fmtTime, usePlayer } from '../lib/player';
+import type { LyricsState } from '../lib/lyrics';
 import { Icon } from './Icon';
 
-/**
- * The scrolling lyrics. Synced lyrics follow the song: the current line is large and bright, the others dimmed, three dots
- * wait through the intro, and tapping a line jumps there. Scrolling by hand pauses the following for a few seconds.
- */
-export function LyricsScroll({ state, time, onRetry, className }: { state: LyricsState; time: number; onRetry: () => void; className?: string }) {
-  const box = useRef<HTMLDivElement>(null);
+/** The lyrics as plain, readable text in a scrolling area. */
+export function LyricsScroll({ state, onRetry, className }: { state: LyricsState; onRetry: () => void; className?: string }) {
   const lines = state.status === 'ready' ? state.lyrics.lines : [];
-  const synced = state.status === 'ready' && state.lyrics.synced;
-  const active = useMemo(() => (synced ? activeLine(lines, time) : -1), [synced, lines, time]);
-  const holdUntil = useRef(0);
-  const first = useRef(true);
-
-  // Keep the current line about a third of the way down.
-  useEffect(() => {
-    const el = box.current;
-    const row = el?.querySelector<HTMLElement>('[data-now="true"]');
-    if (!el || !row || Date.now() < holdUntil.current) return;
-    const top = row.offsetTop - el.clientHeight * 0.3;
-    el.scrollTo({ top: Math.max(0, top), behavior: first.current || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-    first.current = false;
-  }, [active, state.status]);
-
-  const hold = () => (holdUntil.current = Date.now() + 4000);
-
   return (
-    <div className={`fp-ly-scroll ${className ?? ''}`} ref={box} role="region" aria-label="Lyrics" onTouchStart={hold} onWheel={hold} onTouchMove={hold}>
+    <div className={`fp-ly-scroll ${className ?? ''}`} role="region" aria-label="Lyrics">
       {state.status === 'loading' && <p className="fp-ly-note">Looking for lyrics…</p>}
       {state.status === 'none' && <p className="fp-ly-note">No lyrics found for this track.</p>}
       {state.status === 'error' && (
@@ -37,29 +15,17 @@ export function LyricsScroll({ state, time, onRetry, className }: { state: Lyric
         </p>
       )}
       {state.status === 'ready' && (
-        <ol className={synced ? 'synced' : undefined}>
-          {synced && (
-            <li className={`dots ${active < 0 ? 'now' : ''}`} data-now={active < 0} aria-hidden>
-              <i /><i /><i />
-            </li>
-          )}
-          {lines.map((l, i) => {
-            const d = Math.abs(i - active);
-            return (
-              <li
-                key={i}
-                data-now={synced && i === active}
-                data-far={synced && d > 2 ? 'true' : undefined}
-                className={`${synced ? (i === active ? 'now' : i < active ? 'past' : '') : ''} ${l.text ? '' : 'gap'}`}
-                onClick={synced && l.at != null ? () => { holdUntil.current = 0; if (audioCtl.el) audioCtl.el.currentTime = l.at as number; } : undefined}
-              >
-                {l.text || '♪'}
+        <>
+          <ol>
+            {lines.map((l, i) => (
+              <li key={i} className={l.text ? undefined : 'gap'}>
+                {l.text}
               </li>
-            );
-          })}
-        </ol>
+            ))}
+          </ol>
+          <p className="fp-ly-credit">Lyrics from LRCLIB</p>
+        </>
       )}
-      {state.status === 'ready' && <p className="fp-ly-credit">{synced ? 'Lyrics from LRCLIB' : 'Lyrics from LRCLIB · no timing available for this track, so they don’t follow the song'}</p>}
     </div>
   );
 }
@@ -76,7 +42,7 @@ export function LyricsView({ state, onRetry, time, duration, art, title, artist,
           <span>{artist ?? 'Unknown artist'}</span>
         </span>
       </div>
-      <LyricsScroll state={state} time={time} onRetry={onRetry} />
+      <LyricsScroll state={state} onRetry={onRetry} />
       <div className="fp-ly-bar">
         <input
           className="fp-seek"
