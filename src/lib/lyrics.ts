@@ -111,7 +111,8 @@ async function fetchLrclib(t: { title: string; artist: string | null; album: str
   if (t.seconds > 0) q.set('duration', String(Math.round(t.seconds)));
   const exact = await ask(`${API}/get?${q}`);
   if (exact.ok) return fromHit((await exact.json()) as LrcLibHit);
-  if (exact.status !== 404) throw new LyricsError(`error ${exact.status}`);
+  // A busy service (5xx) still gets the search tried, which is served by a different query path.
+  if (exact.status !== 404 && exact.status < 500) throw new LyricsError(`error ${exact.status}`);
   // Not found with the album and length: look by artist and title, and take the closest length.
   const s = new URLSearchParams({ artist_name: t.artist, track_name: t.title });
   const res = await ask(`${API}/search?${s}`);
@@ -125,15 +126,15 @@ async function fetchLrclib(t: { title: string; artist: string | null; album: str
   return null;
 }
 
-/** The service is sometimes busy (503) or slow: ask again a couple of times before giving up. */
+/** The service is often busy (503) for a few seconds at a time: keep asking, waiting longer each time, before giving up. */
 async function withRetries(t: Parameters<typeof fetchLrclib>[0]): Promise<Lyrics | null> {
   for (let i = 0; ; i++) {
     try {
       return await fetchLrclib(t);
     } catch (e) {
       lastFailure = (e as Error).message;
-      if (i >= 3) throw e;
-      await new Promise((r) => setTimeout(r, 700 * (i + 1)));
+      if (i >= 7) throw e;
+      await new Promise((r) => setTimeout(r, Math.min(600 * 2 ** i, 6000) + Math.random() * 400));
     }
   }
 }
