@@ -2113,3 +2113,43 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .fp-body.np .fp-side { justify-content: center; gap: 14px; max-width: 520px; }
   .fp-now h2 { font-size: 24px; }
 }
+
+/* ---------- the large player: lossless mark, Console (wide screens) and Hush (phones) ---------- */
+.fp-lossless { display: inline-flex; vertical-align: -2px; margin-left: 7px; color: color-mix(in srgb, var(--tier) 70%, #fff); }
+.fp-facts { display: none; margin: 0; }
+.fp-flash { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%; background: rgb(0 0 0 / 0.5); color: #fff; pointer-events: none; animation: fp-flash 500ms ease-out both; }
+@keyframes fp-flash { 0% { opacity: 0; transform: scale(0.8); } 25% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .fp-flash { animation: none; } }
+.fp-hairline { display: none; }
+
+/* Console: on a wide screen the small cover, the title and the file's facts sit above the controls; the whole right half is the queue. */
+.full-player.rail .fp-body.np:not(.lyrics-on) {
+  display: grid; grid-template-columns: minmax(110px, 180px) minmax(0, 1fr) minmax(0, 1.05fr); align-content: center; align-items: start;
+  column-gap: 28px; row-gap: 16px; padding: 6px 44px 28px; overflow: hidden;
+}
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-side { display: contents; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { display: block; grid-column: 1; grid-row: 1; width: 100%; height: auto; padding: 0; align-self: start; container-type: normal; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { width: 100%; max-width: 180px; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-titlerow { grid-column: 2; grid-row: 1; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-now h2 { font-size: 26px; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-facts { display: grid; gap: 3px; margin: 8px 0 0; font-size: 12.5px; }
+.full-player.rail .fp-facts div { display: flex; gap: 10px; }
+.full-player.rail .fp-facts dt { width: 52px; flex: none; color: var(--fp-ink-3); }
+.full-player.rail .fp-facts dd { margin: 0; color: var(--fp-ink-2); min-width: 0; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-time { grid-column: 1 / span 2; grid-row: 2; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls { grid-column: 1 / span 2; grid-row: 3; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { grid-column: 1 / span 2; grid-row: 4; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-options { grid-column: 1 / span 2; grid-row: 5; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-sleep { grid-column: 1 / span 2; grid-row: 6; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-queue.np, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details { grid-column: 3; grid-row: 1 / span 6; align-self: start; max-height: calc(100dvh - 160px); overflow-y: auto; scrollbar-width: none; }
+
+/* Hush: on a phone the cover leads. Tap it to play or pause, swipe it to skip; the controls fade away while you listen and return at a touch. */
+.full-player.hush .fp-hairline { display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; height: 2px; background: rgb(255 255 255 / 0.12); opacity: 0; transition: opacity 300ms ease-out; pointer-events: none; }
+.full-player.hush .fp-hairline i { display: block; height: 100%; background: #f4f1ea; }
+.full-player.hush.dozing .fp-hairline { opacity: 1; }
+.full-player.hush .fp-top, .full-player.hush .fp-time, .full-player.hush .fp-controls, .full-player.hush .fp-more, .full-player.hush .fp-album,
+.full-player.hush .fp-options, .full-player.hush .fp-volume, .full-player.hush .fp-sleep { transition: opacity 300ms ease-out; }
+.full-player.hush.dozing .fp-top, .full-player.hush.dozing .fp-time, .full-player.hush.dozing .fp-controls, .full-player.hush.dozing .fp-more, .full-player.hush.dozing .fp-album,
+.full-player.hush.dozing .fp-options, .full-player.hush.dozing .fp-volume, .full-player.hush.dozing .fp-sleep { opacity: 0; pointer-events: none; }
+.full-player.hush .fp-now { text-align: center; }
+.full-player.hush .fp-album { justify-content: center; }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { audioCtl, canSetVolume, fmtTime, usePlayer, type QueueItem } from '../lib/player';
+import { audioCtl, canSetVolume, fmtTime, trackTier, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
 import { WindowControls } from './WindowControls';
@@ -39,7 +39,7 @@ export function FullPlayer({
   /** The short tag: "FLAC 16/44.1", "AAC 128". */
   chip: React.ReactNode;
 }) {
-  const { queue, index, playing, shuffle, repeat, dataSaver, view, volume, sleep } = usePlayer();
+  const { queue, index, playing, shuffle, repeat, dataSaver, converted, view, volume, sleep } = usePlayer();
   const p = usePlayer.getState();
   // Swipe up anywhere on the player (except the seek bar and the volume, which are dragged sideways): the queue rises as the
   // finger moves, and is fully up once the finger has travelled most of the way from where it started to the top of the panel.
@@ -124,11 +124,38 @@ export function FullPlayer({
   const [lyricsOpen, setLyricsOpen] = useState(false);
   // Wide screens keep the art and the controls on the left with the lyrics beside them; upright ones give the lyrics the whole body.
   const [wide, setWide] = useState(() => !queueIsPanel());
+  const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 699px)').matches);
   useEffect(() => {
-    const on = () => setWide(!queueIsPanel());
+    const on = () => {
+      setWide(!queueIsPanel());
+      setNarrow(matchMedia('(max-width: 699px)').matches);
+    };
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
+  // The layout: Console on wide screens, Hush on phones, the classic one elsewhere (or when switched back in About).
+  const classic = (() => {
+    try {
+      return localStorage.getItem('nightjar.classicPlayer') === '1';
+    } catch {
+      return false;
+    }
+  })();
+  const mode = classic || view.kind !== 'now' ? 'classic' : wide ? 'rail' : narrow ? 'hush' : 'classic';
+  const hush = mode === 'hush';
+  // Hush: the controls fade after a few seconds of playing and come back at any touch.
+  const [awake, setAwake] = useState(true);
+  const dozeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const wake = useCallback(() => {
+    setAwake(true);
+    clearTimeout(dozeTimer.current);
+    dozeTimer.current = setTimeout(() => setAwake(false), 3000);
+  }, []);
+  useEffect(() => {
+    if (hush) wake();
+    return () => clearTimeout(dozeTimer.current);
+  }, [hush, playing, wake]);
+  const dozing = hush && !awake && playing;
   const { state: lyrics, retry: retryLyrics } = useLyrics(track, lyricsOpen && view.kind === 'now');
   const details = panel === 'quality';
   const [editing, setEditing] = useState(false);
@@ -236,6 +263,66 @@ export function FullPlayer({
     startY.current = null;
   };
 
+  // Hush: on the cover, a sideways swipe skips (the cover follows the finger; a quick flick is enough) and a tap plays or pauses.
+  const [hx, setHx] = useState(0);
+  const [hLive, setHLive] = useState(false);
+  const [flash, setFlash] = useState<'' | 'play' | 'pause'>('');
+  const hs = useRef<{ x: number; y: number; t: number; mode: '' | 'h' | 'v' } | null>(null);
+  const artTouch = hush
+    ? {
+        onTouchStart: (e: React.TouchEvent) => {
+          const t = e.touches[0];
+          hs.current = { x: t.clientX, y: t.clientY, t: Date.now(), mode: '' };
+          onTouchStart(e);
+        },
+        onTouchMove: (e: React.TouchEvent) => {
+          const s = hs.current;
+          if (!s) return;
+          const t = e.touches[0];
+          const dx = t.clientX - s.x;
+          const dy = t.clientY - s.y;
+          if (!s.mode) {
+            if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) s.mode = 'h';
+            else if (Math.abs(dy) > 8) s.mode = 'v';
+          }
+          if (s.mode === 'h') {
+            setHLive(true);
+            setHx(dx);
+          } else if (s.mode === 'v') onTouchMove(e);
+        },
+        onTouchEnd: () => {
+          const s = hs.current;
+          hs.current = null;
+          if (s?.mode === 'h') {
+            const v = hx / Math.max(1, Date.now() - s.t);
+            const w = window.innerWidth;
+            setHLive(false);
+            if (Math.abs(hx) > w * 0.25 || Math.abs(v) > 0.4) {
+              const dir = hx < 0 ? -1 : 1;
+              setHx(dir * w);
+              setTimeout(() => {
+                setHLive(true);
+                const st = usePlayer.getState();
+                if (dir < 0) {
+                  if (st.index + 1 < st.queue.length || st.repeat === 'all') st.next();
+                } else st.prev();
+                setHx(-dir * 60);
+                requestAnimationFrame(() => requestAnimationFrame(() => { setHLive(false); setHx(0); }));
+              }, 150);
+            } else setHx(0);
+          } else if (s?.mode === 'v') onTouchEnd();
+          else startY.current = null;
+        },
+      }
+    : { onTouchStart, onTouchMove, onTouchEnd };
+  const tapArt = (e: React.MouseEvent<HTMLElement>) => {
+    if (!hush) return tap.onClick(e);
+    p.toggle();
+    setFlash(playing ? 'pause' : 'play');
+    setTimeout(() => setFlash(''), 500);
+  };
+  const tier = track ? trackTier(track) : 'unknown';
+
   const style = {
     ...(tint ? { '--fp-tint': tint } : {}),
     transform: closing ? undefined : drag ? `translateY(${drag}px)` : undefined,
@@ -245,8 +332,13 @@ export function FullPlayer({
   return (
     <>
       <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
-      <div ref={sheet} className={`full-player ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
+      <div ref={sheet} className={`full-player ${mode} ${dozing ? 'dozing' : ''} ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} onPointerDownCapture={hush ? wake : undefined} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
       <Backdrop src={backdropArt} />
+      {hush && (
+        <div className="fp-hairline" aria-hidden>
+          <i style={{ width: `${progress}%` }} />
+        </div>
+      )}
       <div className="fp-top" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <span className="fp-grab" aria-hidden />
         <button className="fp-icon" onClick={close} aria-label="Close the player">
@@ -287,9 +379,19 @@ export function FullPlayer({
         <LyricsView state={lyrics} onRetry={retryLyrics} time={time} duration={duration} art={art} title={track.title} artist={track.artist} playing={playing} />
       ) : (
       <div className={`fp-body np ${lyricsOpen && wide ? 'lyrics-on' : ''}`} {...queueSwipe}>
-        <div className="fp-art-col" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <div className="fp-art-tap" onClick={tap.onClick} title="Double-tap the left or right to go back or forward 10 seconds">
+        <div className="fp-art-col" {...artTouch}>
+          <div
+            className="fp-art-tap"
+            onClick={tapArt}
+            title={hush ? 'Tap to play or pause, swipe to skip' : 'Double-tap the left or right to go back or forward 10 seconds'}
+            style={hush ? { transform: `translateX(${hx}px)`, transition: hLive ? 'none' : 'transform 260ms cubic-bezier(0.23, 1, 0.32, 1)' } : undefined}
+          >
             <img ref={artImg} className={`fp-art ${playing ? '' : 'paused'}`} src={art} alt="" />
+            {flash && (
+              <span className="fp-flash" aria-hidden>
+                <Icon name={flash} size={34} />
+              </span>
+            )}
             {tap.shown && (
               <span className={`fp-jump-flash ${tap.shown.side > 0 ? 'right' : 'left'}`} aria-live="polite">
                 {tap.shown.side > 0 ? '+' : '−'}
@@ -303,7 +405,10 @@ export function FullPlayer({
           <div className="fp-titlerow">
             <div className="fp-now">
               <h2>{track.title}</h2>
-              <p className="fp-artist">{track.artist ?? 'Unknown artist'}</p>
+              <p className="fp-artist">
+                {track.artist ?? 'Unknown artist'}
+                {(tier === 'hires' || tier === 'lossless') && <LosslessMark hires={tier === 'hires'} />}
+              </p>
               <p className="fp-album">
                 {track.album && (
                   <button className="fp-albumlink" onClick={() => p.openAlbum(track.dir)} title="Open the album">
@@ -312,6 +417,11 @@ export function FullPlayer({
                 )}
                 <span className="fp-chip">{chip}</span>
               </p>
+              <dl className="fp-facts">
+                <div><dt>Format</dt><dd>{[track.format.toUpperCase(), track.bits ? `${track.bits}-bit` : '', track.rate ? `${+(track.rate / 1000).toFixed(1)} kHz` : '', track.kbps ? `${track.kbps} kbps` : ''].filter(Boolean).join(' · ')}</dd></div>
+                <div><dt>Source</dt><dd>From your library</dd></div>
+                <div><dt>Output</dt><dd>{dataSaver && (tier === 'hires' || tier === 'lossless') ? 'A smaller copy, to save data' : converted ? 'Converted for this device' : 'Original file, no conversion'}</dd></div>
+              </dl>
             </div>
             <button className={`fp-icon fp-more ${sleep || dataSaver ? 'on' : ''}`} onClick={() => setMoreOpen(true)} aria-label="More: sleep timer, sound quality, less data" aria-haspopup="dialog">
               <Icon name="more" size={20} />
@@ -781,6 +891,18 @@ function VolumeGlyph({ level }: { level: 0 | 2 }) {
       <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z" />
       {level === 2 && <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />}
     </svg>
+  );
+}
+
+/** A small mark beside the artist while a lossless or Hi-Res file plays: five sound bars in the tier's colour. */
+function LosslessMark({ hires }: { hires: boolean }) {
+  const label = hires ? 'Hi-Res lossless' : 'Lossless';
+  return (
+    <span className={`fp-lossless ${hires ? 't-hires' : 't-lossless'}`} role="img" aria-label={label} title={label}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+        <path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2" />
+      </svg>
+    </span>
   );
 }
 
