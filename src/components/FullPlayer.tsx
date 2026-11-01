@@ -577,6 +577,7 @@ export function FullPlayer({
             >
               <div className="fp-queue-head" {...qHead}>
                 <strong>Up next</strong>
+                <small className="fp-queue-count">· {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'}</small>
                 {shuffle && <span className="dim">Shuffled</span>}
                 {repeat !== 'off' && <span className="dim">{repeat === 'one' ? 'Repeating this track' : 'Repeating the queue'}</span>}
                 <span className="fp-gap" />
@@ -610,7 +611,7 @@ export function FullPlayer({
                   {editing && <span className="fp-row-grip-space" aria-hidden />}
                 </li>
                 {upNext.map(({ q, i }) => (
-                  <QueueRow key={q.qid} q={q} state="next" editing={editing} album={track.album} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} onMove={(by) => p.move(q.qid, i + by)} />
+                  <QueueRow key={q.qid} q={q} state="next" editing={editing} album={track.album} thumb={mode === 'rail' ? (q.dir === track.dir ? art : generatedCover(q.dir)) : undefined} rail={mode === 'rail'} onPlay={() => p.jump(i)} onRemove={() => p.remove(q.qid)} onMove={(by) => p.move(q.qid, i + by)} />
                 ))}
                 {upNext.length === 0 && <li className="fp-row empty">Nothing after this{repeat === 'all' ? ': the queue starts again' : ''}.</li>}
               </ol>
@@ -762,6 +763,9 @@ function Backdrop({ src }: { src: string | null }) {
 /** Whether the queue is a panel over the player (upright, or a phone held sideways) rather than a list beside the cover. */
 const queueIsPanel = () => !matchMedia('(min-aspect-ratio: 1/1) and (min-width: 560px)').matches || matchMedia('(max-height: 520px)').matches;
 
+/** The format as a short tag: "FLAC 16/44.1", "MP3 320". */
+const shortFormat = (q: QueueItem) => `${q.format.toUpperCase()}${q.bits ? ` ${q.bits}/${+(q.rate / 1000).toFixed(1)}` : q.kbps ? ` ${q.kbps}` : ''}`;
+
 /** How far a swipe pulls a row open: the width of its Remove button. */
 const SWIPE_OPEN = 88;
 
@@ -774,6 +778,8 @@ function QueueRow({
   state,
   editing,
   album,
+  thumb,
+  rail,
   onPlay,
   onRemove,
   onMove,
@@ -782,6 +788,9 @@ function QueueRow({
   state: 'played' | 'next';
   editing: boolean;
   album?: string | null;
+  /** Console: a small cover at the start of the row, and the file's format under the title. */
+  thumb?: string;
+  rail?: boolean;
   onPlay: () => void;
   onRemove: () => void;
   /** Called with how many places the track moved (negative: up). */
@@ -873,10 +882,11 @@ function QueueRow({
       </button>
       <div className="fp-row-slide" style={{ transform: slide ? `translateX(${slide}px)` : undefined, transition: live ? 'none' : undefined }}>
         <button className="fp-row-main" onClick={editing ? undefined : slide ? () => setSlide(0) : onPlay} tabIndex={editing ? -1 : 0}>
+          {thumb && <img className="fp-row-art" src={thumb} alt="" />}
           <span className="fp-row-n">{q.no || ''}</span>
           <span className="fp-row-t">
             <strong>{q.title}</strong>
-            <span>{[q.artist, q.album !== album ? q.album : null].filter(Boolean).join(' · ')}</span>
+            <span>{(rail ? [q.artist, shortFormat(q)] : [q.artist, q.album !== album ? q.album : null]).filter(Boolean).join(' · ')}</span>
           </span>
           <span className="fp-row-d">{fmtTime(q.seconds)}</span>
         </button>

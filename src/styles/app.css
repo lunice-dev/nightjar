@@ -2160,3 +2160,21 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 }
 .fp-hint { margin: 8px 0 0; font-size: 12px; color: var(--fp-ink-3); transition: opacity 300ms ease-out; }
 .full-player.hush.dozing .fp-hint { opacity: 0; }
+/* Console's queue as planned: "UP NEXT · 6 tracks", then one card per track with its cover, the format under the title and the length. */
+.fp-row-art, .fp-queue-count { display: none; }
+.full-player.rail .fp-queue-count { display: inline; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--fp-ink-3); margin-left: -6px; }
+.full-player.rail .fp-queue-head { border-bottom: 0; padding: 0 4px 8px; background: none; }
+.full-player.rail .fp-queue-head strong { font-size: 12px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fp-ink-3); }
+.full-player.rail .fp-queue ol { display: grid; gap: 5px; }
+.full-player.rail .fp-queue .fp-row.played, .full-player.rail .fp-queue .fp-row.now, .full-player.rail .fp-queue .fp-row.empty { display: none; }
+.full-player.rail .fp-queue .fp-row.next { border: 0; border-radius: 10px; background: rgb(255 255 255 / 0.06); }
+.full-player.rail .fp-queue .fp-row-main { grid-template-columns: 44px minmax(0, 1fr) auto; min-height: 56px; padding: 6px 10px; gap: 12px; }
+.full-player.rail .fp-queue .fp-row-n { display: none; }
+.full-player.rail .fp-queue .fp-row-art { display: block; width: 44px; height: 44px; border-radius: 6px; object-fit: cover; }
+.full-player.rail .fp-queue .fp-row-t strong { font-size: 14px; font-weight: 600; -webkit-line-clamp: 1; line-clamp: 1; }
+.full-player.rail .fp-queue .fp-row-t span { font-size: 12px; }
+
+/* Hush: the title is centred on the whole screen; the "…" button sits at the right edge without pushing it. */
+.full-player.hush .fp-titlerow { position: relative; justify-content: center; }
+.full-player.hush .fp-titlerow .fp-now { padding: 0 52px; }
+.full-player.hush .fp-more { position: absolute; right: 0; top: 0; }
