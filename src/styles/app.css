@@ -1645,6 +1645,7 @@ html.dx-nowill .full-player { will-change: auto !important; }
 html.dx-noclip .full-player { overflow: visible !important; }
 html.dx-noanim .full-player, html.dx-noanim .full-player *, html.dx-noanim .full-player *::before, html.dx-noanim .full-player *::after { animation: none !important; transition: none !important; }
 html.dx-nobrand .fp-brand-name { display: none; }
+html.dx-abs .full-player, html.dx-abs .fp-backdrop { position: absolute !important; }
 
 /* ---------- covers open the album ---------- */
 .cover-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: var(--r-md); -webkit-tap-highlight-color: transparent; }

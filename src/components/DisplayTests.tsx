@@ -10,6 +10,7 @@ export const DISPLAY_TESTS: { id: string; label: string; hint: string }[] = [
   { id: 'noclip', label: 'No clipping of the player', hint: 'The player no longer cuts off what is outside its edges.' },
   { id: 'noanim', label: 'No animations in the player', hint: 'Everything in the player is drawn without moving or fading.' },
   { id: 'nobrand', label: 'Hide the NIGHTJAR name', hint: 'Hides the name in the top bar.' },
+  { id: 'abs', label: 'Player not pinned to the screen', hint: 'Lays the player out like a normal page layer instead of a fixed one, so iOS treats its top edge differently.' },
 ];
 
 const read = (): string[] => {
