@@ -1,5 +1,6 @@
 # When the version in package.json changes on main, builds the Windows installer and publishes it as
 # release vX.Y.Z (the tag is made here). Nightjar's updater finds new versions in these releases.
+# The release notes are read from the changelog in About, by installer/release-notes.mjs.
 name: Release
 on:
   push:
