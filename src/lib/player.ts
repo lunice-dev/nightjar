@@ -465,6 +465,14 @@ export const fmtTime = (s: number) => {
   return `${m}:${String(r).padStart(2, '0')}`;
 };
 
+/** Which quality tier a track's file belongs to, the same tiers the search results use. */
+export function trackTier(t: Track): 'hires' | 'lossless' | 'high' | 'mid' | 'low' | 'unknown' {
+  const lossless = ['flac', 'wav', 'aif', 'aiff', 'alac'].includes(t.format) || (t.format === 'm4a' && t.bits > 0);
+  if (lossless) return t.bits > 16 || t.rate > 48000 ? 'hires' : 'lossless';
+  if (!t.kbps) return 'unknown';
+  return t.kbps >= 300 ? 'high' : t.kbps >= 192 ? 'mid' : 'low';
+}
+
 /** What the file on the computer is, in words: "FLAC · 24-bit / 96 kHz · lossless, hi-res". */
 export function sourceQuality(t: Track) {
   const fmt = t.format.toUpperCase();

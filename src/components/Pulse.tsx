@@ -76,6 +76,13 @@ export function Pulse() {
                 library.tiers[t] ? <i key={t} className={`t-${t}`} style={{ flexGrow: library.tiers[t] }} title={`${TIER_LABEL[t]}: ${library.tiers[t]}`} /> : null,
               )}
             </div>
+            <ul className="pulse-key" aria-hidden>
+              {SHOWN.filter((t) => library.tiers[t]).map((t) => (
+                <li key={t} className={`t-${t}`}>
+                  {TIER_LABEL[t]} {library.tiers[t]}
+                </li>
+              ))}
+            </ul>
           </>
         ) : (
           <p className="pulse-sub">Reading your shared folders…</p>

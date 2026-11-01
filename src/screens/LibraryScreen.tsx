@@ -268,7 +268,7 @@ function AlbumRow({ a }: { a: LibAlbum }) {
           {a.year && <span className="dim"> · {a.year}</span>}
         </button>
         <div className="lib-meta">
-          <span className={`lib-q ${a.format === 'Hi-Res' ? 'hires' : a.format === 'FLAC' ? 'lossless' : ''}`}>{quality(a)}</span>
+          <span className={`lib-q format ${a.format === 'Hi-Res' ? 't-hires' : a.format === 'FLAC' ? 't-lossless' : 't-unknown'}`}>{quality(a)}</span>
           <span>
             {a.tracks} tracks · {bytes(a.size)}
           </span>
@@ -617,7 +617,7 @@ function CopyRow({ a }: { a: LibAlbum }) {
       <div className="copy-main">
         <code>{a.rel}</code>
         <div className="lib-meta">
-          <span className={`lib-q ${a.format === 'Hi-Res' ? 'hires' : a.format === 'FLAC' ? 'lossless' : ''}`}>{quality(a)}</span>
+          <span className={`lib-q format ${a.format === 'Hi-Res' ? 't-hires' : a.format === 'FLAC' ? 't-lossless' : 't-unknown'}`}>{quality(a)}</span>
           <span>
             {a.tracks} tracks · {bytes(a.size)}
           </span>

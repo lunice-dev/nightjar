@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AlbumTracks, PlaylistFull, PlaylistTrack, Track } from '../api/library';
-import { fmtTime, toItems, toQueue, usePlayer, type QueueItem } from '../lib/player';
+import { fmtTime, toItems, toQueue, trackTier, usePlayer, type QueueItem } from '../lib/player';
 import { generatedCover, onlineCover } from '../lib/covers';
 import { useStore } from '../store';
 import { Icon } from './Icon';
@@ -174,7 +174,7 @@ export function AlbumView({ dir, onArt }: { dir: string; onArt: (url: string | n
             <span>
               {album.tracks.length} {album.tracks.length === 1 ? 'track' : 'tracks'} · {fmtLength(total)}
             </span>
-            {first && <span className="fp-chip"><span className="pq-chip">{qualityLabel(first)}</span></span>}
+            {first && <span className="fp-chip"><span className={`pq-chip t-${trackTier(first)}`}>{qualityLabel(first)}</span></span>}
           </p>
         </div>
         <div className="dv-actions">

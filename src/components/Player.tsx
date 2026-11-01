@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, usePlayer, type QueueItem } from '../lib/player';
+import { audioCtl, canSetVolume, fmtTime, sourceQuality, streamChoice, trackTier, usePlayer, type QueueItem } from '../lib/player';
 import { isIos } from '../api/remote';
 import { Icon } from './Icon';
 import { FullPlayer, morph, warmArt } from './FullPlayer';
@@ -333,7 +333,7 @@ function QualityChip() {
   if (!t) return null;
   const s = sending(t, dataSaver, converted);
   const src = sourceQuality(t);
-  return <span className={`pq-chip ${s.aac ? 'aac' : src.lossless ? 'lossless' : ''}`}>{s.aac ? `AAC ${s.aac}` : src.short}</span>;
+  return <span className={`pq-chip ${s.aac ? 'aac' : `t-${trackTier(t)}`}`}>{s.aac ? `AAC ${s.aac}` : src.short}</span>;
 }
 
 /**
