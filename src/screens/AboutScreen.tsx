@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { ReportProblem } from '../components/ReportProblem';
 import { UpdateSection } from '../components/Updates';
 import { Mark } from '../components/Mark';
+import { DisplayTests } from '../components/DisplayTests';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { shownChanges } from '../lib/changes';
@@ -256,6 +257,7 @@ export function AboutScreen() {
             ))}
           </ol>
         </section>
+        <DisplayTests />
         <p className="about-sig dim" style={{ whiteSpace: 'pre-line' }}>{screenNote()}</p>
         <p className="about-sig">coded by lunice</p>
       </div>

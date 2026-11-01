@@ -1638,6 +1638,14 @@ html.in-app, html.in-app body { overflow: hidden; }
 .fp-lyrics-btn.on { background: rgb(255 255 255 / 0.18); }
 @media (max-height: 520px) { .fp-ly-head, .fp-ly-foot, .fp-ly-bar { display: none; } .fp-ly-scroll li { font-size: 20px; } }
 
+/* ---------- display tests (About): each switch turns one part of the large player's drawing off ---------- */
+html.dx-nobg .fp-bgbox { display: none; }
+html.dx-notint .full-player { background: #232220 !important; }
+html.dx-nowill .full-player { will-change: auto !important; }
+html.dx-noclip .full-player { overflow: visible !important; }
+html.dx-noanim .full-player, html.dx-noanim .full-player *, html.dx-noanim .full-player *::before, html.dx-noanim .full-player *::after { animation: none !important; transition: none !important; }
+html.dx-nobrand .fp-brand-name { display: none; }
+
 /* ---------- covers open the album ---------- */
 .cover-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: var(--r-md); -webkit-tap-highlight-color: transparent; }
 .cover-open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
