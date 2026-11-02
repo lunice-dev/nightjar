@@ -1,7 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { AlbumTracks, LibAlbum } from '../api/library';
 import { onThisComputer } from '../api/remote';
 import { useCheckAll, verdictText } from '../lib/check';
+import { usePcShell } from '../lib/pcShell';
 import { usePlayer } from '../lib/player';
 import { bytes } from '../lib/quality';
 import { usePrefs, type SavedCheck } from '../prefs';
@@ -9,6 +11,7 @@ import { useStore } from '../store';
 import { AlbumPlay } from './AlbumPlay';
 import { Cover } from './Cover';
 import { Icon } from './Icon';
+import { addToPlaylist } from './Playlists';
 import { CheckButton, CheckResult, useQualityCheck } from './QualityCheck';
 
 export const tone = (sev: number) => (sev < 0 ? 'none' : sev >= 7 ? 'bad' : sev >= 3 ? 'warn' : 'ok');
@@ -68,7 +71,8 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).
  * Every album in the library. The top shows the library's shape (how much is Hi-Res, FLAC, MP3) and what needs
  * attention; below it a cover wall or a list, and on a wide window the chosen album's details sit beside it.
  */
-export function AlbumsView({ albums, onReview }: { albums: LibAlbum[]; onReview: () => void }) {
+export function AlbumsView({ albums, onReview, panelSlot }: { albums: LibAlbum[]; onReview: () => void; /** On a computer, where the chosen album's panel is docked (beside the page, not in it). */ panelSlot?: HTMLElement | null }) {
+  const docked = usePcShell() && !!panelSlot;
   const checks = usePrefs((s) => s.checks);
   const [filter, setFilter] = useState<Filter>('all');
   const [format, setFormat] = useState<string | null>(null);
@@ -174,7 +178,7 @@ export function AlbumsView({ albums, onReview }: { albums: LibAlbum[]; onReview:
       </div>
 
       <div className="lx-wrap">
-        <div className={`lx-split${current ? ' open' : ''}`}>
+        <div className={`lx-split${current && !docked ? ' open' : ''}`}>
           <div className="lx-main">
             {shown.length === 0 && <p className="hint-text">Nothing here.</p>}
             {view === 'covers' ? (
@@ -192,7 +196,7 @@ export function AlbumsView({ albums, onReview }: { albums: LibAlbum[]; onReview:
               <AlbumTable albums={shown} checkOf={checkOf} selected={selected} onSelect={select} sort={sort} onSort={setSort} />
             )}
           </div>
-          {current && <AlbumDetail key={current.dir} a={current} onClose={() => setSelected(null)} />}
+          {current && (docked ? createPortal(<AlbumDetail key={current.dir} a={current} docked onClose={() => setSelected(null)} />, panelSlot!) : <AlbumDetail key={current.dir} a={current} onClose={() => setSelected(null)} />)}
         </div>
       </div>
     </>
@@ -397,7 +401,7 @@ function AlbumTable({
 
 // ------------------------------------------------------------------ one album
 
-function AlbumDetail({ a, onClose }: { a: LibAlbum; onClose: () => void }) {
+function AlbumDetail({ a, onClose, docked = false }: { a: LibAlbum; onClose: () => void; docked?: boolean }) {
   const backend = useStore((s) => s.backend);
   const toast = useStore((s) => s.toast);
   const searchFor = useStore((s) => s.search);
@@ -417,6 +421,93 @@ function AlbumDetail({ a, onClose }: { a: LibAlbum; onClose: () => void }) {
     if (!(await backend?.files.reveal(a.dir))) toast('Couldn’t open Explorer. The folder may have been moved.', 'error');
   };
   const discs = new Set(tracks?.tracks.map((t) => t.disc)).size > 1;
+
+  // On a computer the album sits in a panel docked beside the page: the cover, what it is, what to do with it, and
+  // the tracks scrolling on their own. Nothing is boxed.
+  if (docked) {
+    const p = usePlayer.getState();
+    const trackList = (
+      <>
+        {tracks === undefined ? (
+          <p className="hint-text">
+            <span className="spinner" aria-hidden /> Reading the tracks…
+          </p>
+        ) : tracks && tracks.tracks.length > 0 ? (
+          <>
+            <h3 className="lx-panel-h">
+              {tracks.tracks.length} {tracks.tracks.length === 1 ? 'track' : 'tracks'}
+            </h3>
+            <ol className="lx-tracks">
+              {tracks.tracks.map((t, i) => (
+                <li key={t.path}>
+                  <button className={`lx-track${playing === t.path ? ' now' : ''}`} onClick={() => void p.playAlbum(a.dir, i)} title="Play from this track">
+                    <span className="lx-no">{discs && t.disc ? `${t.disc}.` : ''}{t.no || ''}</span>
+                    <span className="lx-track-title">{t.title}</span>
+                    <span className="dim">{t.seconds ? mmss(t.seconds) : ''}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <p className="hint-text">nightjar couldn’t read the tracks. The folder may have been moved.</p>
+        )}
+      </>
+    );
+    return (
+      <aside className="lx-panel" aria-label={`${a.album}, details`}>
+        <button className="lx-panel-close" onClick={onClose} title="Close (Esc)">
+          Close
+        </button>
+        <div className="lx-panel-head">
+          <Cover className="lx-panel-cover" dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} online={false} />
+          <h2>{a.album}</h2>
+          <p className="lx-panel-by">
+            {a.artist}
+            {a.year && <span className="dim"> · {a.year}</span>}
+          </p>
+          <p className="lx-panel-facts">
+            <span className={`lx-panel-q ${tierOf(a.format)}`}>{quality(a)}</span>
+            <span>
+              {a.tracks.toLocaleString()} {a.tracks === 1 ? 'track' : 'tracks'}
+              {a.size > 0 && <> · {bytes(a.size)}</>}
+            </span>
+            {a.kind === 'discs' && <span>several discs</span>}
+            {a.kind === 'box' && <span>box set</span>}
+            {a.status === 'move' && <span className="lx-flag">not tidy</span>}
+            {a.status === 'needsYear' && <span className="lx-flag">no year</span>}
+            {a.dupKey && <span className="lx-flag">copy</span>}
+          </p>
+          <div className="lx-panel-acts">
+            <button className="lx-go" onClick={() => void p.playAlbum(a.dir)}>
+              Play
+            </button>
+            <button className="lx-act" onClick={() => void p.addAlbum(a.dir, 'next')}>
+              Play next
+            </button>
+            <button className="lx-act" onClick={() => void p.addAlbum(a.dir, 'end')}>
+              Queue
+            </button>
+            <button className="lx-act" onClick={() => tracks?.tracks.length && addToPlaylist(tracks.tracks.map((t) => ({ ...t, dir: tracks.dir })))} disabled={!tracks?.tracks.length}>
+              Playlist
+            </button>
+            <CheckButton check={check} />
+            {onThisComputer && (
+              <button className="lx-act" onClick={reveal} title="Show in the folder">
+                Folder
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="lx-panel-scroll">
+          <CheckResult check={check} onFindAnother={() => searchFor(`${a.artist} ${a.album}`)} />
+          {!check.saved && !check.running && !check.error && <p className="hint-text">Not checked yet.</p>}
+          <code className="lx-path">{a.rel}</code>
+          {trackList}
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="lx-detail" aria-label={`${a.album}, details`}>
