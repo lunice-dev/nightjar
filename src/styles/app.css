@@ -2944,3 +2944,51 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   *::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--ink) 24%, transparent); background-clip: padding-box; }
   *::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--ink) 40%, transparent); background-clip: padding-box; }
 }
+
+/* Statistics */
+.hx-more { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.hx-more:hover { color: var(--ink); }
+.stats { display: flex; flex-direction: column; gap: 22px; }
+.st-ranges, .st-measures { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-ranges button, .st-measures button { padding: 6px 12px; border: 1px solid var(--rule); border-radius: 999px; background: none; color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.st-ranges button:hover, .st-measures button:hover { background: var(--hover); }
+.st-ranges button.on, .st-measures button.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.st-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.st-card { padding: 16px 18px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--rule); }
+.st-label, .st-sub { margin: 0; color: var(--ink-2); font-size: 13px; }
+.st-big { margin: 4px 0; font-family: var(--font-display); font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.st-sub .up { color: var(--t-high); font-weight: 600; }
+.st-sub .down { color: var(--danger); font-weight: 600; }
+.st-block { min-width: 0; }
+.st-block h2 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.st-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.st-head h2 { margin: 0; }
+.st-chart { padding: 14px 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--rule); }
+.st-chart svg { display: block; width: 100%; height: 180px; touch-action: pan-y; }
+.st-grid { stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.st-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.st-line.in, .dot.in { stroke: var(--t-lossless); background: var(--t-lossless); }
+.st-line.out, .dot.out { stroke: var(--moon); background: var(--moon); }
+.st-cursor { stroke: var(--ink-3); stroke-width: 1; }
+.st-readout, .st-legend { margin: 8px 0 0; color: var(--ink-2); font-size: 13px; }
+.st-readout b { color: var(--ink); font-weight: 600; margin-right: 8px; }
+.st-legend { margin-top: 8px; }
+.dot { display: inline-block; width: 8px; height: 8px; margin: 0 4px 0 8px; border-radius: 50%; }
+.st-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
+.st-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-bars li { position: relative; display: flex; justify-content: space-between; gap: 12px; padding: 7px 10px; border-radius: var(--r-sm); font-size: 13px; overflow: hidden; }
+.st-bar { position: absolute; inset: 0 auto 0 0; background: var(--hover); border-radius: var(--r-sm); }
+.st-name, .st-val { position: relative; min-width: 0; }
+.st-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-val { flex: none; color: var(--ink-2); }
+.st-types { list-style: none; margin: 0; padding: 0; }
+.st-types li { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 13px; }
+.st-types li span { color: var(--ink-2); }
+.st-heat { display: flex; flex-direction: column; gap: 3px; }
+.st-heat-row { display: grid; grid-template-columns: 30px repeat(24, 1fr); gap: 3px; align-items: center; font-size: 11px; color: var(--ink-3); }
+.st-heat-row i { aspect-ratio: 1; border-radius: 3px; background: var(--t-lossless); }
+.st-records { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.st-records dt { color: var(--ink-2); font-size: 13px; }
+.st-records dd { margin: 2px 0 0; font-weight: 600; }
+.st-records small { display: block; color: var(--ink-3); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-empty { color: var(--ink-2); font-size: 13px; }

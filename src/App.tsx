@@ -22,6 +22,7 @@ import { PeopleScreen } from './screens/PeopleScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { AboutScreen } from './screens/AboutScreen';
+import { StatsScreen } from './screens/StatsScreen';
 import { WishlistScreen } from './screens/WishlistScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { TransfersScreen } from './screens/TransfersScreen';
@@ -40,7 +41,7 @@ import { neighbourTab } from './lib/swipeNav';
 import { NowDock } from './components/NowDock';
 import { useDockOpenFor } from './lib/nowDock';
 
-const PANES: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'browse', 'settings', 'about'];
+const PANES: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'browse', 'settings', 'about', 'stats'];
 
 /** The window's width, kept up to date (the tab order differs on a phone). */
 function useWidth() {
@@ -343,6 +344,9 @@ function HeaderEnd({
               <ThemeSwitch theme={theme} onChange={onTheme} />
             </div>
             <hr />
+            <button role="menuitem" aria-current={route === 'stats' ? 'page' : undefined} onClick={then(() => openRoute('stats'))}>
+              <span>Statistics</span>
+            </button>
             <button role="menuitem" aria-current={route === 'about' ? 'page' : undefined} onClick={then(() => openRoute('about'))}>
               <span>About nightjar</span>
             </button>
@@ -555,6 +559,7 @@ function Shell() {
             {r === 'people' && <PeopleScreen />}
             {r === 'settings' && <SettingsScreen />}
             {r === 'about' && <AboutScreen />}
+            {r === 'stats' && <StatsScreen />}
           </div>
         ))}
         <NowDock />

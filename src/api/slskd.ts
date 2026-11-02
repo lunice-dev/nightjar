@@ -385,6 +385,11 @@ export class SlskdBackend implements Backend {
     return this.request<TransferUser[]>('GET', `/transfers/${direction}s`);
   }
 
+  async history(direction: Direction) {
+    const users = await this.request<TransferUser[]>('GET', `/transfers/${direction}s?includeRemoved=true`, undefined, 120_000);
+    return users.flatMap((u) => u.directories.flatMap((d) => d.files));
+  }
+
   async enqueue(username: string, files: EnqueueFile[], options?: EnqueueOptions) {
     if (options?.batchId || options?.destination) {
       // A batch lets every source of one album write into the same folder.

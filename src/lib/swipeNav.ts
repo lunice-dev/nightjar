@@ -14,7 +14,7 @@ const PHONE: Route[] = ['search', 'downloads', 'messages', 'people'];
 /** The tabs in the order you see them: the bottom bar on a phone, the top bar on bigger screens. */
 export const tabOrder = (width = window.innerWidth): Route[] => (width < 700 ? PHONE : ALL);
 /** Pages that sit under a tab: Browse under People, About under Settings. */
-export const tabOf = (r: Route): Route => (r === 'browse' ? 'people' : r === 'about' ? 'settings' : r);
+export const tabOf = (r: Route): Route => (r === 'browse' ? 'people' : r === 'about' || r === 'stats' ? 'settings' : r);
 
 /** The tab next to the one open, in the order on screen; null at either end. */
 export function neighbourTab(dir: -1 | 1, route = useStore.getState().route, width = window.innerWidth): Route | null {

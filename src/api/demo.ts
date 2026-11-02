@@ -401,6 +401,39 @@ export class DemoBackend implements Backend {
     peekTags: async () => null,
   };
 
+  async history(direction: Direction): Promise<Transfer[]> {
+    const want = direction === 'upload' ? 'Upload' : 'Download';
+    const r = rng(`history:${want}`);
+    const names = ['vinylmole', 'sonata_k', 'tape_hiss', 'lowtide', 'mara.d', 'oldcrate', 'nightbus', 'paperkite'];
+    const kinds = ['flac', 'flac', 'mp3', 'mp3', 'm4a', 'ogg'];
+    const now = Date.now();
+    const out: Transfer[] = [];
+    for (let i = 0; i < 900; i++) {
+      const at = now - Math.pow(r(), 1.6) * 120 * 86_400_000;
+      const ext = kinds[Math.floor(r() * kinds.length)];
+      const size = Math.round((ext === 'flac' ? 28e6 : 8e6) * (0.5 + r()));
+      const ok = r() > 0.12;
+      const speed = 150_000 + r() * 2_500_000;
+      const started = at + r() * 600_000;
+      out.push({
+        id: `h${i}`,
+        username: names[Math.floor(Math.pow(r(), 2) * names.length)],
+        direction: want,
+        filename: `Shared\\Artist ${i % 40}\\Album ${i % 17}\\${String((i % 12) + 1).padStart(2, '0')}. Track.${ext}`,
+        size,
+        state: ok ? 'Completed, Succeeded' : 'Completed, Errored',
+        bytesTransferred: ok ? size : Math.round(size * r()),
+        averageSpeed: ok ? speed : 0,
+        percentComplete: ok ? 100 : 40,
+        requestedAt: new Date(at).toISOString(),
+        enqueuedAt: new Date(at + 1000).toISOString(),
+        startedAt: new Date(started).toISOString(),
+        endedAt: new Date(started + (size / speed) * 1000).toISOString(),
+      } as unknown as Transfer);
+    }
+    return out;
+  }
+
   async transfers(direction: Direction): Promise<TransferUser[]> {
     this.tick();
     const want = direction === 'upload' ? 'Upload' : 'Download';

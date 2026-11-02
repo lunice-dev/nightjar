@@ -15,6 +15,7 @@ import type {
   Settings,
   SettingsPatch,
   ShareStatus,
+  Transfer,
   TransferUser,
   UserInfo,
   UserStatus,
@@ -56,6 +57,8 @@ export interface Backend {
   watchSearch(id: string, watch: SearchWatch): Unsubscribe;
 
   transfers(direction: Direction): Promise<TransferUser[]>;
+  /** Everything ever transferred in one direction, including entries removed from the list (for the statistics). */
+  history(direction: Direction): Promise<Transfer[]>;
   enqueue(username: string, files: EnqueueFile[], options?: EnqueueOptions): Promise<void>;
   /** Average speed each person actually sent you at, from slskd's own history (bytes/s). */
   measuredSpeeds(): Promise<Map<string, number>>;

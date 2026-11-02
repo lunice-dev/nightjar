@@ -5,7 +5,7 @@ import { searchRunning, type Conversation, type EnqueueFile, type Search, type S
 import { TIERS, type Tier } from './lib/quality';
 import { usePrefs } from './prefs';
 
-export type Route = 'search' | 'wishlist' | 'downloads' | 'library' | 'uploads' | 'messages' | 'rooms' | 'people' | 'browse' | 'settings' | 'about';
+export type Route = 'search' | 'wishlist' | 'downloads' | 'library' | 'uploads' | 'messages' | 'rooms' | 'people' | 'browse' | 'settings' | 'about' | 'stats';
 
 export interface SearchTab {
   search: Search;

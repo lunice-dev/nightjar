@@ -615,6 +615,9 @@ function Activity() {
           {share.now.people > 0 ? `To ${share.now.people} ${share.now.people === 1 ? 'person' : 'people'} · ` : ''}
           {bytes(share.week.bytes)} sent this week
         </p>
+        <button className="hx-more" onClick={() => go('stats')}>
+          All your statistics
+        </button>
       </div>
       {(unread > 0 || news > 0 || programs.length > 0) && (
         <div>
