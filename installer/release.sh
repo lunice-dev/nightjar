@@ -27,4 +27,4 @@ if [ -z "$NOTES" ]; then
   echo "No changelog entry for $VERSION in src/screens/AboutScreen.tsx: add one before releasing." >&2
   exit 1
 fi
-gh release create "v$VERSION" "$EXE" "$SUM" "$SIG" --repo "$REPO" --title "Nightjar $VERSION" --notes "$NOTES"
+gh release create "v$VERSION" "$EXE" "$SUM" "$SIG" --repo "$REPO" --title "nightjar $VERSION" --notes "$NOTES"
