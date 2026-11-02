@@ -628,7 +628,19 @@ function TransferRow({
     backend.library
       .tracks(diskDir)
       .then((a) => alive && setOnDisk(a ? a.tracks.map((t) => ({ path: t.path })) : []))
-      .catch(() => alive && setOnDisk(null));
+      .catch(() => {
+        if (!alive) return;
+        setOnDisk(null);
+        // The folder is gone: when the album was gathered into the engine's own folder (named after the other person's), follow it there.
+        const dl = where.downloadDir;
+        const remote = g.files[0]?.filename;
+        const guess = dl && remote ? joinPath(dl, basename(remote.slice(0, Math.max(0, remote.lastIndexOf('\\'))))) : undefined;
+        if (guess && guess.toLowerCase() !== diskDir.toLowerCase())
+          backend.library
+            .tracks(guess)
+            .then((a) => a?.tracks.length && alive && usePrefs.getState().albumMoved(diskDir, guess))
+            .catch(() => undefined);
+      });
     return () => {
       alive = false;
     };
@@ -643,7 +655,7 @@ function TransferRow({
     if (r == null) toast('Couldn’t reach the Nightjar app to delete files.', 'error');
     else toast(`Moved ${extraCopies.length} extra ${extraCopies.length === 1 ? 'copy' : 'copies'} to the Recycle Bin`, 'info');
     setDiskTick((n) => n + 1);
-  };
+  };
   // Parts of one album in several folders (a retry went to the engine's own folder): where most of it is, and the rest.
   const folders = useMemo(() => {
     const dl = where.downloadDir?.replace(/[\\/]+$/, '').toLowerCase();
@@ -662,7 +674,11 @@ function TransferRow({
     if (!folders.target) return;
     const r = await backend?.files.mergeFolders(folders.others, folders.target);
     if (!r) toast('This needs the newest nightjar app on your computer. Update it, then try again.', 'error');
-    else toast(`Gathered into one folder: ${r.moved} moved${r.duplicates ? `, ${r.duplicates} extra ${r.duplicates === 1 ? 'copy' : 'copies'} to the Recycle Bin` : ''}`, 'info');
+    else {
+      // Their files are in the one folder now: cards and plans follow.
+      folders.others.forEach((from) => folders.target && usePrefs.getState().albumMoved(from, folders.target));
+      toast(`Gathered into one folder:${r.moved} moved${r.duplicates ? `, ${r.duplicates} extra ${r.duplicates === 1 ? 'copy' : 'copies'} to the Recycle Bin` : ''}`, 'info');
+    }
     setDiskTick((n) => n + 1);
     rescanSoon(2000);
   };
