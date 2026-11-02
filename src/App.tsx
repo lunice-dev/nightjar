@@ -897,14 +897,15 @@ function LoadingScreen() {
     return () => clearTimeout(t);
   }, [play]);
   return (
-    <main className="connect loading-screen" aria-busy="true">
+    <main className={`connect loading-screen`} aria-busy="true">
+      {/* In the Windows app the logo was just shown (and faded out) on the opening screen: no second logo here. */}
       <h1 className="loading-title">
-        <Intro play={play} />
+        {!inApp && <Intro play={play} />}
       </h1>
       <p className={`loading-text ${slow ? 'in' : ''}`} role="status">
         {onThisComputer ? 'Starting nightjar…' : 'Connecting to your computer…'}
       </p>
-      <span className="signature loading-sig" aria-hidden>coded by lunice</span>
+      {!inApp && <span className="signature loading-sig" aria-hidden>coded by lunice</span>}
     </main>
   );
 }
