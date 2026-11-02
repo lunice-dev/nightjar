@@ -2418,16 +2418,30 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .hx-strip-touch { grid-auto-flow: column; grid-auto-columns: calc((100% - var(--cols, 4) * 18px) / (var(--cols, 4) + 0.35)); grid-template-columns: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
 .hx-strip-touch::-webkit-scrollbar { display: none; }
 .hx-strip-touch > .hx-tile { scroll-snap-align: start; }
-.hx-tile { display: grid; gap: 8px; align-content: start; min-width: 0; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.hx-tile { display: grid; gap: 8px; align-content: start; min-width: 0; color: inherit; text-align: left; }
+.hx-art-btn { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.hx-cap { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px; }
+.hx-cap-main { display: grid; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.hx-more { display: grid; place-items: center; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--ink-3); cursor: pointer; opacity: 0; transition: opacity 0.15s, background-color 0.12s, color 0.12s; }
+.hx-tile:hover .hx-more, .hx-more:focus-visible, .hx-more[aria-expanded='true'] { opacity: 1; }
+@media (hover: none) { .hx-more { opacity: 1; } }
+@media (hover: hover) { .hx-more:hover { background: var(--hover); color: var(--ink); } }
+.hx-more:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hx-menu { position: fixed; right: auto; top: auto; z-index: 60; min-width: 180px; }
+.hx-menu.end { transform: translateX(-100%); transform-origin: top right; }
+.hx-newrow { display: flex; align-items: center; gap: 12px; margin: -4px 0 16px; }
+.hx-newrow .input { height: 36px; width: min(320px, 100%); }
+.hx-newrow .hx-link { margin-left: 0; }
+.hx-empty { margin: 0; color: var(--ink-3); font-size: 14px; }
 .hx-art { position: relative; display: block; border-radius: 12px; overflow: hidden; background: var(--sunken); box-shadow: 0 0 0 1px var(--rule); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s; }
 .hx-art::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--tier, transparent); pointer-events: none; }
 .hx-cover { display: block; width: 100%; border-radius: 0; }
-.hx-tile:focus-visible .hx-art { outline: 2px solid var(--focus); outline-offset: 3px; }
-@media (hover: hover) { .hx-tile:hover .hx-art { transform: translateY(-3px); box-shadow: 0 0 0 1px var(--rule-strong), 0 16px 30px -16px rgb(0 0 0 / 0.6); } }
+.hx-art-btn:focus-visible .hx-art { outline: 2px solid var(--focus); outline-offset: 3px; }
+@media (hover: hover) { .hx-art-btn:hover .hx-art { transform: translateY(-3px); box-shadow: 0 0 0 1px var(--rule-strong), 0 16px 30px -16px rgb(0 0 0 / 0.6); } }
 .hx-prog { display: block; height: 3px; margin-top: -2px; border-radius: 3px; background: var(--rule-strong); overflow: hidden; }
 .hx-prog i { display: block; height: 100%; background: var(--t-lossless); }
 .hx-name { font-weight: 600; font-size: 14.5px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.hx-sub { margin-top: -4px; color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.hx-sub { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .hx-sub.warn { color: var(--t-mid); }
 .hx-sub.bad { color: var(--t-low); }
 
@@ -2663,3 +2677,42 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .hdr-menu .hdr-credit-menu { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hdr-menu { animation: none; } }
+/* ---------- the small player: one row on phones and tablets, a bottom bar with three zones on a computer ---------- */
+.player-l, .player-m, .player-r, .player-sk, .player-q-inline { display: contents; }
+.player-q, .player-n, .player-vol, .player-stop, .player-t { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  :root .shell > .player { margin: 0; padding: 0 var(--hx-edge); border-radius: 0; overflow: visible; background: color-mix(in srgb, var(--paper) 62%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.3); backdrop-filter: blur(22px) saturate(1.3); box-shadow: inset 0 1px 0 var(--rule); }
+  .shell > .player .player-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 640px) minmax(0, 1fr); align-items: center; gap: 28px; height: 84px; padding: 0; }
+  .player-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .shell > .player .player-art { width: 56px; height: 56px; border-radius: 10px; box-shadow: 0 0 0 1px var(--rule), 0 10px 22px -12px rgb(0 0 0 / 0.7); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .shell > .player .player-art:hover { transform: scale(1.04); }
+  .shell > .player .player-text { gap: 2px; }
+  .shell > .player .player-text strong { font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 1.2; letter-spacing: -0.01em; }
+  .shell > .player .player-text span { color: var(--ink-2); }
+  .shell > .player .player-q .pq-chip { padding: 0; background: none; font-size: 12px; font-weight: 600; color: var(--tier-ink, var(--ink-2)); }
+  .player-m { display: grid; gap: 4px; justify-items: center; min-width: 0; }
+  .shell > .player .player-controls { gap: 8px; }
+  .shell > .player .player-btn { width: 34px; height: 34px; color: var(--ink-2); transition: background-color 0.12s, color 0.12s, transform 0.1s; }
+  .shell > .player .player-btn:active:not(:disabled) { transform: scale(0.94); }
+  .shell > .player .player-btn.main { width: 40px; height: 40px; background: var(--ink); color: var(--on-ink); }
+  .shell > .player .player-btn.hide-narrow { display: grid; }
+  .player-sk { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .player-t { display: block; }
+  .shell > .player .player-seek-wrap { position: relative; left: auto; right: auto; bottom: auto; height: 18px; display: flex; align-items: center; }
+  .shell > .player .player-seek { position: relative; bottom: auto; height: 3px; border-radius: 3px; background: linear-gradient(to right, var(--ink) var(--p, 0%), var(--rule-strong) var(--p, 0%)); }
+  .player-r { display: flex; justify-content: flex-end; align-items: center; gap: 22px; min-width: 0; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
+  .shell > .player .player-time, .shell > .player .player-btn.close, .player-q-inline { display: none; }
+  .player-stop { display: inline; padding: 2px 0; border: 0; background: none; color: var(--ink-3); font: inherit; cursor: pointer; transition: color 0.15s; }
+  .player-stop:hover { color: var(--ink); }
+  .player-vol { align-items: center; gap: 9px; }
+  .player-vol-range { -webkit-appearance: none; appearance: none; width: 92px; height: 3px; margin: 0; border-radius: 3px; background: linear-gradient(to right, var(--ink-2) var(--p, 0%), var(--rule-strong) var(--p, 0%)); cursor: pointer; }
+  .player-vol-range::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: var(--ink); opacity: 0; transition: opacity 0.15s; }
+  .player-vol-range:hover::-webkit-slider-thumb, .player-vol-range:focus-visible::-webkit-slider-thumb { opacity: 1; }
+}
+/* narrower than this, the quality stays beside the artist and the details thin out */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (max-width: 1249px) {
+  .shell > .player .player-bar { gap: 18px; }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 1250px) { .player-q, .player-n { display: block; } }
+@media (hover: hover) and (pointer: fine) and (min-width: 1500px) { .player-vol { display: inline-flex; } }
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (prefers-reduced-transparency: reduce) { :root .shell > .player { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }

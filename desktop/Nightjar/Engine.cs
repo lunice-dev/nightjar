@@ -149,6 +149,7 @@ namespace Nightjar
                     Status?.Invoke("Opening…");
                     Ready?.Invoke();
                     OpenPortInBackground();
+                    LibraryReview.WarmUp();
                     return;
                 }
                 await Task.Delay(700).ConfigureAwait(false);

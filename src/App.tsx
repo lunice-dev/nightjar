@@ -54,13 +54,13 @@ import type { IconName } from './components/Icon';
 
 const NAV: { route: Route; label: string; short?: string; icon: IconName; primary?: boolean }[] = [
   { route: 'search', label: 'Search', icon: 'search', primary: true },
-  { route: 'wishlist', label: 'Wishlist', icon: 'star' },
   { route: 'downloads', label: 'Downloads', icon: 'download', primary: true },
-  { route: 'library', label: 'Library', icon: 'folder' },
   { route: 'uploads', label: 'Uploads', icon: 'upload' },
-  { route: 'messages', label: 'Messages', icon: 'chat', primary: true },
+  { route: 'library', label: 'Library', icon: 'folder' },
   { route: 'rooms', label: 'Rooms', icon: 'rooms' },
+  { route: 'messages', label: 'Messages', icon: 'chat', primary: true },
   { route: 'people', label: 'People', icon: 'person', primary: true },
+  { route: 'wishlist', label: 'Wishlist', icon: 'star' },
   { route: 'settings', label: 'Settings', icon: 'settings' },
 ];
 

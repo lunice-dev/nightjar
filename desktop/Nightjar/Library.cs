@@ -151,8 +151,17 @@ namespace Nightjar
 
         // ---------------------------------------------------------------- the scan
 
+        /// <summary>A first look at the library as Nightjar starts, so it is ready by the time a page asks for it.</summary>
+        public static void WarmUp()
+        {
+            try { if (!string.IsNullOrEmpty(AppSettings.LibraryRoot) && last == null) StartScan(); } catch { }
+        }
+
         public static ScanJob StartScan()
         {
+            // A look that is already under way (the warm-up at start, or another page asking at the same moment) is the answer.
+            var running = Scans.Values.FirstOrDefault(j => !j.finished && j.root == AppSettings.LibraryRoot && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - j.at < 30000);
+            if (running != null) return running;
             var job = new ScanJob { id = Guid.NewGuid().ToString("N"), root = AppSettings.LibraryRoot, at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
             Scans[job.id] = job;
             Task.Run(() => RunScan(job));
