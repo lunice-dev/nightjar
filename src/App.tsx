@@ -31,6 +31,7 @@ import { ProfileCard } from './components/ProfileCard';
 import { useFriendsSync } from './lib/friends';
 import { backfillFakes } from './lib/fakes';
 import { sharePrefsThrough, usePrefs } from './prefs';
+import { planSyncThrough } from './lib/planSync';
 import { HELPER } from './api/slskd';
 import { onThisComputer, remoteApi } from './api/remote';
 import { Player } from './components/Player';
@@ -111,6 +112,8 @@ export function App() {
       }
       sharePrefsThrough(HELPER);
       await usePrefs.persist.rehydrate();
+      // After the saved copy is in, or an old copy of the plans could be sent over the computer's.
+      planSyncThrough(HELPER);
       // A new install has no Soulseek account yet: the setup steps come first.
       if (r.phase === 'ready') {
         const acct = await r.backend.account().catch(() => ({ username: 'unknown', hasPassword: true }));

@@ -33,6 +33,11 @@ const localSet = (k: string, v: string) => {
  */
 let sharedAt: string | null = null;
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
+/** Set while the computer's Nightjar app keeps the plans (see planSync): the shared copy then leaves them alone. */
+let plansElsewhere = false;
+export const keepPlansElsewhere = (v: boolean) => {
+  plansElsewhere = v;
+};
 export function sharePrefsThrough(helper: string | null) {
   sharedAt = helper;
 }
@@ -77,6 +82,7 @@ export function mergeShared(mine: string, theirs: string | null): string {
   if (!a.state || !b.state || a.version !== b.version) return mine;
   let changed = false;
   for (const [field, rule] of Object.entries(MERGED)) {
+    if (field === 'plans' && plansElsewhere) continue;
     const ours = a.state[field];
     const other = b.state[field];
     if (!Array.isArray(ours) || !Array.isArray(other)) continue;

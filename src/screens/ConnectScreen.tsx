@@ -6,6 +6,7 @@ import { asDevice, deviceToken, deviceName, helperAnswers, isIos, pair, standalo
 import { useStore } from '../store';
 import { Mark } from '../components/Mark';
 import { sharePrefsThrough } from '../prefs';
+import { planSyncThrough } from '../lib/planSync';
 
 /**
  * Shown when no engine is reachable, or when slskd asks for a login.
@@ -46,6 +47,7 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
   };
 
   const demo = () => {
+    planSyncThrough(null);
     sharePrefsThrough(null); // sample data never touches your real preferences
     setBackend(new DemoBackend(), 'ready');
     ready('demo');

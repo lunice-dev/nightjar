@@ -42,6 +42,49 @@ namespace Nightjar
         DateTime leaseUntil;
         readonly object leaseGate = new object();
 
+        // Downloads in progress ("plans"): one copy, kept here, that every window and device reads and changes. Each
+        // plan is kept as it came (opaque JSON); the revision lets a window ask "anything new?" for a few bytes.
+        static readonly object plansGate = new object();
+        static List<object> plansList;
+        static int plansRev;
+        static readonly Dictionary<string, int> plansRevOf = new Dictionary<string, int>();
+        static string PlansPath { get { return Path.Combine(Paths.Data, "plans.json"); } }
+        static string PlanId(object p)
+        {
+            var d = p as Dictionary<string, object>;
+            return d != null && d.ContainsKey("id") ? Convert.ToString(d["id"]) : null;
+        }
+        static void LoadPlans()
+        {
+            if (plansList != null) return;
+            plansList = new List<object>();
+            try
+            {
+                var d = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(PlansPath));
+                plansRev = Convert.ToInt32(d["rev"]);
+                foreach (var p in (System.Collections.IEnumerable)d["plans"]) { plansList.Add(p); plansRevOf[PlanId(p)] = plansRev; }
+            }
+            catch { }
+        }
+        // What a window needs to catch up from revision since: every id in order, and the plans that changed after it.
+        static object PlansAnswer(int since)
+        {
+            if (since < 0 || since > plansRev) return new { rev = plansRev, full = true, plans = plansList };
+            var ids = plansList.Select(PlanId).ToList();
+            var changed = plansList.Where(p => { int r; return plansRevOf.TryGetValue(PlanId(p), out r) && r > since; }).ToList();
+            return new { rev = plansRev, ids = ids, plans = changed };
+        }
+        static void SavePlans()
+        {
+            try
+            {
+                var tmp = PlansPath + ".tmp";
+                File.WriteAllText(tmp, Json.Serialize(new { rev = plansRev, plans = plansList }), new UTF8Encoding(false));
+                if (File.Exists(PlansPath)) File.Replace(tmp, PlansPath, null); else File.Move(tmp, PlansPath);
+            }
+            catch { }
+        }
+
         public bool Listening { get; private set; }
 
         public Helper(Func<Func<object>, object> onUi, Action quit, Action show, Action restart)
@@ -1073,6 +1116,48 @@ namespace Nightjar
                         string text = null;
                         try { text = File.ReadAllText(Paths.Prefs); } catch { }
                         Reply(stream, 200, origin, new { prefs = text });
+                    }
+                    return;
+                case "/plans":
+                    lock (plansGate)
+                    {
+                        LoadPlans();
+                        var changed = false;
+                        var since = -1;
+                        int parsed;
+                        if (int.TryParse(req.Q("rev"), out parsed)) since = parsed;
+                        if (req.Method == "POST")
+                        {
+                            var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                            if (body.ContainsKey("rev")) since = Convert.ToInt32(body["rev"]);
+                            var next = plansRev + 1;
+                            var ops = body.ContainsKey("ops") ? body["ops"] as System.Collections.IEnumerable : null;
+                            if (ops != null)
+                                foreach (var o in ops)
+                                {
+                                    var op = o as Dictionary<string, object>;
+                                    if (op == null || !op.ContainsKey("op")) continue;
+                                    var kind = Convert.ToString(op["op"]);
+                                    if (kind == "put" && op.ContainsKey("plan"))
+                                    {
+                                        var id = PlanId(op["plan"]);
+                                        if (id == null) continue;
+                                        var at = plansList.FindIndex(x => PlanId(x) == id);
+                                        if (at >= 0) plansList[at] = op["plan"]; else plansList.Insert(0, op["plan"]);
+                                        plansRevOf[id] = next;
+                                        changed = true;
+                                    }
+                                    else if (kind == "del" && op.ContainsKey("id"))
+                                    {
+                                        var id = Convert.ToString(op["id"]);
+                                        if (plansList.RemoveAll(x => PlanId(x) == id) > 0) { plansRevOf.Remove(id); changed = true; }
+                                    }
+                                }
+                            if (plansList.Count > 100) { foreach (var x in plansList.Skip(100)) plansRevOf.Remove(PlanId(x)); plansList.RemoveRange(100, plansList.Count - 100); }
+                            if (changed) { plansRev = next; SavePlans(); }
+                        }
+                        if (req.Method != "POST" && since == plansRev) Reply(stream, 200, origin, new { rev = plansRev, same = true });
+                        else Reply(stream, 200, origin, PlansAnswer(since));
                     }
                     return;
                 case "/lease":
