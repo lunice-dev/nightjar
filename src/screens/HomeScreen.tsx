@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePcShell } from '../lib/pcShell';
+import { NowPanel } from '../components/NowPanel';
 import type { LibAlbum } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
@@ -10,7 +11,7 @@ import { useBlocked } from '../lib/blocking';
 import { verdictText } from '../lib/check';
 import { useSuspects } from '../lib/guard';
 import { useLibraryReview } from '../lib/libraryReview';
-import { audioCtl, fmtTime, sourceQuality, toQueue, trackTier, usePlayer } from '../lib/player';
+import { toQueue, usePlayer } from '../lib/player';
 import { bytes, normalise, speed } from '../lib/quality';
 import { groupDownloads } from '../lib/transfers';
 import { uploadStats } from '../lib/uploadStats';
@@ -38,159 +39,40 @@ const shuffled = <T,>(a: T[]) => {
  * takes its colour from the cover of whatever is playing.
  */
 export function Home() {
-  // The Now column has the controls, so the player bar at the bottom steps aside while Home is open.
+  // The page's search box in the top bar steps aside while Home is open (Home has its own).
   // (Every screen stays mounted behind the one you see, so this goes by the route, not by Home being mounted.)
-  // On a phone the Now card scrolls away with the page: while it's out of view the player bar comes back, so the music
-  // can still be paused or skipped.
   const route = useStore((s) => s.route);
   const pc = usePcShell();
   useEffect(() => {
-    if (route !== 'search') return;
+    if (route !== 'search' || !pc) return;
     const root = document.documentElement.classList;
-    const now = document.querySelector('.tab-pane[data-route="search"] .hx-now');
-    if (pc || !now || !('IntersectionObserver' in window)) {
-      root.add('on-home');
-      return () => root.remove('on-home');
-    }
-    const io = new IntersectionObserver(([e]) => root.toggle('on-home', e.isIntersecting), { threshold: 0.15 });
-    io.observe(now);
-    return () => {
-      io.disconnect();
-      root.remove('on-home');
-    };
+    root.add('on-home');
+    return () => root.remove('on-home');
   }, [route, pc]);
 
+  // On a computer, what's playing is the Now panel docked at the right of the window (every screen has it); the
+  // day's activity takes the left. On a phone or tablet it's the card at the top of the page.
   return (
     <div className="hx">
       <div className="hx-scroll">
         <div className="hx-page">
-          <Now />
-          <Middle />
-          <Activity />
+          {pc ? (
+            <>
+              <Activity />
+              <Middle />
+            </>
+          ) : (
+            <>
+              <NowPanel variant="card" />
+              <Middle />
+              <Activity />
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
-// ------------------------------------------------------------------ left: now playing
-
-function useProgress(fallback: number) {
-  const [p, setP] = useState({ t: 0, d: 0 });
-  useEffect(() => {
-    const tick = () => {
-      const el = audioCtl.el;
-      if (!el) return;
-      const t = Math.floor(el.currentTime || 0);
-      const d = Math.floor(Number.isFinite(el.duration) ? el.duration : 0);
-      setP((o) => (o.t === t && o.d === d ? o : { t, d }));
-    };
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, []);
-  return { t: p.t, d: p.d || Math.round(fallback) };
-}
-
-function Now() {
-  const queue = usePlayer((s) => s.queue);
-  const index = usePlayer((s) => s.index);
-  const playing = usePlayer((s) => s.playing);
-  const t = queue[index];
-  const { t: pos, d } = useProgress(t?.seconds ?? 0);
-  const repeat = usePlayer((s) => s.repeat);
-  // While the position handle is being dragged it shows where it is; the music jumps when it's let go.
-  const [drag, setDrag] = useState<number | null>(null);
-  const seekTo = () => {
-    if (drag !== null && audioCtl.el) audioCtl.el.currentTime = drag;
-    setDrag(null);
-  };
-  if (!t) {
-    return (
-      <aside className="hx-now idle" aria-label="Now playing">
-        <div className="hx-now-art empty">
-          <span>Nothing playing</span>
-        </div>
-        <div className="hx-now-text">
-          <h1 className="hx-now-title">Pick an album</h1>
-          <p className="hx-now-by">It plays here, and the page takes its colours from the cover.</p>
-        </div>
-      </aside>
-    );
-  }
-  const q = sourceQuality(t);
-  const next = queue.slice(index + 1, index + 4);
-  return (
-    <aside className="hx-now" aria-label="Now playing">
-      <button className="hx-now-art" onClick={() => usePlayer.getState().setExpanded(true)} aria-label="Open the player">
-        <Cover className="hx-now-cover" dir={t.dir} artist={t.artist ?? undefined} album={t.album ?? undefined} seed={t.dir} />
-      </button>
-      <div className="hx-now-text">
-        <h1 className="hx-now-title" title={t.title}>
-          {t.title}
-        </h1>
-        <p className="hx-now-by">{[t.artist, t.album].filter(Boolean).join(' · ')}</p>
-      </div>
-      <div className="hx-now-meta">
-        <span className={`hx-q t-${trackTier(t)}`}>{q.short}</span>
-        <span className="dim">
-          Track {index + 1} of {queue.length}
-        </span>
-        {!playing && <span className="dim">Paused</span>}
-        <button className="hx-stop" onClick={() => usePlayer.getState().stop()} title="Stop and clear the queue">
-          Stop
-        </button>
-      </div>
-      <div className="hx-seekbox">
-        <input
-          className="hx-seek"
-          type="range"
-          min={0}
-          max={d || 0}
-          step={1}
-          value={Math.min(drag ?? pos, d || 0)}
-          aria-label="Position"
-          style={{ ['--p' as string]: `${d ? Math.min(100, ((drag ?? pos) / d) * 100) : 0}%` }}
-          onChange={(e) => setDrag(Number(e.target.value))}
-          onPointerUp={seekTo}
-          onKeyUp={seekTo}
-          onBlur={seekTo}
-        />
-        <div className="hx-times">
-          <span>{fmtTime(drag ?? pos)}</span>
-          <span>{d ? fmtTime(d) : ''}</span>
-        </div>
-      </div>
-      <div className="hx-ctl">
-        <button onClick={() => usePlayer.getState().prev()} aria-label="Previous track" title="Previous track">
-          <Icon name="prev" size={20} />
-        </button>
-        <button className="go" onClick={() => usePlayer.getState().toggle()} aria-label={playing ? 'Pause' : 'Play'}>
-          <Icon name={playing ? 'pause' : 'play'} size={22} />
-        </button>
-        <button onClick={() => usePlayer.getState().next()} disabled={index + 1 >= queue.length && repeat !== 'all'} aria-label="Next track" title="Next track">
-          <Icon name="next" size={20} />
-        </button>
-      </div>
-      {next.length > 0 && (
-        <div className="hx-nextbox">
-          <h2 className="hx-h small">Up next</h2>
-          <ul className="hx-next">
-            {next.map((n, i) => (
-              <li key={n.qid}>
-                <button onClick={() => usePlayer.getState().jump(index + 1 + i)} title="Play this one now">
-                  <span>{n.no || ''}</span>
-                  <b>{n.title}</b>
-                  <span>{n.seconds ? fmtTime(n.seconds) : ''}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </aside>
-  );
-}
-
 // ------------------------------------------------------------------ middle
 
 function Middle() {

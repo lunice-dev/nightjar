@@ -685,7 +685,7 @@ export function FullPlayer({
             {...sheetTouch}
           >
             <span className="fp-sheet-grab" aria-hidden />
-            {hush && (
+            {(hush || mode === 'rail') && (
               <>
                 <button className="fp-sheet-row" role="switch" aria-checked={shuffle} onClick={() => p.setShuffle(!shuffle)}>
                   <span>Shuffle</span>

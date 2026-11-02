@@ -35,6 +35,7 @@ import { FolderBrowserHost } from './components/FolderBrowser';
 import { PlaylistPicker } from './components/Playlists';
 import { useStore, type Route } from './store';
 import { neighbourTab } from './lib/swipeNav';
+import { NowDock } from './components/NowDock';
 
 const PANES: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'browse', 'settings', 'about'];
 
@@ -546,6 +547,7 @@ function Shell() {
             {r === 'about' && <AboutScreen />}
           </div>
         ))}
+        <NowDock />
       </div>
       <Player />
 
