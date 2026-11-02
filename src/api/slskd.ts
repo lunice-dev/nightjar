@@ -792,6 +792,19 @@ export class SlskdBackend implements Backend {
         return null;
       }
     },
+    mergeFolders: async (from, to) => {
+      try {
+        const res = await fetch(`${HELPER}/merge-folders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from, to }),
+          signal: AbortSignal.timeout(120_000),
+        });
+        return res.ok ? ((await res.json()) as { moved: number; duplicates: number; renamed: number }) : null;
+      } catch {
+        return null;
+      }
+    },
     peekTags: async (user, file, destination) => {
       try {
         const res = await fetch(`${HELPER}/peek-tags?user=${enc(user)}&file=${enc(file)}&dest=${enc(destination)}`, { signal: AbortSignal.timeout(15_000) });

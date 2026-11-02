@@ -397,6 +397,7 @@ export class DemoBackend implements Backend {
     },
     lease: async () => true,
     trashDownload: async (what) => what.folders.length + what.files.length + what.partials.length,
+    mergeFolders: async () => ({ moved: 0, duplicates: 0, renamed: 0 }),
     peekTags: async () => null,
   };
 

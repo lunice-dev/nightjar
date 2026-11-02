@@ -618,7 +618,7 @@ function TransferRow({
       : [];
   // The list forgets files that finished when "Clear finished" is pressed, even while the rest of the album is still
   // coming. So "not in the list" doesn't mean "not downloaded": look in the album's folder before calling it missing.
-  const diskDir = direction === 'download' && g.plan ? groupCoverDir(g, local, where.downloadDir) : undefined;
+  const diskDir = direction === 'download' ? (g.plan ? groupCoverDir(g, local, where.downloadDir) : saved.length ? dirOf(saved[0]) : undefined) : undefined;
   const [onDisk, setOnDisk] = useState<{ path: string }[] | null | undefined>(undefined);
   const [diskTick, setDiskTick] = useState(0);
   const checkDisk = notListed.length > 0 || g.phase === 'done';
@@ -643,6 +643,28 @@ function TransferRow({
     if (r == null) toast('Couldn’t reach the Nightjar app to delete files.', 'error');
     else toast(`Moved ${extraCopies.length} extra ${extraCopies.length === 1 ? 'copy' : 'copies'} to the Recycle Bin`, 'info');
     setDiskTick((n) => n + 1);
+  };
+  // Parts of one album in several folders (a retry went to the engine's own folder): where most of it is, and the rest.
+  const folders = useMemo(() => {
+    const dl = where.downloadDir?.replace(/[\\/]+$/, '').toLowerCase();
+    const count = new Map<string, { dir: string; n: number }>();
+    for (const p of saved) {
+      const dir = dirOf(p);
+      if (!dl || !dir.toLowerCase().startsWith(dl + '\\')) continue;
+      const e = count.get(dir.toLowerCase()) ?? { dir, n: 0 };
+      e.n++;
+      count.set(dir.toLowerCase(), e);
+    }
+    const list = [...count.values()].sort((a, b) => b.n - a.n);
+    return { target: list[0]?.dir, others: list.slice(1).map((e) => e.dir), all: list.length };
+  }, [saved, where.downloadDir]);
+  const gather = async () => {
+    if (!folders.target) return;
+    const r = await backend?.files.mergeFolders(folders.others, folders.target);
+    if (!r) toast('This needs the newest nightjar app on your computer. Update it, then try again.', 'error');
+    else toast(`Gathered into one folder: ${r.moved} moved${r.duplicates ? `, ${r.duplicates} extra ${r.duplicates === 1 ? 'copy' : 'copies'} to the Recycle Bin` : ''}`, 'info');
+    setDiskTick((n) => n + 1);
+    rescanSoon(2000);
   };
   const audioDone = g.files.filter((f) => AUDIO_EXT.has(extOf(f.filename)) && phaseOf(f.state) === 'done').length;
   // The copy itself is short: the person shares only part of the album.
@@ -971,6 +993,14 @@ function TransferRow({
           <b>Incomplete:</b> {onDisk ? planTracks.length - missing.length : audioDone} of {planTracks.length} tracks arrived.{' '}
           <button className="link" onClick={getMissing}>
             Get the {missing.length} missing {missing.length === 1 ? 'track' : 'tracks'}
+          </button>
+        </p>
+      )}
+      {folders.all > 1 && unfinished.length === 0 && !inLibrary && (
+        <p className="incomplete-line">
+          <b>This album is in {folders.all} folders.</b> Retried tracks went into the engine’s own folder.{' '}
+          <button className="link" onClick={gather}>
+            Put it all in one folder
           </button>
         </p>
       )}

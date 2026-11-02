@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { uuid } from './lib/uuid';
 import type { Backend, Direction, Unsubscribe } from './api/backend';
 import { searchRunning, type Conversation, type EnqueueFile, type Search, type SearchResponse, type TransferUser } from './api/types';
 import { TIERS, type Tier } from './lib/quality';
@@ -264,10 +265,27 @@ export const useStore = create<State>((set, get) => ({
   async enqueue(username, files, label) {
     const { backend } = get();
     if (!backend || files.length === 0) return;
-    const keys = files.map((f) => `${username}\u0000${f.filename}`);
+    // More of an album that has a folder already goes into that folder (not the engine's own, named after the other
+    // person's), and what is already in it isn't asked for a second time.
+    let destination: string | undefined;
+    let fresh = files;
+    try {
+      const { existingDestination, alreadyThere } = await import('./lib/folderDest');
+      destination = await existingDestination(username, files[0].filename);
+      const there = await alreadyThere(username, files, destination);
+      if (there.length) {
+        const skip = new Set(there.map((f) => f.filename));
+        fresh = files.filter((f) => !skip.has(f.filename));
+        get().toast(fresh.length ? `${there.length} of ${files.length} already in the folder, left out` : `${label} is already in the folder`);
+      }
+    } catch {
+      /* nothing known about the folder: the plain request */
+    }
+    if (fresh.length === 0) return;
+    const keys = fresh.map((f) => `${username}\u0000${f.filename}`);
     set((s) => ({ queuedKeys: new Set([...s.queuedKeys, ...keys]) }));
     try {
-      await backend.enqueue(username, files);
+      await backend.enqueue(username, fresh, destination ? { batchId: uuid(), destination } : undefined);
       get().toast(`Queued ${label} from ${username}`);
       get().refreshTransfers('download');
     } catch (e) {

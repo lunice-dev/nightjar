@@ -224,3 +224,15 @@ export function extraCopyPaths(paths: string[]): string[] {
     return /_\d{15,}\.[A-Za-z0-9]+$/.test(name) && names.has(name.replace(/_\d{15,}(\.[A-Za-z0-9]+)$/, '$1').toLowerCase());
   });
 }
+
+/**
+ * Whether a recent download carries a batch that none of this device's albums (plans) know: an album another device
+ * has just started, whose plan hasn't reached this one yet. Then it's worth asking for the shared copy right away.
+ */
+export function hasUnknownBatch(users: TransferUser[], plans: DownloadPlan[], now = Date.now(), withinMs = 20 * 60_000): boolean {
+  const known = new Set(plans.flatMap((p) => p.batches));
+  for (const u of users)
+    for (const d of u.directories)
+      for (const f of d.files) if (f.batchId && !known.has(f.batchId) && now - timeOf(f.requestedAt) < withinMs) return true;
+  return false;
+}

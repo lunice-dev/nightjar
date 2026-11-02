@@ -967,6 +967,44 @@ namespace Nightjar
                         Reply(stream, 200, origin, new { removed = TrashDownload(folders, files, partials) });
                         return;
                     }
+                case "/merge-folders":
+                    {
+                        // One album that ended up in several folders (retries went to the engine's own folder): everything goes
+                        // into one. A track that is already there with the same size is the same file, so the extra copy goes to
+                        // the Recycle Bin; the same name with another size keeps both. Only inside the download folder.
+                        var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
+                        var to = InsideDownloads(body.TryGetValue("to", out var tv) ? tv as string : null);
+                        var from = (body.TryGetValue("from", out var fv) ? fv as System.Collections.ArrayList : null)?.Cast<object>().Select(x => InsideDownloads(x as string)).Where(x => x != null).ToList() ?? new List<string>();
+                        if (to == null) { Reply(stream, 403, origin, new { ok = false, error = "outside download folders" }); return; }
+                        int moved = 0, duplicates = 0, renamed = 0;
+                        try
+                        {
+                            Directory.CreateDirectory(to);
+                            foreach (var src in from)
+                            {
+                                if (!Directory.Exists(src) || string.Equals(src.TrimEnd('\\'), to.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) continue;
+                                foreach (var file in Directory.GetFiles(src))
+                                {
+                                    var name = Path.GetFileName(file);
+                                    var target = Path.Combine(to, name);
+                                    if (File.Exists(target))
+                                    {
+                                        if (new FileInfo(target).Length == new FileInfo(file).Length) { ToRecycleBin(file); duplicates++; continue; }
+                                        var stem = Path.GetFileNameWithoutExtension(name); var ext = Path.GetExtension(name);
+                                        for (var n = 2; File.Exists(target); n++) target = Path.Combine(to, stem + " (" + n + ")" + ext);
+                                        renamed++;
+                                    }
+                                    File.Move(file, target);
+                                    moved++;
+                                }
+                                try { if (!Directory.EnumerateFileSystemEntries(src).Any()) Directory.Delete(src); } catch { }
+                            }
+                            Log.Write("Gathered an album into " + to + ": " + moved + " moved, " + duplicates + " extra copies to the Recycle Bin");
+                            Reply(stream, 200, origin, new { ok = true, moved, duplicates, renamed });
+                        }
+                        catch (Exception e) { Reply(stream, 500, origin, new { ok = false, error = e.Message, moved, duplicates, renamed }); }
+                        return;
+                    }
                 case "/trash":
                     {
                         // Only inside the download and incomplete folders, and only to the Recycle Bin.

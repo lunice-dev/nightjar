@@ -135,6 +135,8 @@ export interface FileAccess {
    * cancelled or failed tracks. Resolves to how many items went, or null when the helper isn't reachable.
    */
   trashDownload(what: { folders: string[]; files: string[]; partials: { user: string; file: string }[] }): Promise<number | null>;
+  /** An album found in several folders, gathered into one (extra copies go to the Recycle Bin). Null: this computer's app can't do it. */
+  mergeFolders(from: string[], to: string): Promise<{ moved: number; duplicates: number; renamed: number } | null>;
   /** The tags of a track being downloaded, from the part that has arrived (null: not readable yet). */
   peekTags(user: string, file: string, destination: string): Promise<TrackTags | null>;
   /** Lets the person choose a picture; resolves to its path, or null. */

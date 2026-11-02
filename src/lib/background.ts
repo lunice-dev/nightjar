@@ -5,7 +5,7 @@ import { isIgnored, pullShared, usePrefs, type NotifyPrefs, type WishItem } from
 import { useStore } from '../store';
 import { rescanSoon } from './shareVersion';
 import { tierRank, toFolders, type FolderResult } from './quality';
-import { groupDownloads } from './transfers';
+import { groupDownloads, hasUnknownBatch } from './transfers';
 import { groupCoverDir, useLocalFiles } from './useLocal';
 import { parseActivity, uploadsActivity } from './activity';
 import { runGuard } from './guard';
@@ -263,7 +263,9 @@ function useDownloadManager() {
         // Albums started on another device: their plans, so they show as one album and get managed here too.
         // The shared copy is over a megabyte: the computer looks every two minutes, a phone (mobile data) every ten,
         // and never while the page is in the background. Saving merges too, so nothing waits on this.
-        if (!document.hidden && Date.now() - pulled > (onThisComputer ? 120_000 : 600_000)) {
+        // (Sooner when a download here belongs to an album no plan here knows: another device started it a moment ago.)
+        const waiting = onThisComputer && hasUnknownBatch(useStore.getState().downloads, usePrefs.getState().plans);
+        if (!document.hidden && Date.now() - pulled > (waiting ? 8_000 : onThisComputer ? 120_000 : 600_000)) {
           pulled = Date.now();
           await pullShared();
         }
