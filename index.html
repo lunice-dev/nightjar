@@ -19,145 +19,272 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="assets/outfit.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-@font-face{font-family:'Outfit';src:url(assets/outfit.woff2) format('woff2');font-weight:100 900;font-display:swap}
-body{margin:0;background:#0f111a}
-a{color:#e8b45a}a:hover{color:#f3cf8a}
-a:focus-visible{outline:2px solid #e8b45a;outline-offset:3px;border-radius:6px}
-html{scroll-snap-type:y mandatory;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-.snap{scroll-snap-align:start;scroll-snap-stop:always;min-height:min(100svh,1000px);display:flex;flex-direction:column;justify-content:center;box-sizing:border-box}
-.snap>div,.snap>header,.snap>footer{width:100%;box-sizing:border-box}
-.snap>header,.snap>div{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-h1.flight{margin:0;line-height:0;width:min(600px,100%)}
-.nj-stage{width:100%;height:auto;display:block;overflow:visible}
-.nj-ink,.nj-word{fill:#ece8e0}.nj-moon,.nj-moonfill{fill:#e8b45a}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+/*
+  One screen per slide. Each slide is exactly as tall as the screen and its content is made to fit it, so snapping
+  never skips anything. A wide, tall-enough screen (a PC, an iPad held sideways) shows combined slides; a phone or a
+  short window gets the same content split over more slides: .w-only shows only on the wide layout, .n-only only on
+  the narrow one.
+*/
+@font-face { font-family: 'Outfit'; src: url(assets/outfit.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
+:root {
+  --bg: #0f111a; --panel: #151824; --raised: #1e2232; --line: #262b3c; --line-2: #353b50;
+  --ink: #ece8e0; --ink-2: #a9abb8; --ink-3: #858899; --moon: #e8b45a; --on-moon: #151824;
+  --gutter: max(20px, env(safe-area-inset-left, 0px));
+  --h2: clamp(28px, 3.4vw, 44px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 350 17px/1.6 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; }
+a { color: var(--moon); } a:hover { color: #f3cf8a; }
+a:focus-visible { outline: 2px solid var(--moon); outline-offset: 3px; border-radius: 6px; }
+h1, h2, h3, p, figure, ul, dl, dd { margin: 0; }
+h2 { font-size: var(--h2); line-height: 1.1; font-weight: 400; letter-spacing: -0.02em; text-wrap: balance; }
+h3 { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; }
+
+.slide {
+  scroll-snap-align: start; scroll-snap-stop: always;
+  min-height: 100svh; display: flex; flex-direction: column; justify-content: center;
+  border-top: 1px solid var(--raised);
+  padding: max(28px, env(safe-area-inset-top, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px)) max(28px, env(safe-area-inset-bottom, 0px)) var(--gutter);
+}
+.slide:first-child { border-top: 0; }
+.inner { width: 100%; max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.dim { color: var(--ink-2); }
+.small { font-size: 14px; color: var(--ink-3); }
+
+/* opening */
+.hero { justify-content: flex-start; padding-top: max(18px, env(safe-area-inset-top, 0px)); }
+.top { width: 100%; max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-size: 21px; font-weight: 400; letter-spacing: -0.01em; }
+.brand img { width: 34px; height: 34px; }
+.pill { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-2); color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 450; }
+.pill:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-3); }
+.hero .inner { flex: 1; align-items: center; justify-content: center; text-align: center; gap: clamp(18px, 3.4svh, 30px); }
+h1.flight { line-height: 0; width: min(600px, 100%, 78svh); }
+.nj-stage { width: 100%; height: auto; display: block; overflow: visible; }
+.nj-ink, .nj-word { fill: var(--ink); } .nj-moon, .nj-moonfill { fill: var(--moon); }
+.lede { max-width: 30ch; font-size: clamp(21px, 2.6vw, 30px); line-height: 1.35; font-weight: 300; letter-spacing: -0.01em; text-wrap: balance; }
+.cta { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.button { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 28px; border-radius: 999px; background: var(--moon); color: var(--on-moon); text-decoration: none; font-size: 17px; font-weight: 550; }
+.button:hover { color: var(--on-moon); background: #f0c470; }
+
+/* what it does */
+.features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 56px; }
+.feature { display: flex; flex-direction: column; gap: 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+.feature p { color: var(--ink-2); }
+.narrow-features { display: flex; flex-direction: column; gap: 34px; }
+
+/* screenshots */
+.shot { display: flex; flex-direction: column; gap: 12px; }
+.shot img { display: block; width: auto; max-width: 100%; height: auto; max-height: 62svh; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); }
+.shot figcaption { font-size: 15px; color: var(--ink-3); }
+.shot.big img { max-height: 62svh; width: auto; max-width: 100%; border-radius: 16px; box-shadow: 0 0 0 1px var(--line), 0 40px 80px -40px rgb(0 0 0 / 0.8); }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-items: start; }
+.pair .shot img { max-height: 46svh; width: auto; max-width: 100%; }
+
+/* phone */
+.phone-row { display: flex; flex-direction: row; align-items: center; gap: clamp(40px, 6vw, 96px); }
+.phone { display: block; height: min(72svh, 620px); width: auto; max-width: 100%; border-radius: 36px; box-shadow: 0 0 0 7px var(--raised), 0 0 0 8px var(--line-2), 0 50px 90px -40px rgb(0 0 0 / 0.9); }
+.phone-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.phone-text p, .points { max-width: 56ch; }
+.points { padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.points li { display: flex; gap: 14px; align-items: baseline; }
+.points li::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--moon); translate: 0 -2px; }
+.points strong { font-weight: 500; }
+.points span { color: var(--ink-2); }
+
+/* how it's built */
+.built { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 72px; align-items: center; }
+.built-text { display: flex; flex-direction: column; gap: 16px; }
+.built-text p { color: var(--ink-2); }
+.facts { display: grid; }
+.facts > div { display: flex; justify-content: space-between; gap: 24px; padding: 14px 0; border-top: 1px solid var(--line); }
+.facts > div:last-child { border-bottom: 1px solid var(--line); }
+.facts dt { color: var(--ink-3); flex: none; }
+.facts dd { text-align: right; }
+
+/* the end */
+.end { background: var(--panel); padding-bottom: 0; }
+.end .inner { flex: 1; align-items: center; justify-content: center; text-align: center; gap: 22px; }
+.end .mark { width: clamp(64px, 10svh, 88px); height: auto; }
+.end h2 { font-size: clamp(32px, 4.4vw, 54px); font-weight: 300; }
+.end footer { width: 100%; max-width: 1120px; margin: 0 auto; border-top: 1px solid var(--raised); padding: 22px 0 max(26px, env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; font-size: 13px; color: var(--ink-3); }
+.sig { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; }
+
+/* ---- the narrow layout: a phone, an iPad held upright, or a short window ---- */
+.n-only { display: none !important; }
+@media (max-width: 899px), (max-height: 679px) {
+  .w-only { display: none !important; }
+  .n-only { display: revert !important; }
+  section.n-only { display: flex !important; }
+  img.n-only { display: block !important; }
+  .features { grid-template-columns: minmax(0, 1fr); }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+  .pair .shot img, .shot.big img { max-height: 58svh; }
+  .phone-row { flex-direction: column; align-items: flex-start; gap: 22px; }
+  .phone { height: min(46svh, 520px); align-self: center; border-radius: 26px; box-shadow: 0 0 0 5px var(--raised), 0 0 0 6px var(--line-2), 0 40px 70px -40px rgb(0 0 0 / 0.9); }
+  .built { grid-template-columns: minmax(0, 1fr); }
+  .facts > div { flex-direction: column; gap: 2px; padding: 12px 0; }
+  .facts dd { text-align: left; }
+}
+/* very short screens (a phone on its side): too little room for slides, so the page scrolls freely */
+@media (max-height: 520px) { html { scroll-snap-type: none; } .slide { min-height: 0; padding-top: 56px; padding-bottom: 56px; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<div style="background: #0f111a; color: #ece8e0; font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; font-weight: 350; font-size: 17px; line-height: 1.6; min-height: 100vh">
 
-<section class="snap" style="justify-content: flex-start">
-<header style="max-width: 1120px; margin: 0 auto; padding: 22px clamp(16px, 4vw, 40px); display: flex; align-items: center; justify-content: space-between; gap: 16px">
-<a href="#top" style="display: flex; align-items: center; gap: 10px; color: #ece8e0; text-decoration: none">
-<img src="assets/mark.svg" alt="" width="34" height="34" style="width: 34px; height: 34px">
-<span style="font-size: 21px; font-weight: 400; letter-spacing: -0.01em">nightjar</span>
-</a>
-<a href="https://github.com/lunice-dev/nightjar" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px #353b50; color: #ece8e0; text-decoration: none; font-size: 15px; font-weight: 450">GitHub
-<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"></path></svg>
-</a>
-</header>
-
-<div id="top" style="flex: 1; max-width: 1120px; margin: 0 auto; padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 40px) clamp(56px, 8vw, 96px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 28px">
-<h1 class="flight"><svg class="nj-stage" viewBox="0 0 360 220" role="img" aria-label="nightjar"><g class="nj-word"><g opacity="0"><g transform="translate(80.58 176) scale(0.0585 -0.0585)"><path d="M407 0V276Q407 334 372.0 371.0Q337 408 280 408Q241 408 211.5 391.0Q182 374 165.5 344.5Q149 315 149 277L114 296Q114 350 138.5 392.0Q163 434 205.5 458.5Q248 483 303 483Q357 483 398.5 456.0Q440 429 464.0 385.5Q488 342 488 291V0ZM68 0V473H149V0Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.575s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -56.8;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.575s" fill="freeze"/></g><g opacity="0"><g transform="translate(111.94 176) scale(0.0585 -0.0585)"><path d="M69 0V473H149V0ZM109 571Q86 571 71.5 586.5Q57 602 57 624Q57 647 71.5 662.5Q86 678 109 678Q132 678 147.0 662.5Q162 647 162 624Q162 602 147.0 586.5Q132 571 109 571Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.630s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -53.3;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.630s" fill="freeze"/></g><g opacity="0"><g transform="translate(124.10 176) scale(0.0585 -0.0585)"><path d="M264 -208Q192 -208 136.0 -181.5Q80 -155 46 -106L98 -54Q126 -91 167.5 -111.5Q209 -132 266 -132Q342 -132 387.0 -91.5Q432 -51 432 19V137L447 243L432 350V473H513V19Q513 -49 481.5 -100.0Q450 -151 394.0 -179.5Q338 -208 264 -208ZM267 6Q201 6 149.5 37.5Q98 69 68.0 123.0Q38 177 38 245Q38 313 67.5 366.5Q97 420 149.0 451.5Q201 483 266 483Q321 483 364.5 461.0Q408 439 434.0 400.5Q460 362 464 309V179Q459 128 433.0 89.0Q407 50 364.0 28.0Q321 6 267 6ZM282 82Q328 82 363.0 102.5Q398 123 417.5 159.5Q437 196 437 244Q437 293 417.5 329.5Q398 366 363.0 386.5Q328 407 281 407Q234 407 197.5 386.5Q161 366 141.0 329.5Q121 293 121 245Q121 197 141.5 160.0Q162 123 198.0 102.5Q234 82 282 82Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.690s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -51.8;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.690s" fill="freeze"/></g><g opacity="0"><g transform="translate(157.45 176) scale(0.0585 -0.0585)"><path d="M407 0V276Q407 334 372.0 371.0Q337 408 280 408Q241 408 211.5 391.0Q182 374 165.5 344.5Q149 315 149 277L114 296Q114 350 138.5 392.0Q163 434 205.5 458.5Q248 483 303 483Q357 483 398.5 458.5Q440 434 464.0 391.0Q488 348 488 291V0ZM68 0V711H149V0Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.780s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -53.5;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.780s" fill="freeze"/></g><g opacity="0"><g transform="translate(188.45 176) scale(0.0585 -0.0585)"><path d="M141 0V671H222V0ZM24 400V473H339V400Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.860s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -57.5;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.860s" fill="freeze"/></g><g opacity="0"><g transform="translate(209.05 176) scale(0.0585 -0.0585)"><path d="M2 -208Q-42 -208 -72.5 -194.0Q-103 -180 -127 -153L-75 -100Q-60 -117 -43.0 -125.5Q-26 -134 -3 -134Q29 -134 52.0 -114.5Q75 -95 75 -55V473H156V-54Q156 -105 134.5 -139.0Q113 -173 78.0 -190.5Q43 -208 2 -208ZM116 571Q94 571 79.0 586.5Q64 602 64 624Q64 647 79.0 662.5Q94 678 116 678Q139 678 154.0 662.5Q169 647 169 624Q169 602 154.0 586.5Q139 571 116 571Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.900s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -59.7;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.900s" fill="freeze"/></g><g opacity="0"><g transform="translate(221.56 176) scale(0.0585 -0.0585)"><path d="M271 -10Q205 -10 152.5 22.5Q100 55 69.0 110.5Q38 166 38 235Q38 305 69.0 361.0Q100 417 152.5 450.0Q205 483 271 483Q325 483 367.5 461.0Q410 439 436.5 399.5Q463 360 467 309V164Q462 113 436.0 73.5Q410 34 367.5 12.0Q325 -10 271 -10ZM284 66Q355 66 397.5 113.0Q440 160 440 236Q440 287 420.5 325.5Q401 364 365.5 385.5Q330 407 283 407Q236 407 199.5 385.0Q163 363 142.0 324.5Q121 286 121 236Q121 187 142.0 148.5Q163 110 200.0 88.0Q237 66 284 66ZM435 0V127L450 243L435 357V473H515V0Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="1.045s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -66.0;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="1.045s" fill="freeze"/></g><g opacity="0"><g transform="translate(255.08 176) scale(0.0585 -0.0585)"><path d="M68 0V473H149V0ZM149 272 117 286Q117 376 159.5 429.5Q202 483 280 483Q315 483 344.5 470.0Q374 457 399 429L346 375Q330 392 310.5 399.5Q291 407 266 407Q215 407 182.0 373.5Q149 340 149 272Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="1.255s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -84.1;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="1.255s" fill="freeze"/></g></g><g opacity="0" transform="translate(138.40 20.30) scale(1.3)"><animate attributeName="opacity" values="0;1" dur="0.01s" begin="2.3s" fill="freeze"/><defs><mask id="nj-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><path d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z" fill="#000"/><path d="M32 25.6 C34.6 25.6 35.9 26.8 35.9 28.5 C35.9 30 35.2 31.1 35.1 32.6 C35 34.6 35.3 36.6 35 38.6 C34.8 39.6 34.5 40.4 34.2 41 L36.9 56.6 C35.4 56.2 33.7 56 32 56 C30.3 56 28.6 56.2 27.1 56.6 L29.8 41 C29.5 40.4 29.2 39.6 29 38.6 C28.7 36.6 29 34.6 28.9 32.6 C28.8 31.1 28.1 30 28.1 28.5 C28.1 26.8 29.4 25.6 32 25.6 Z" fill="#000"/></mask><mask id="nj-notmoon" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><circle cx="32" cy="29" r="0" fill="#000"><animate attributeName="r" values="0;18.4;17" keyTimes="0;0.7;1" dur="0.55s" begin="2.3s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.4 1;0.4 0 0.6 1"/></circle></mask><clipPath id="nj-wg"><path d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z"/></clipPath></defs><circle class="nj-moon" cx="32" cy="29" r="0" mask="url(#nj-cut)"><animate attributeName="r" values="0;18.4;17" keyTimes="0;0.7;1" dur="0.55s" begin="2.3s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.4 1;0.4 0 0.6 1"/></circle><g class="nj-ink" mask="url(#nj-notmoon)"><path d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z"/><path d="M32 25.6 C34.6 25.6 35.9 26.8 35.9 28.5 C35.9 30 35.2 31.1 35.1 32.6 C35 34.6 35.3 36.6 35 38.6 C34.8 39.6 34.5 40.4 34.2 41 L36.9 56.6 C35.4 56.2 33.7 56 32 56 C30.3 56 28.6 56.2 27.1 56.6 L29.8 41 C29.5 40.4 29.2 39.6 29 38.6 C28.7 36.6 29 34.6 28.9 32.6 C28.8 31.1 28.1 30 28.1 28.5 C28.1 26.8 29.4 25.6 32 25.6 Z"/></g><path class="nj-moonfill" clip-path="url(#nj-wg)" d="M11.6 23.4 L14.8 22.8 L16.2 30.4 L12.8 29.6 Z M 52.4 23.4 L 49.2 22.8 L 47.8 30.4 L 51.2 29.6 Z" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.35s" begin="2.72s" fill="freeze"/></path></g><g class="nj-fly"><animateMotion path="M -60 100 C -10 84 40 84 90 100 C 140 116 190 112 240 96 C 290 80 330 40 300 22 C 270 4 225 6 215 30 C 205 54 180 109.69999999999999 180 69.69999999999999" dur="2.3s" fill="freeze" rotate="auto" keyPoints="0.0000;0.5140;0.8676;1.0000" keyTimes="0.0000;0.4565;0.7609;1.0000" calcMode="spline" keySplines="0.3 0.05 0.7 0.95;0.35 0 0.65 1;0.4 0 0.2 1"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.999;1" dur="2.32s" fill="freeze"/><g><animateTransform attributeName="transform" type="scale" values="0.72;0.72;1" keyTimes="0;0.457;1" dur="2.3s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1"/><g><animateTransform attributeName="transform" type="rotate" values="0;0;360;360" keyTimes="0;0.530;0.748;1" dur="2.3s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.45 0 0.55 1;0 0 1 1"/><g transform="rotate(90) scale(1.3) translate(-32 -38)"><g transform="translate(0 34)"><g><animateTransform attributeName="transform" type="scale" values="1 -1;1 -1;1 1" keyTimes="0;0.783;1" dur="2.3s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.5 0 0.3 1"/><g transform="translate(0 -34)"><g transform="translate(32 0)"><g><animateTransform attributeName="transform" type="scale" values="1 1;0.38 1;1 1;0.5 1;1 1;0.34 1;1 1" keyTimes="0;0.16;0.33;0.48;0.64;0.82;1" dur="0.78s" begin="0s" fill="freeze"/><animateTransform attributeName="transform" type="scale" values="1 1;0.4 1;1 1;0.46 1;1 1" keyTimes="0;0.25;0.5;0.75;1" dur="0.5s" begin="0.92s" fill="freeze"/><g transform="translate(-32 0)"><path class="nj-ink" d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z"/></g></g></g></g></g></g><path class="nj-ink" d="M32 25.6 C34.6 25.6 35.9 26.8 35.9 28.5 C35.9 30 35.2 31.1 35.1 32.6 C35 34.6 35.3 36.6 35 38.6 C34.8 39.6 34.5 40.4 34.2 41 L36.9 56.6 C35.4 56.2 33.7 56 32 56 C30.3 56 28.6 56.2 27.1 56.6 L29.8 41 C29.5 40.4 29.2 39.6 29 38.6 C28.7 36.6 29 34.6 28.9 32.6 C28.8 31.1 28.1 30 28.1 28.5 C28.1 26.8 29.4 25.6 32 25.6 Z"/></g></g></g></g></svg></h1>
-<p style="margin: 0; max-width: 30ch; font-size: clamp(22px, 2.6vw, 30px); line-height: 1.35; font-weight: 300; letter-spacing: -0.01em; text-wrap: balance">A modern Soulseek client for Windows, with your music on your phone wherever you are.</p>
-<div style="display: flex; flex-direction: column; align-items: center; gap: 14px">
-<a href="https://github.com/lunice-dev/nightjar" style="display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 28px; border-radius: 999px; background: #e8b45a; color: #151824; text-decoration: none; font-size: 17px; font-weight: 550">View on GitHub
-<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"></path></svg>
-</a>
-<p style="margin: 0; font-size: 14px; color: #858899">Free and open source. For Windows 10 and 11.</p>
-</div>
-</div>
+<!-- 1. Opening -->
+<section class="slide hero" id="top">
+  <header class="top">
+    <a class="brand" href="#top"><img src="assets/mark.svg" alt="" width="34" height="34">nightjar</a>
+    <a class="pill" href="https://github.com/lunice-dev/nightjar">GitHub <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"/></svg></a>
+  </header>
+  <div class="inner">
+    <h1 class="flight"><svg class="nj-stage" viewBox="0 0 360 220" role="img" aria-label="nightjar"><g class="nj-word"><g opacity="0"><g transform="translate(80.58 176) scale(0.0585 -0.0585)"><path d="M407 0V276Q407 334 372.0 371.0Q337 408 280 408Q241 408 211.5 391.0Q182 374 165.5 344.5Q149 315 149 277L114 296Q114 350 138.5 392.0Q163 434 205.5 458.5Q248 483 303 483Q357 483 398.5 456.0Q440 429 464.0 385.5Q488 342 488 291V0ZM68 0V473H149V0Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.575s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -56.8;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.575s" fill="freeze"/></g><g opacity="0"><g transform="translate(111.94 176) scale(0.0585 -0.0585)"><path d="M69 0V473H149V0ZM109 571Q86 571 71.5 586.5Q57 602 57 624Q57 647 71.5 662.5Q86 678 109 678Q132 678 147.0 662.5Q162 647 162 624Q162 602 147.0 586.5Q132 571 109 571Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.630s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -53.3;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.630s" fill="freeze"/></g><g opacity="0"><g transform="translate(124.10 176) scale(0.0585 -0.0585)"><path d="M264 -208Q192 -208 136.0 -181.5Q80 -155 46 -106L98 -54Q126 -91 167.5 -111.5Q209 -132 266 -132Q342 -132 387.0 -91.5Q432 -51 432 19V137L447 243L432 350V473H513V19Q513 -49 481.5 -100.0Q450 -151 394.0 -179.5Q338 -208 264 -208ZM267 6Q201 6 149.5 37.5Q98 69 68.0 123.0Q38 177 38 245Q38 313 67.5 366.5Q97 420 149.0 451.5Q201 483 266 483Q321 483 364.5 461.0Q408 439 434.0 400.5Q460 362 464 309V179Q459 128 433.0 89.0Q407 50 364.0 28.0Q321 6 267 6ZM282 82Q328 82 363.0 102.5Q398 123 417.5 159.5Q437 196 437 244Q437 293 417.5 329.5Q398 366 363.0 386.5Q328 407 281 407Q234 407 197.5 386.5Q161 366 141.0 329.5Q121 293 121 245Q121 197 141.5 160.0Q162 123 198.0 102.5Q234 82 282 82Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.690s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -51.8;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.690s" fill="freeze"/></g><g opacity="0"><g transform="translate(157.45 176) scale(0.0585 -0.0585)"><path d="M407 0V276Q407 334 372.0 371.0Q337 408 280 408Q241 408 211.5 391.0Q182 374 165.5 344.5Q149 315 149 277L114 296Q114 350 138.5 392.0Q163 434 205.5 458.5Q248 483 303 483Q357 483 398.5 458.5Q440 434 464.0 391.0Q488 348 488 291V0ZM68 0V711H149V0Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.780s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -53.5;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.780s" fill="freeze"/></g><g opacity="0"><g transform="translate(188.45 176) scale(0.0585 -0.0585)"><path d="M141 0V671H222V0ZM24 400V473H339V400Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.860s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -57.5;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.860s" fill="freeze"/></g><g opacity="0"><g transform="translate(209.05 176) scale(0.0585 -0.0585)"><path d="M2 -208Q-42 -208 -72.5 -194.0Q-103 -180 -127 -153L-75 -100Q-60 -117 -43.0 -125.5Q-26 -134 -3 -134Q29 -134 52.0 -114.5Q75 -95 75 -55V473H156V-54Q156 -105 134.5 -139.0Q113 -173 78.0 -190.5Q43 -208 2 -208ZM116 571Q94 571 79.0 586.5Q64 602 64 624Q64 647 79.0 662.5Q94 678 116 678Q139 678 154.0 662.5Q169 647 169 624Q169 602 154.0 586.5Q139 571 116 571Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="0.900s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -59.7;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="0.900s" fill="freeze"/></g><g opacity="0"><g transform="translate(221.56 176) scale(0.0585 -0.0585)"><path d="M271 -10Q205 -10 152.5 22.5Q100 55 69.0 110.5Q38 166 38 235Q38 305 69.0 361.0Q100 417 152.5 450.0Q205 483 271 483Q325 483 367.5 461.0Q410 439 436.5 399.5Q463 360 467 309V164Q462 113 436.0 73.5Q410 34 367.5 12.0Q325 -10 271 -10ZM284 66Q355 66 397.5 113.0Q440 160 440 236Q440 287 420.5 325.5Q401 364 365.5 385.5Q330 407 283 407Q236 407 199.5 385.0Q163 363 142.0 324.5Q121 286 121 236Q121 187 142.0 148.5Q163 110 200.0 88.0Q237 66 284 66ZM435 0V127L450 243L435 357V473H515V0Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="1.045s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -66.0;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="1.045s" fill="freeze"/></g><g opacity="0"><g transform="translate(255.08 176) scale(0.0585 -0.0585)"><path d="M68 0V473H149V0ZM149 272 117 286Q117 376 159.5 429.5Q202 483 280 483Q315 483 344.5 470.0Q374 457 399 429L346 375Q330 392 310.5 399.5Q291 407 266 407Q215 407 182.0 373.5Q149 340 149 272Z"/></g><animate attributeName="opacity" values="0;1" dur="0.12s" begin="1.255s" fill="freeze"/><animateTransform attributeName="transform" type="translate" values="0 -84.1;0 0;0 -3.5;0 0" keyTimes="0;0.62;0.82;1" calcMode="spline" keySplines="0.5 0 0.9 0.6;0.2 0.6 0.4 1;0.5 0 0.6 1" dur="0.62s" begin="1.255s" fill="freeze"/></g></g><g opacity="0" transform="translate(138.40 20.30) scale(1.3)"><animate attributeName="opacity" values="0;1" dur="0.01s" begin="2.3s" fill="freeze"/><defs><mask id="nj-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><path d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z" fill="#000"/><path d="M32 25.6 C34.6 25.6 35.9 26.8 35.9 28.5 C35.9 30 35.2 31.1 35.1 32.6 C35 34.6 35.3 36.6 35 38.6 C34.8 39.6 34.5 40.4 34.2 41 L36.9 56.6 C35.4 56.2 33.7 56 32 56 C30.3 56 28.6 56.2 27.1 56.6 L29.8 41 C29.5 40.4 29.2 39.6 29 38.6 C28.7 36.6 29 34.6 28.9 32.6 C28.8 31.1 28.1 30 28.1 28.5 C28.1 26.8 29.4 25.6 32 25.6 Z" fill="#000"/></mask><mask id="nj-notmoon" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><circle cx="32" cy="29" r="0" fill="#000"><animate attributeName="r" values="0;18.4;17" keyTimes="0;0.7;1" dur="0.55s" begin="2.3s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.4 1;0.4 0 0.6 1"/></circle></mask><clipPath id="nj-wg"><path d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z"/></clipPath></defs><circle class="nj-moon" cx="32" cy="29" r="0" mask="url(#nj-cut)"><animate attributeName="r" values="0;18.4;17" keyTimes="0;0.7;1" dur="0.55s" begin="2.3s" fill="freeze" calcMode="spline" keySplines="0.3 0 0.4 1;0.4 0 0.6 1"/></circle><g class="nj-ink" mask="url(#nj-notmoon)"><path d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z"/><path d="M32 25.6 C34.6 25.6 35.9 26.8 35.9 28.5 C35.9 30 35.2 31.1 35.1 32.6 C35 34.6 35.3 36.6 35 38.6 C34.8 39.6 34.5 40.4 34.2 41 L36.9 56.6 C35.4 56.2 33.7 56 32 56 C30.3 56 28.6 56.2 27.1 56.6 L29.8 41 C29.5 40.4 29.2 39.6 29 38.6 C28.7 36.6 29 34.6 28.9 32.6 C28.8 31.1 28.1 30 28.1 28.5 C28.1 26.8 29.4 25.6 32 25.6 Z"/></g><path class="nj-moonfill" clip-path="url(#nj-wg)" d="M11.6 23.4 L14.8 22.8 L16.2 30.4 L12.8 29.6 Z M 52.4 23.4 L 49.2 22.8 L 47.8 30.4 L 51.2 29.6 Z" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.35s" begin="2.72s" fill="freeze"/></path></g><g class="nj-fly"><animateMotion path="M -60 100 C -10 84 40 84 90 100 C 140 116 190 112 240 96 C 290 80 330 40 300 22 C 270 4 225 6 215 30 C 205 54 180 109.69999999999999 180 69.69999999999999" dur="2.3s" fill="freeze" rotate="auto" keyPoints="0.0000;0.5140;0.8676;1.0000" keyTimes="0.0000;0.4565;0.7609;1.0000" calcMode="spline" keySplines="0.3 0.05 0.7 0.95;0.35 0 0.65 1;0.4 0 0.2 1"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;0.999;1" dur="2.32s" fill="freeze"/><g><animateTransform attributeName="transform" type="scale" values="0.72;0.72;1" keyTimes="0;0.457;1" dur="2.3s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1"/><g><animateTransform attributeName="transform" type="rotate" values="0;0;360;360" keyTimes="0;0.530;0.748;1" dur="2.3s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.45 0 0.55 1;0 0 1 1"/><g transform="rotate(90) scale(1.3) translate(-32 -38)"><g transform="translate(0 34)"><g><animateTransform attributeName="transform" type="scale" values="1 -1;1 -1;1 1" keyTimes="0;0.783;1" dur="2.3s" fill="freeze" calcMode="spline" keySplines="0 0 1 1;0.5 0 0.3 1"/><g transform="translate(0 -34)"><g transform="translate(32 0)"><g><animateTransform attributeName="transform" type="scale" values="1 1;0.38 1;1 1;0.5 1;1 1;0.34 1;1 1" keyTimes="0;0.16;0.33;0.48;0.64;0.82;1" dur="0.78s" begin="0s" fill="freeze"/><animateTransform attributeName="transform" type="scale" values="1 1;0.4 1;1 1;0.46 1;1 1" keyTimes="0;0.25;0.5;0.75;1" dur="0.5s" begin="0.92s" fill="freeze"/><g transform="translate(-32 0)"><path class="nj-ink" d="M30.4 30.6 C26.6 26.8 22.8 24.4 18.6 23.6 C13.6 22.8 8 24.4 2.4 27.8 C8.4 27.8 14 29 19 31.2 C23 33 26.6 35.4 29.6 37.8 Z M 33.6 30.6 C 37.4 26.8 41.2 24.4 45.4 23.6 C 50.4 22.8 56 24.4 61.6 27.8 C 55.6 27.8 50 29 45 31.2 C 41 33 37.4 35.4 34.4 37.8 Z"/></g></g></g></g></g></g><path class="nj-ink" d="M32 25.6 C34.6 25.6 35.9 26.8 35.9 28.5 C35.9 30 35.2 31.1 35.1 32.6 C35 34.6 35.3 36.6 35 38.6 C34.8 39.6 34.5 40.4 34.2 41 L36.9 56.6 C35.4 56.2 33.7 56 32 56 C30.3 56 28.6 56.2 27.1 56.6 L29.8 41 C29.5 40.4 29.2 39.6 29 38.6 C28.7 36.6 29 34.6 28.9 32.6 C28.8 31.1 28.1 30 28.1 28.5 C28.1 26.8 29.4 25.6 32 25.6 Z"/></g></g></g></g></svg></h1>
+    <p class="lede">A modern Soulseek client for Windows, with your music on your phone wherever you are.</p>
+    <div class="cta">
+      <a class="button" href="https://github.com/lunice-dev/nightjar">View on GitHub <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"/></svg></a>
+      <p class="small">Free and open source. For Windows 10 and 11.</p>
+    </div>
+  </div>
 </section>
 
-<section class="snap" style="border-top: 1px solid #1e2232">
-<div style="max-width: 1120px; margin: 0 auto; padding: clamp(56px, 8vw, 112px) clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 48px">
-<div style="display: flex; flex-direction: column; gap: 14px; max-width: 640px">
-<h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -0.02em; text-wrap: balance">Finds the best copy, then keeps your library in order</h2>
-<p style="margin: 0; color: #a9abb8">Soulseek is a network of people sharing their own record collections. nightjar searches it, downloads the best copy it can find, and plays it on your computer, phone or iPad.</p>
-</div>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 40px 56px">
-<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 20px; border-top: 1px solid #262b3c">
-<h3 style="margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em">Albums, not loose files</h3>
-<p style="margin: 0; color: #a9abb8">Results come grouped as albums. Everyone's copies of the same album are stacked in one row and ranked by quality, then a free slot, then speed.</p>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 20px; border-top: 1px solid #262b3c">
-<h3 style="margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em">Quality you can see</h3>
-<p style="margin: 0; color: #a9abb8">Hi-res, lossless, 320, VBR and low bitrate each have their own colour. nightjar tells a real lossless file from an MP3 in disguise, and real hi-res from upsampled.</p>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 20px; border-top: 1px solid #262b3c">
-<h3 style="margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em">Several people at once</h3>
-<p style="margin: 0; color: #a9abb8">When others have exactly the same files, nightjar downloads different tracks from up to three of them together, and moves a slow track to someone faster.</p>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 20px; border-top: 1px solid #262b3c">
-<h3 style="margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em">A library in order</h3>
-<p style="margin: 0; color: #a9abb8">Downloads go into Format, Artist, Year – Album. It can review the library you already have before moving anything, and every move can be undone.</p>
-</div>
-</div>
-</div>
+<!-- 2. What it does (on a wide screen, all four points are here) -->
+<section class="slide">
+  <div class="inner" style="gap: clamp(28px, 5svh, 48px)">
+    <div style="display: flex; flex-direction: column; gap: 14px; max-width: 640px">
+      <h2>Finds the best copy, then keeps your library in order</h2>
+      <p class="dim">Soulseek is a network of people sharing their own record collections. nightjar searches it, downloads the best copy it can find, and plays it on your computer, phone or iPad.</p>
+    </div>
+    <div class="features w-only">
+      <div class="feature"><h3>Albums, not loose files</h3><p>Results come grouped as albums. Everyone's copies of the same album are stacked in one row and ranked by quality, then a free slot, then speed.</p></div>
+      <div class="feature"><h3>Quality you can see</h3><p>Hi-res, lossless, 320, VBR and low bitrate each have their own colour. nightjar tells a real lossless file from an MP3 in disguise, and real hi-res from upsampled.</p></div>
+      <div class="feature"><h3>Several people at once</h3><p>When others have exactly the same files, nightjar downloads different tracks from up to three of them together, and moves a slow track to someone faster.</p></div>
+      <div class="feature"><h3>A library in order</h3><p>Downloads go into Format, Artist, Year – Album. It can review the library you already have before moving anything, and every move can be undone.</p></div>
+    </div>
+  </div>
 </section>
 
-<section class="snap" style="border-top: 1px solid #1e2232">
-<div style="max-width: 1120px; margin: 0 auto; padding: clamp(56px, 8vw, 112px) clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 40px">
-<h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -0.02em">On your screen</h2>
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 14px">
-<img src="assets/pc-search.webp" width="1800" height="700" loading="lazy" decoding="async" alt="nightjar's search: two albums by one artist, each with its quality, size, sources and a Download button" style="width: 100%; height: auto; display: block; border-radius: 16px; box-shadow: 0 0 0 1px #262b3c, 0 40px 80px -40px rgb(0 0 0 / 0.8)">
-<figcaption style="font-size: 15px; color: #858899">Search: every copy of an album in one row, with what you already have.</figcaption>
-</figure>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 32px">
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 14px">
-<img src="assets/pc-library.webp" width="1800" height="719" loading="lazy" decoding="async" alt="The library: albums grouped by artist, with a bar showing how much is hi-res, FLAC and MP3" style="width: 100%; height: auto; display: block; border-radius: 14px; box-shadow: 0 0 0 1px #262b3c">
-<figcaption style="font-size: 15px; color: #858899">Your library, checked and tidied.</figcaption>
-</figure>
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 14px">
-<img src="assets/ipad-home.webp" width="1500" height="1048" loading="lazy" decoding="async" alt="nightjar's home page on an iPad: the player on the left, rows of albums on the right" style="width: 100%; height: auto; display: block; border-radius: 14px; box-shadow: 0 0 0 1px #262b3c">
-<figcaption style="font-size: 15px; color: #858899">Home on an iPad.</figcaption>
-</figure>
-</div>
-<p style="margin: 0; font-size: 13px; color: #858899">Screenshots use sample albums.</p>
-</div>
+<!-- 2b, 2c. What it does, two points per slide (narrow only) -->
+<section class="slide n-only">
+  <div class="inner narrow-features">
+    <div class="feature"><h3>Albums, not loose files</h3><p>Results come grouped as albums. Everyone's copies of the same album are stacked in one row and ranked by quality, then a free slot, then speed.</p></div>
+    <div class="feature"><h3>Quality you can see</h3><p>Hi-res, lossless, 320, VBR and low bitrate each have their own colour. nightjar tells a real lossless file from an MP3 in disguise, and real hi-res from upsampled.</p></div>
+  </div>
+</section>
+<section class="slide n-only">
+  <div class="inner narrow-features">
+    <div class="feature"><h3>Several people at once</h3><p>When others have exactly the same files, nightjar downloads different tracks from up to three of them together, and moves a slow track to someone faster.</p></div>
+    <div class="feature"><h3>A library in order</h3><p>Downloads go into Format, Artist, Year – Album. It can review the library you already have before moving anything, and every move can be undone.</p></div>
+  </div>
 </section>
 
-<section class="snap" style="border-top: 1px solid #1e2232">
-<div style="max-width: 1120px; margin: 0 auto; padding: clamp(56px, 8vw, 112px) clamp(16px, 4vw, 40px); display: flex; flex-wrap: wrap-reverse; align-items: center; gap: clamp(40px, 6vw, 96px)">
-<img src="assets/phone-home.webp" width="640" height="1073" loading="lazy" decoding="async" alt="nightjar on an iPhone: the home page with the library and rows of albums" style="flex: 0 1 300px; width: 300px; max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 40px; box-shadow: 0 0 0 8px #1e2232, 0 0 0 9px #353b50, 0 50px 90px -40px rgb(0 0 0 / 0.9)">
-<div style="flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
-<h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -0.02em; text-wrap: balance">Your music on your phone, wherever you are</h2>
-<p style="margin: 0; color: #a9abb8; max-width: 56ch">Search, download, browse your library and play your music from your phone, iPad or another computer, at home or away. Your PC does the work; the phone is a window onto it.</p>
-<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; max-width: 56ch">
-<li style="display: flex; gap: 14px; align-items: baseline"><span aria-hidden="true" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #e8b45a; translate: 0 -2px"></span><span><strong style="font-weight: 500">Private.</strong> <span style="color: #a9abb8">It goes through Tailscale, a free private network between your own devices. Nothing is opened to the internet.</span></span></li>
-<li style="display: flex; gap: 14px; align-items: baseline"><span aria-hidden="true" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #e8b45a; translate: 0 -2px"></span><span><strong style="font-weight: 500">Easy to set up.</strong> <span style="color: #a9abb8">Settings walks you through it and installs Tailscale for you. A phone signs in with a short code.</span></span></li>
-<li style="display: flex; gap: 14px; align-items: baseline"><span aria-hidden="true" style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: #e8b45a; translate: 0 -2px"></span><span><strong style="font-weight: 500">Feels like an app.</strong> <span style="color: #a9abb8">It goes on the Home Screen, with lock-screen controls and a "Use less data" mode for mobile data.</span></span></li>
-</ul>
-</div>
-</div>
+<!-- 3. Screenshots: search -->
+<section class="slide">
+  <div class="inner">
+    <h2>On your screen</h2>
+    <figure class="shot big">
+      <img src="assets/pc-search.webp" width="1800" height="700" alt="nightjar's search: two albums by one artist, each with its quality, size, sources and a Download button">
+      <figcaption>Search: every copy of an album in one row, with what you already have. Screenshots use sample albums.</figcaption>
+    </figure>
+  </div>
 </section>
 
-<section class="snap" style="border-top: 1px solid #1e2232">
-<div style="max-width: 1120px; margin: 0 auto; padding: clamp(56px, 8vw, 112px) clamp(16px, 4vw, 40px); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 40px 72px">
-<div style="display: flex; flex-direction: column; gap: 18px">
-<h2 style="margin: 0; font-size: clamp(30px, 3.6vw, 44px); line-height: 1.1; font-weight: 400; letter-spacing: -0.02em">How it's built</h2>
-<p style="margin: 0; color: #a9abb8">nightjar is a new interface on top of <a href="https://github.com/slskd/slskd">slskd</a>, an open source Soulseek engine, used without changes. It runs as a real Windows app: its own window, an icon next to the clock, and sharing and downloading in the background.</p>
-<p style="margin: 0; color: #a9abb8">It isn't the official Soulseek client and isn't affiliated with Soulseek, slskd or Tailscale. The nightjar is a nod to Soulseek's own bird.</p>
-</div>
-<dl style="margin: 0; display: grid; gap: 0; align-content: start">
-<div style="display: flex; justify-content: space-between; gap: 24px; padding: 16px 0; border-top: 1px solid #262b3c"><dt style="color: #858899">Licence</dt><dd style="margin: 0; text-align: right">Free software, GNU AGPL 3.0</dd></div>
-<div style="display: flex; justify-content: space-between; gap: 24px; padding: 16px 0; border-top: 1px solid #262b3c"><dt style="color: #858899">Runs on</dt><dd style="margin: 0; text-align: right">Windows 10 and 11, no admin rights needed</dd></div>
-<div style="display: flex; justify-content: space-between; gap: 24px; padding: 16px 0; border-top: 1px solid #262b3c"><dt style="color: #858899">Use it from</dt><dd style="margin: 0; text-align: right">Your PC, phone, iPad or another computer</dd></div>
-<div style="display: flex; justify-content: space-between; gap: 24px; padding: 16px 0; border-top: 1px solid #262b3c"><dt style="color: #858899">Updates</dt><dd style="margin: 0; text-align: right">Installs them itself, and every one is signed</dd></div>
-<div style="display: flex; justify-content: space-between; gap: 24px; padding: 16px 0; border-top: 1px solid #262b3c; border-bottom: 1px solid #262b3c"><dt style="color: #858899">Engine</dt><dd style="margin: 0; text-align: right">slskd, unchanged</dd></div>
-</dl>
-</div>
+<!-- 3b. Screenshots: the library -->
+<section class="slide">
+  <div class="inner">
+    <figure class="shot big">
+      <img src="assets/pc-library.webp" width="1800" height="719" loading="lazy" decoding="async" alt="The library: albums grouped by artist, with a bar showing how much is hi-res, FLAC and MP3">
+      <figcaption>Your library, checked and tidied.</figcaption>
+    </figure>
+  </div>
 </section>
 
-<section class="snap" style="border-top: 1px solid #1e2232; background: #151824">
-<div style="flex: 1; justify-content: center; max-width: 1120px; margin: 0 auto; padding: clamp(72px, 10vw, 140px) clamp(16px, 4vw, 40px); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 26px">
-<img src="assets/mark.svg" alt="" style="width: 88px; height: 88px">
-<h2 style="margin: 0; font-size: clamp(32px, 4.4vw, 54px); line-height: 1.08; font-weight: 300; letter-spacing: -0.02em; text-wrap: balance">Get nightjar on GitHub</h2>
-<p style="margin: 0; color: #a9abb8; max-width: 46ch">The code, the latest download and the full guide, including remote access step by step.</p>
-<a href="https://github.com/lunice-dev/nightjar" style="display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 28px; border-radius: 999px; background: #e8b45a; color: #151824; text-decoration: none; font-size: 17px; font-weight: 550">View on GitHub
-<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"></path></svg>
-</a>
-<p style="margin: 0; font-size: 14px; color: #858899">github.com/lunice-dev/nightjar</p>
-</div>
-<footer style="border-top: 1px solid #1e2232">
-<div style="max-width: 1120px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 36px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; font-size: 13px; color: #858899">
-<span style="font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace">&gt; coded by lunice_</span>
-<span>Not affiliated with Soulseek, slskd or Tailscale.</span>
-</div>
-</footer>
+<!-- 3c. Screenshots: the iPad -->
+<section class="slide">
+  <div class="inner">
+    <figure class="shot big">
+      <img src="assets/ipad-home.webp" width="1500" height="1048" loading="lazy" decoding="async" alt="nightjar's home page on an iPad: the player on the left, rows of albums on the right">
+      <figcaption>Home on an iPad.</figcaption>
+    </figure>
+  </div>
 </section>
 
-</div>
+<!-- 4. On your phone -->
+<section class="slide">
+  <div class="inner phone-row">
+    <img class="phone w-only" src="assets/phone-home.webp" width="640" height="1073" loading="lazy" decoding="async" alt="nightjar on an iPhone: the home page with the library and rows of albums">
+    <div class="phone-text">
+      <h2>Your music on your phone, wherever you are</h2>
+      <p class="dim">Search, download, browse your library and play your music from your phone, iPad or another computer, at home or away. Your PC does the work; the phone is a window onto it.</p>
+      <ul class="points w-only">
+        <li><p><strong>Private.</strong> <span>It goes through Tailscale, a free private network between your own devices. Nothing is opened to the internet.</span></p></li>
+        <li><p><strong>Easy to set up.</strong> <span>Settings walks you through it and installs Tailscale for you. A phone signs in with a short code.</span></p></li>
+        <li><p><strong>Feels like an app.</strong> <span>It goes on the Home Screen, with lock-screen controls and a "Use less data" mode for mobile data.</span></p></li>
+      </ul>
+    </div>
+    <img class="phone n-only" src="assets/phone-home.webp" width="640" height="1073" loading="lazy" decoding="async" alt="nightjar on an iPhone: the home page with the library and rows of albums">
+  </div>
+</section>
+
+<!-- 4b. On your phone: the three points (narrow only) -->
+<section class="slide n-only">
+  <div class="inner">
+    <ul class="points" style="gap: 24px">
+      <li><p><strong>Private.</strong> <span>It goes through Tailscale, a free private network between your own devices. Nothing is opened to the internet.</span></p></li>
+      <li><p><strong>Easy to set up.</strong> <span>Settings walks you through it and installs Tailscale for you. A phone signs in with a short code.</span></p></li>
+      <li><p><strong>Feels like an app.</strong> <span>It goes on the Home Screen, with lock-screen controls and a "Use less data" mode for mobile data.</span></p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 5. How it's built -->
+<section class="slide">
+  <div class="inner built">
+    <div class="built-text">
+      <h2>How it's built</h2>
+      <p>nightjar is a new interface on top of <a href="https://github.com/slskd/slskd">slskd</a>, an open source Soulseek engine, used without changes. It runs as a real Windows app: its own window, an icon next to the clock, and sharing and downloading in the background.</p>
+      <p>It isn't the official Soulseek client and isn't affiliated with Soulseek, slskd or Tailscale. The nightjar is a nod to Soulseek's own bird.</p>
+    </div>
+    <dl class="facts w-only">
+      <div><dt>Licence</dt><dd>Free software, GNU AGPL 3.0</dd></div>
+      <div><dt>Runs on</dt><dd>Windows 10 and 11, no admin rights needed</dd></div>
+      <div><dt>Use it from</dt><dd>Your PC, phone, iPad or another computer</dd></div>
+      <div><dt>Updates</dt><dd>Installs them itself, and every one is signed</dd></div>
+      <div><dt>Engine</dt><dd>slskd, unchanged</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- 5b. The facts (narrow only) -->
+<section class="slide n-only">
+  <div class="inner">
+    <dl class="facts">
+      <div><dt>Licence</dt><dd>Free software, GNU AGPL 3.0</dd></div>
+      <div><dt>Runs on</dt><dd>Windows 10 and 11, no admin rights needed</dd></div>
+      <div><dt>Use it from</dt><dd>Your PC, phone, iPad or another computer</dd></div>
+      <div><dt>Updates</dt><dd>Installs them itself, and every one is signed</dd></div>
+      <div><dt>Engine</dt><dd>slskd, unchanged</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- 6. The end -->
+<section class="slide end">
+  <div class="inner">
+    <img class="mark" src="assets/mark.svg" alt="" width="88" height="88">
+    <h2>Get nightjar on GitHub</h2>
+    <p class="dim" style="max-width: 46ch">The code, the latest download and the full guide, including remote access step by step.</p>
+    <a class="button" href="https://github.com/lunice-dev/nightjar">View on GitHub <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"/></svg></a>
+    <p class="small">github.com/lunice-dev/nightjar</p>
+  </div>
+  <footer>
+    <span class="sig">&gt; coded by lunice_</span>
+    <span>Not affiliated with Soulseek, slskd or Tailscale.</span>
+  </footer>
+</section>
 
 <script>
   // Reduce Motion: show the finished logo, no flight.
