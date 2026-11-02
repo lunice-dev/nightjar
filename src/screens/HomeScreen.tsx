@@ -37,10 +37,13 @@ const shuffled = <T,>(a: T[]) => {
  */
 export function Home() {
   // The Now column has the controls, so the player bar at the bottom steps aside while Home is open.
+  // (Every screen stays mounted behind the one you see, so this goes by the route, not by Home being mounted.)
+  const route = useStore((s) => s.route);
   useEffect(() => {
+    if (route !== 'search') return;
     document.documentElement.classList.add('on-home');
     return () => document.documentElement.classList.remove('on-home');
-  }, []);
+  }, [route]);
 
   return (
     <div className="hx">
