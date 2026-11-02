@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { usePcShell } from '../lib/pcShell';
 import type { LibAlbum } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
@@ -39,12 +40,25 @@ const shuffled = <T,>(a: T[]) => {
 export function Home() {
   // The Now column has the controls, so the player bar at the bottom steps aside while Home is open.
   // (Every screen stays mounted behind the one you see, so this goes by the route, not by Home being mounted.)
+  // On a phone the Now card scrolls away with the page: while it's out of view the player bar comes back, so the music
+  // can still be paused or skipped.
   const route = useStore((s) => s.route);
+  const pc = usePcShell();
   useEffect(() => {
     if (route !== 'search') return;
-    document.documentElement.classList.add('on-home');
-    return () => document.documentElement.classList.remove('on-home');
-  }, [route]);
+    const root = document.documentElement.classList;
+    const now = document.querySelector('.tab-pane[data-route="search"] .hx-now');
+    if (pc || !now || !('IntersectionObserver' in window)) {
+      root.add('on-home');
+      return () => root.remove('on-home');
+    }
+    const io = new IntersectionObserver(([e]) => root.toggle('on-home', e.isIntersecting), { threshold: 0.15 });
+    io.observe(now);
+    return () => {
+      io.disconnect();
+      root.remove('on-home');
+    };
+  }, [route, pc]);
 
   return (
     <div className="hx">
