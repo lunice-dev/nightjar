@@ -2765,3 +2765,11 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .lx-panel { background: color-mix(in srgb, var(--paper) 90%, transparent); box-shadow: -30px 0 60px -30px rgb(0 0 0 / 0.8); }
 }
 @media (prefers-reduced-motion: reduce) { .lx-panel { animation: none; } .tab-pane:has(.lx-panel) > .page { transition: none; } }
+
+/* Downloads: the numbers that change every second get a steady width (and tabular digits), so the rest of the line stays put. */
+.dl-meta { font-variant-numeric: tabular-nums; }
+@media (min-width: 700px) {
+  .dl-m-state { min-width: 25ch; }
+  .dl-m-bytes { min-width: 17ch; }
+  .dl-m-eta { min-width: 11ch; }
+}
