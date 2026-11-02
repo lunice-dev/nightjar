@@ -50,7 +50,7 @@ export function uploadReason(t: Pick<Transfer, 'state' | 'exception'>): UploadRe
   if (/could not find|not found|no such file|does not exist|access to the path|being used by another process|no space left/.test(e))
     return say('Your computer couldn’t read the file: it was moved, deleted or is in use. It may need sharing again.', true);
   // Stopped here: you pressed Stop, blocked them, or Nightjar was closing.
-  if (s === 'Completed, Cancelled' && !/rejected|remote/.test(e)) return say('Stopped on this computer: you stopped it or blocked them, or Nightjar restarted');
+  if (s === 'Completed, Cancelled' && !/rejected|remote/.test(e)) return say('Stopped on this computer: you stopped it or blocked them, or nightjar restarted');
   if (e.includes('offline')) return say('They went offline');
   if (s === 'Completed, Rejected' || /rejected|cancelled by the remote|remote.*cancel/.test(e)) return say('They cancelled it');
   if (s === 'Completed, TimedOut' || e.includes('timed out')) return say('They didn’t start it in time');

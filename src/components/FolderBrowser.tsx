@@ -65,7 +65,7 @@ export function FolderBrowserHost({ helper }: { helper: string }) {
     <div className="modal-backdrop" onClick={() => done(null)}>
       <div className="modal folder-browser" role="dialog" aria-label="Choose a folder on your computer" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === 'Escape' && done(null)}>
         <h2>Choose a folder</h2>
-        <p className="hint-text">These are the folders on the computer Nightjar runs on.</p>
+        <p className="hint-text">These are the folders on the computer nightjar runs on.</p>
         <div className="fb-where">
           {here ? (
             <>

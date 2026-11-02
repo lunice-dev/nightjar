@@ -362,7 +362,7 @@ function SpeedLimit({ direction, label }: { direction: Direction; label: string 
         className="btn quiet small"
         onClick={() => {
           if (!editable) {
-            toast('The engine is set to refuse changes from Nightjar. Turn on remote_configuration in data\\slskd.yml.', 'error');
+            toast('The engine is set to refuse changes from nightjar. Turn on remote_configuration in data\\slskd.yml.', 'error');
             return;
           }
           setValue(limit ? String(limit) : '');
@@ -647,7 +647,7 @@ function TransferRow({
   const trashAll = async () => {
     setConfirmDelete(false);
     const removed = await backend?.files.trashDownload(leftovers);
-    if (removed == null) toast('Couldn’t reach the Nightjar app to delete files.', 'error');
+    if (removed == null) toast('Couldn’t reach the nightjar app to delete files.', 'error');
     else toast(removed ? `Moved ${g.title} to the Recycle Bin` : 'Nothing was left on disk to delete', 'info');
     if (removed) {
       rescanSoon(3000); // stop offering deleted files to others
@@ -798,12 +798,12 @@ function TransferRow({
           <span>
             {g.plan.identity.test && (
               <>
-                <b>Fake-album test:</b> nothing is wrong with this album; Nightjar acted as if it were. Keep downloading carries on and clears the
+                <b>Fake-album test:</b> nothing is wrong with this album; nightjar acted as if it were. Keep downloading carries on and clears the
                 mark.{' '}
               </>
             )}
             <b>This isn’t {g.plan.artist ? `${g.plan.artist} – ` : ''}{g.plan.title}.</b> The files’ own tags say{' '}
-            <b>{[g.plan.identity.artist, g.plan.identity.album].filter(Boolean).join(' – ')}</b>. Nightjar paused it
+            <b>{[g.plan.identity.artist, g.plan.identity.album].filter(Boolean).join(' – ')}</b>. nightjar paused it
             {g.plan.identity.user ? ` and will rank ${g.plan.identity.user}’s copies last in searches` : ''}.
           </span>
           <button
@@ -814,7 +814,7 @@ function TransferRow({
                 ...leftovers,
                 partials: [...leftovers.partials, ...paused.map((p) => ({ user: p.username, file: p.filename }))],
               });
-              if (removed == null) toast('Couldn’t reach the Nightjar app to delete files.', 'error');
+              if (removed == null) toast('Couldn’t reach the nightjar app to delete files.', 'error');
               else toast(`Moved ${g.title} to the Recycle Bin`, 'info');
               if (g.plan) usePrefs.getState().updatePlan(g.plan.id, { finishedAt: Date.now() });
               usePrefs.getState().forgetFinished(g.key);
@@ -884,7 +884,7 @@ function TransferRow({
           </button>
         )}
         {before && (
-          <span className="dim" title={`Since ${new Date(before.since).toLocaleDateString()}, as far as Nightjar has kept count`}>
+          <span className="dim" title={`Since ${new Date(before.since).toLocaleDateString()}, as far as nightjar has kept count`}>
             {bytes(before.bytes)} from you before ({before.files} {before.files === 1 ? 'file' : 'files'})
           </span>
         )}
@@ -930,7 +930,7 @@ function TransferRow({
           </button>
         </p>
       )}
-      {direction === 'download' && gone && <p className="hint-text moved-line">No longer in your downloads folder (moved or deleted outside Nightjar).</p>}
+      {direction === 'download' && gone && <p className="hint-text moved-line">No longer in your downloads folder (moved or deleted outside nightjar).</p>}
       {direction === 'download' && <CheckResult check={quality} onFindAnother={() => searchFor(`${g.parent} ${g.title}`)} />}
       {organizing && albumDir && <OrganizeDialog dir={albumDir} onClose={() => setOrganizing(false)} onMoved={(to) => setMovedTo(to)} />}
       {direction === 'download' && inLibrary && albumDir && !gone && <p className="hint-text moved-line">In your library: {albumDir}</p>}
@@ -1115,7 +1115,7 @@ function UploadActivity() {
       </div>
       {shown.length === 0 ? (
         <p className="hint-text" style={{ marginTop: 12 }}>
-          Nothing here yet. Nightjar records this while it’s open.
+          Nothing here yet. nightjar records this while it’s open.
         </p>
       ) : (
         feedByDay(shown.slice(0, limit)).map(([day, items]) => (

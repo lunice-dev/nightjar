@@ -55,17 +55,17 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
     <main className="connect">
       <div className="connect-card">
         <h1>
-          <Mark size={34} /> Nightjar
+          <Mark size={34} /> nightjar
         </h1>
         {phase === 'login' && (viaTailscale || (viaHomeWifi && pairing)) ? (
           <PairDevice onDone={onRetry} />
         ) : phase === 'login' && viaHomeWifi && pairing === null ? (
           <p className="hint-text">
-            <span className="spinner" aria-hidden /> Looking for Nightjar on your computer…
+            <span className="spinner" aria-hidden /> Looking for nightjar on your computer…
           </p>
         ) : phase === 'login' ? (
           <>
-            <p>Sign in to Nightjar on your computer with its phone login. This isn’t your Soulseek account.</p>
+            <p>Sign in to nightjar on your computer with its phone login. This isn’t your Soulseek account.</p>
             <form onSubmit={login}>
               <label className="field">
                 Username
@@ -88,7 +88,7 @@ export function ConnectScreen({ error, onRetry }: { error?: string; onRetry: () 
         ) : (
           <>
             <p>
-              Nightjar’s engine isn’t answering. If you opened this page in a browser, open the Nightjar app on the computer
+              nightjar’s engine isn’t answering. If you opened this page in a browser, open the nightjar app on the computer
               it’s installed on (or check it’s still running next to the clock), then try again.
             </p>
             {error && <p className="error" role="alert">{error}</p>}
@@ -140,7 +140,7 @@ function PairDevice({ onDone }: { onDone: () => void }) {
     return (
       <div className="pair">
         <p>
-          <strong>First, add Nightjar to your Home Screen</strong>, so it opens like an app and stays signed in.
+          <strong>First, add nightjar to your Home Screen</strong>, so it opens like an app and stays signed in.
         </p>
         <ol className="pair-steps">
           <li>
@@ -149,7 +149,7 @@ function PairDevice({ onDone }: { onDone: () => void }) {
           <li>
             Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.
           </li>
-          <li>Open Nightjar from its new icon and type the code there.</li>
+          <li>Open nightjar from its new icon and type the code there.</li>
         </ol>
         <button className="link" onClick={() => setInSafari(false)}>
           Use it in Safari instead
@@ -170,7 +170,7 @@ function PairDevice({ onDone }: { onDone: () => void }) {
   return (
     <form className="pair" onSubmit={submit}>
       <p>
-        On your computer, open Nightjar → <strong>Settings</strong> → <strong>Remote access</strong> → <strong>Add a phone or computer</strong>, and
+        On your computer, open nightjar → <strong>Settings</strong> → <strong>Remote access</strong> → <strong>Add a phone or computer</strong>, and
         type the code it shows. Your remote password works too.
       </p>
       <label className="field">

@@ -86,9 +86,9 @@ namespace Nightjar
             try
             {
                 MessageBox.Show(
-                    "Nightjar ran into a problem it couldn't handle:\n\n" + (e?.Message ?? "unknown error") +
-                    "\n\nThe details are in " + Log.File + ".\nOpen Nightjar again from the Start menu. If it keeps happening, send that file to lunice.",
-                    "Nightjar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    "nightjar ran into a problem it couldn't handle:\n\n" + (e?.Message ?? "unknown error") +
+                    "\n\nThe details are in " + Log.File + ".\nOpen nightjar again from the Start menu. If it keeps happening, send that file to lunice.",
+                    "nightjar", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch { }
         }

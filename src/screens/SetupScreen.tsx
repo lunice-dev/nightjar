@@ -84,7 +84,7 @@ export function SetupScreen({ onDone }: { onDone: () => void }) {
     <main className="connect setup">
       <div className="connect-card setup-card">
         <h1>
-          <Mark size={34} /> Nightjar
+          <Mark size={34} /> nightjar
         </h1>
         <ol className="setup-steps" aria-label="Setup">
           <li aria-current={step === 'account' ? 'step' : undefined}>Account</li>
@@ -103,7 +103,7 @@ export function SetupScreen({ onDone }: { onDone: () => void }) {
             }}
           >
             <p>
-              Nightjar finds music on Soulseek, a network of people sharing their collections. Choose a name and a password.
+              nightjar finds music on Soulseek, a network of people sharing their collections. Choose a name and a password.
               If the name is free, Soulseek creates your account the first time you sign in. No email needed.
             </p>
             <label className="field">
@@ -164,7 +164,7 @@ export function SetupScreen({ onDone }: { onDone: () => void }) {
               {music.music && shared.includes(music.music) && music.musicInOneDrive && (
                 <span className="hint-text">
                   Your Music folder is in OneDrive. Files that are only in the cloud are downloaded to this computer when
-                  Nightjar reads them. If that’s a lot, share a folder that is on this computer instead.
+                  nightjar reads them. If that’s a lot, share a folder that is on this computer instead.
                 </span>
               )}
               {canPick && (

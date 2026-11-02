@@ -357,8 +357,8 @@ namespace Nightjar
                 WaveStream reader;
                 if (Path.GetExtension(source).Equals(".flac", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!File.Exists(FlacExe)) throw new FileNotFoundException("The FLAC decoder is missing; install Nightjar again.");
-                    var info = FlacInfo(source) ?? throw new InvalidDataException("Nightjar can make phone copies of 16- and 24-bit mono or stereo FLAC only.");
+                    if (!File.Exists(FlacExe)) throw new FileNotFoundException("The FLAC decoder is missing; install nightjar again.");
+                    var info = FlacInfo(source) ?? throw new InvalidDataException("nightjar can make phone copies of 16- and 24-bit mono or stereo FLAC only.");
                     pcm = target + ".pcm";
                     // Raw samples through standard output, as playing does. Written to a file, flac.exe deletes it
                     // again when the FLAC ends in junk (an old ID3v1 tag, common), though every sample was there.

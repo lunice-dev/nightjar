@@ -98,7 +98,7 @@ export function PeopleScreen() {
         <section className="settings-block" aria-labelledby="blocked-h">
           <h2 id="blocked-h">Can’t download from you</h2>
           <p className="hint-text">
-            These people can still see you and talk to you, but Nightjar refuses their downloads.
+            These people can still see you and talk to you, but nightjar refuses their downloads.
             {!editable && ' To change this list here, turn on remote_configuration in the engine’s config (data\\slskd.yml).'}
           </p>
           {blocked === undefined ? (

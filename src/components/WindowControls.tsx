@@ -46,7 +46,7 @@ export function WindowControls() {
           )}
         </svg>
       </button>
-      <button className="win-btn close" aria-label="Close to the icon next to the clock" title="Close (Nightjar keeps running next to the clock)" onClick={() => windowAction('close')}>
+      <button className="win-btn close" aria-label="Close to the icon next to the clock" title="Close (nightjar keeps running next to the clock)" onClick={() => windowAction('close')}>
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
           <path d="M.5.5l9 9M9.5.5l-9 9" stroke="currentColor" strokeWidth="1" />
         </svg>

@@ -392,7 +392,7 @@ namespace Nightjar
                 var log = Log();
                 var m = log.FirstOrDefault(x => x.id == id && !x.undone);
                 if (m == null) return new { ok = false, error = "Nothing to undo." };
-                if (!Directory.Exists(m.to)) return new { ok = false, error = "The album isn't where Nightjar put it any more." };
+                if (!Directory.Exists(m.to)) return new { ok = false, error = "The album isn't where nightjar put it any more." };
                 if (Directory.Exists(m.from)) return new { ok = false, error = "Something else is already where the album was." };
                 Directory.CreateDirectory(Path.GetDirectoryName(m.from));
                 MoveDir(m.to, m.from);

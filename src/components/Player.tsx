@@ -84,7 +84,7 @@ export function Player() {
     backend.files.streamUrl(track.path, as).then((url) => {
       if (!alive) return;
       if (!url) {
-        toast('Playing needs the Nightjar app on your computer.', 'error');
+        toast('Playing needs the nightjar app on your computer.', 'error');
         usePlayer.getState().stop();
         return;
       }

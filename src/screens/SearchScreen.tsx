@@ -130,7 +130,7 @@ function ClassicLanding() {
           <div className="hero-copy">
             <h1 className="hero-title">Dig at night. Keep the best copy.</h1>
             <p className="hero-sub">
-              Nightjar searches Soulseek, where people share their own record collections. Every copy of an album is stacked
+              nightjar searches Soulseek, where people share their own record collections. Every copy of an album is stacked
               together and ranked by quality and speed, so the best one you can get is on top.
             </p>
             <div className="hero-actions">

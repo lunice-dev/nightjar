@@ -345,37 +345,37 @@ namespace Nightjar
 
         public static Problem Missing() => new Problem
         {
-            Title = "Part of Nightjar is missing",
-            Text = "The engine (slskd.exe) isn't where it should be. Your antivirus may have moved it to quarantine. Install Nightjar again; your settings and music stay.",
+            Title = "Part of nightjar is missing",
+            Text = "The engine (slskd.exe) isn't where it should be. Your antivirus may have moved it to quarantine. Install nightjar again; your settings and music stay.",
             Actions = new[] { ("logs", "Open the log folder"), ("quit", "Close") },
         };
 
         public static Problem SoulseekQtOpen() => new Problem
         {
             Title = "SoulseekQt is open",
-            Text = "Soulseek allows one connection per account, so SoulseekQt and Nightjar would keep signing each other out. Close SoulseekQt (including its icon next to the clock), or let Nightjar close it.",
-            Actions = new[] { ("close-soulseekqt", "Close SoulseekQt and continue"), ("retry", "I closed it, try again"), ("quit", "Quit Nightjar") },
+            Text = "Soulseek allows one connection per account, so SoulseekQt and nightjar would keep signing each other out. Close SoulseekQt (including its icon next to the clock), or let nightjar close it.",
+            Actions = new[] { ("close-soulseekqt", "Close SoulseekQt and continue"), ("retry", "I closed it, try again"), ("quit", "Quit nightjar") },
         };
 
         public static Problem StrayEngine() => new Problem
         {
             Title = "Another copy of the engine is running",
-            Text = "An older SSK-Lite (or one it left behind) is still running, so Nightjar can't start its own. Nightjar can end it for you; nothing is lost.",
-            Actions = new[] { ("end-engines", "End it and continue"), ("retry", "Try again"), ("quit", "Quit Nightjar") },
+            Text = "An older SSK-Lite (or one it left behind) is still running, so nightjar can't start its own. nightjar can end it for you; nothing is lost.",
+            Actions = new[] { ("end-engines", "End it and continue"), ("retry", "Try again"), ("quit", "Quit nightjar") },
         };
 
         public static Problem PortBusy(int port) => new Problem
         {
-            Title = "Another program is using Nightjar's address",
+            Title = "Another program is using nightjar's address",
             Text = "Port " + port + " on this computer is taken by another program, so the engine can't start. Close programs you don't need (or restart the computer), then try again.",
-            Actions = new[] { ("retry", "Try again"), ("logs", "Open the log folder"), ("quit", "Quit Nightjar") },
+            Actions = new[] { ("retry", "Try again"), ("logs", "Open the log folder"), ("quit", "Quit nightjar") },
         };
 
         public static Problem Slow() => new Problem
         {
             Title = "The engine is taking too long to start",
             Text = "This can happen right after Windows starts, or when an antivirus scans the engine. Try again; if it keeps happening, the log folder has the details.",
-            Actions = new[] { ("retry", "Try again"), ("logs", "Open the log folder"), ("quit", "Quit Nightjar") },
+            Actions = new[] { ("retry", "Try again"), ("logs", "Open the log folder"), ("quit", "Quit nightjar") },
         };
 
         public static Problem Crashing(int code, string details) => new Problem
@@ -383,13 +383,13 @@ namespace Nightjar
             Title = "The engine keeps stopping",
             Text = "It stopped three times in a row (code " + code + "). The lines below come from its log; usually it's a folder that no longer exists or a setting it can't read.",
             Details = details,
-            Actions = new[] { ("retry", "Try again"), ("logs", "Open the log folder"), ("quit", "Quit Nightjar") },
+            Actions = new[] { ("retry", "Try again"), ("logs", "Open the log folder"), ("quit", "Quit nightjar") },
         };
 
         public static Problem NoWebView() => new Problem
         {
             Title = "Microsoft Edge WebView2 is missing",
-            Text = "Nightjar shows its window with WebView2, part of Windows 10 and 11. It seems to be missing or broken here. Install it from Microsoft (search for \"WebView2 Runtime\"), then open Nightjar again.",
+            Text = "nightjar shows its window with WebView2, part of Windows 10 and 11. It seems to be missing or broken here. Install it from Microsoft (search for \"WebView2 Runtime\"), then open nightjar again.",
             Actions = new[] { ("quit", "Close") },
         };
     }

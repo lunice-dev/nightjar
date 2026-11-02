@@ -37,17 +37,17 @@ namespace Nightjar
                 if (!toldAboutTray)
                 {
                     toldAboutTray = true;
-                    tray.ShowBalloonTip(5000, "Nightjar is still running", "Downloads and sharing continue. Open Nightjar from this icon, or choose Quit to stop everything.", ToolTipIcon.Info);
+                    tray.ShowBalloonTip(5000, "nightjar is still running", "Downloads and sharing continue. Open nightjar from this icon, or choose Quit to stop everything.", ToolTipIcon.Info);
                 }
             };
             form.QuitRequested += () => Quit();
             form.ActionRequested += OnAction;
 
             var menu = new ContextMenuStrip();
-            menu.Items.Add("Open Nightjar", null, (s, e) => ShowWindow());
+            menu.Items.Add("Open nightjar", null, (s, e) => ShowWindow());
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Quit Nightjar", null, (s, e) => Quit());
-            tray = new NotifyIcon { Icon = Nightjar.MainForm.AppIcon(), Text = "Nightjar", ContextMenuStrip = menu, Visible = true };
+            menu.Items.Add("Quit nightjar", null, (s, e) => Quit());
+            tray = new NotifyIcon { Icon = Nightjar.MainForm.AppIcon(), Text = "nightjar", ContextMenuStrip = menu, Visible = true };
             tray.DoubleClick += (s, e) => ShowWindow();
 
             helper = new Helper(fn => form.Invoke(fn), () => form.BeginInvoke((Action)(() => Quit())), () => form.BeginInvoke((Action)ShowWindow), () => Task.Run(() => engine.Restart()));
@@ -61,7 +61,7 @@ namespace Nightjar
             engine.Ready += () => form.BeginInvoke((Action)(() =>
             {
                 form.OpenPage();
-                foreach (var note in engine.Notes) tray.ShowBalloonTip(8000, "Nightjar", note, ToolTipIcon.Warning);
+                foreach (var note in engine.Notes) tray.ShowBalloonTip(8000, "nightjar", note, ToolTipIcon.Warning);
             }));
             engine.ExitedOnPurpose += () => form.BeginInvoke((Action)(() => Quit(engineAlreadyStopped: true)));
 
@@ -136,7 +136,7 @@ namespace Nightjar
             quitting = true;
             Log.Write("Quitting");
             form.Hide();
-            tray.Text = "Nightjar is closing…";
+            tray.Text = "nightjar is closing…";
             if (!engineAlreadyStopped) await engine.Stop();
             tray.Visible = false;
             tray.Dispose();
@@ -162,11 +162,12 @@ namespace Nightjar
 
         public MainForm()
         {
-            Text = "Nightjar";
+            Text = "nightjar";
             Icon = AppIcon();
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            BackColor = Color.FromArgb(0xe6, 0xe3, 0xdd);
+            BackColor = ThemeBack(ChosenTheme);
+            web.DefaultBackgroundColor = BackColor; // no white flash between the opening screen and the app
             AutoScaleMode = AutoScaleMode.None;
             var scale = DeviceDpi / 96f;
             MinimumSize = new Size((int)(960 * scale), (int)(600 * scale));
@@ -271,7 +272,7 @@ namespace Nightjar
                 }
                 catch (WebView2RuntimeNotFoundException)
                 {
-                    MessageBox.Show(Problem.NoWebView().Text, "Nightjar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(Problem.NoWebView().Text, "nightjar", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     QuitRequested?.Invoke();
                     return;
                 }
@@ -284,7 +285,7 @@ namespace Nightjar
                 catch (Exception e)
                 {
                     Log.Write("Window failed: " + e);
-                    MessageBox.Show("Nightjar couldn't open its window: " + e.Message + "\n\nDownloads and sharing keep running next to the clock. Quit Nightjar from its icon there and open it again.", "Nightjar", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("nightjar couldn't open its window: " + e.Message + "\n\nDownloads and sharing keep running next to the clock. Quit nightjar from its icon there and open it again.", "nightjar", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
             }
@@ -321,8 +322,7 @@ namespace Nightjar
             };
             if (pageOpen) core.Navigate(Paths.EngineUrl + "/");
             else
-                using (var s = typeof(MainForm).Assembly.GetManifestResourceStream("splash.html"))
-                using (var r = new StreamReader(s)) core.NavigateToString(r.ReadToEnd());
+                { splashShownAt = DateTime.Now; core.NavigateToString(SplashHtml()); }
         }
 
         /// <summary>After a background start: out of sight, and ready to appear in the middle of the screen.</summary>
@@ -359,8 +359,8 @@ namespace Nightjar
             if (pageOpen)
             {
                 pageOpen = false;
-                using (var s = typeof(MainForm).Assembly.GetManifestResourceStream("splash.html"))
-                using (var r = new StreamReader(s)) web.CoreWebView2?.NavigateToString(r.ReadToEnd());
+                web.CoreWebView2?.NavigateToString(SplashHtml());
+                splashShownAt = DateTime.MinValue; // a problem: no flight to wait for
             }
             var actions = Array.ConvertAll(p.Actions, a => new { id = a.id, label = a.label });
             var script = "showProblem(" + Js(new { title = p.Title, text = p.Text, details = p.Details, actions }) + ")";
@@ -368,11 +368,66 @@ namespace Nightjar
             Run("typeof showProblem==='function'&&" + script);
         }
 
-        public void OpenPage()
+        /// <summary>When the opening screen (with the bird's flight) was last shown.</summary>
+        DateTime splashShownAt = DateTime.MinValue;
+        /// <summary>How long the bird's flight on the opening screen lasts, plus half a second on the finished logo.</summary>
+        static readonly TimeSpan Intro = TimeSpan.FromSeconds(3.7);
+
+        public async void OpenPage()
         {
+            // Let the bird land first: the app appears once the opening flight has finished. Not when the window is
+            // out of sight (a background start) or Windows has animations turned off (the opening screen is then still).
+            var onScreen = Visible && Opacity > 0 && Location.X > -30000 && SystemInformation.UIEffectsEnabled;
+            var wait = splashShownAt + Intro - DateTime.Now;
+            if (wait > TimeSpan.Zero && onScreen) await Task.Delay(wait);
+            if (pageOpen) return;
+            // The opening screen fades out softly; the app then fades in (see .intro-done in the page's styles).
+            if (onScreen && splashShownAt != DateTime.MinValue)
+            {
+                Run("document.body.classList.add('leaving')");
+                await Task.Delay(320);
+                if (pageOpen) return;
+            }
             pageOpen = true;
             pendingScript = null;
             web.CoreWebView2?.Navigate(Paths.EngineUrl + "/");
+        }
+
+        static readonly string[] Themes = { "light", "dark", "oled", "glass" };
+
+        /// <summary>The theme chosen in the page ("light", "dark", "oled", "glass"), or null for Auto (follows Windows).
+        /// The page reports it whenever it changes; kept in data\nightjar.json so the opening screen matches next time.</summary>
+        static string ChosenTheme => AppSettings.Get("theme") is string t && Array.IndexOf(Themes, t) >= 0 ? t : null;
+
+        static bool WindowsIsLight()
+        {
+            try
+            {
+                using (var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
+                    return k?.GetValue("AppsUseLightTheme") is int v && v == 1;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>The window's own colour, seen for a moment before the page paints: the theme's background.</summary>
+        static Color ThemeBack(string theme)
+        {
+            switch (theme ?? (WindowsIsLight() ? "light" : "dark"))
+            {
+                case "light": return Color.FromArgb(0xe4, 0xe1, 0xda);
+                case "oled": return Color.Black;
+                case "glass": return Color.FromArgb(0x0c, 0x0e, 0x12);
+                default: return Color.FromArgb(0x0f, 0x11, 0x1a);
+            }
+        }
+
+        static string SplashHtml()
+        {
+            string html;
+            using (var s = typeof(MainForm).Assembly.GetManifestResourceStream("splash.html"))
+            using (var r = new StreamReader(s)) html = r.ReadToEnd();
+            var t = ChosenTheme;
+            return html.Replace("data-theme-slot", t != null ? "data-theme=\"" + t + "\"" : "");
         }
 
         void OnMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -381,6 +436,17 @@ namespace Nightjar
             try { m = new JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string, object>>(e.WebMessageAsJson); }
             catch { return; }
             m.TryGetValue("type", out var type);
+            if ((type as string) == "theme")
+            {
+                m.TryGetValue("theme", out var chosen);
+                var t = chosen as string;
+                if (t != "system" && Array.IndexOf(Themes, t) < 0) return;
+                var keep = t == "system" ? null : t;
+                if (keep != ChosenTheme) AppSettings.Set("theme", keep);
+                BackColor = ThemeBack(keep);
+                web.DefaultBackgroundColor = BackColor;
+                return;
+            }
             if ((type as string) == "action" && m.TryGetValue("id", out var id)) { ActionRequested?.Invoke(id as string); return; }
             if ((type as string) != "window" || !m.TryGetValue("action", out var action)) return;
             switch (action as string)

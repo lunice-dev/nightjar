@@ -30,7 +30,7 @@ export function ReportProblem() {
       setDone(r.ok ? { path: r.path, name: r.name } : { error: r.error ?? 'Couldn’t make the report.' });
       if (r.ok) setNote('');
     } catch (e) {
-      setDone({ error: `The Nightjar app didn’t answer (${(e as Error).message}).` });
+      setDone({ error: `The nightjar app didn’t answer (${(e as Error).message}).` });
     }
     setBusy(false);
   };
@@ -42,7 +42,7 @@ export function ReportProblem() {
       if (!res.ok) throw new Error('The report isn’t on the computer any more.');
       const file = new File([await res.blob()], done.name, { type: 'application/zip' });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Nightjar report' }).catch((e: Error) => {
+        await navigator.share({ files: [file], title: 'nightjar report' }).catch((e: Error) => {
           if (e.name !== 'AbortError') throw e;
         });
         return;
@@ -61,7 +61,7 @@ export function ReportProblem() {
     <section className="report" aria-labelledby={id}>
       <h2 id={id}>Something not working?</h2>
       <p className="hint-text">
-        Make a report and send it to whoever gave you Nightjar. It holds Nightjar’s recent logs and settings, what remote access is doing and your devices’ names (never passwords or keys), and it
+        Make a report and send it to whoever gave you nightjar. It holds nightjar’s recent logs and settings, what remote access is doing and your devices’ names (never passwords or keys), and it
         stays on your computer until you send it.
       </p>
       <textarea

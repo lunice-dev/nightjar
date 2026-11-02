@@ -98,7 +98,7 @@ async function draw(info: CardInfo, useImage: boolean): Promise<Blob> {
 
   // The backdrop: a small copy of the cover, blurred by hand (canvas blur filters aren't on every browser), then enlarged in
   // steps so no blocks show.
-  ctx.fillStyle = info.tint ?? '#2a2724';
+  ctx.fillStyle = info.tint ?? '#22273a';
   ctx.fillRect(0, 0, W, H);
   if (img) {
     const small = document.createElement('canvas');
@@ -142,7 +142,7 @@ async function draw(info: CardInfo, useImage: boolean): Promise<Blob> {
   ctx.shadowBlur = 60;
   ctx.shadowOffsetY = 24;
   roundRect(ctx, cx, cy, size, size, 40);
-  ctx.fillStyle = info.tint ?? '#2a2724';
+  ctx.fillStyle = info.tint ?? '#22273a';
   ctx.fill();
   ctx.restore();
   ctx.save();

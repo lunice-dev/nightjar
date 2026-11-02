@@ -42,6 +42,21 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
  */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.10.0',
+    date: '2 Nov 2026',
+    title: 'A new look',
+    items: [
+      'A new logo: a nightjar crossing a full moon, with new colours and a new typeface',
+      'The name is written nightjar, in lowercase, everywhere',
+      'nightjar opens with the bird flying in, dropping the letters of its name and landing on the moon (the finished logo, if Reduce Motion is on)',
+      'The opening screen follows your theme, on the computer and on phones',
+      'New icons for the app, the Home Screen, the browser tab and the installer',
+      'Home: a cover plays the album in the player beside it instead of opening the large player',
+      'On an iPad, rows of covers on Home swipe sideways',
+      'Fixed the player on an iPad’s Home sliding over the activity below it',
+    ],
+  },
+  {
     version: '0.9.0',
     date: '2 Nov 2026',
     title: 'A new player, lyrics and a lighter network',
@@ -74,9 +89,9 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Opening an album’s tracks again doesn’t ask its owner a second time',
       'When someone sharing an album can’t be reached, their tracks go to the others sharing it',
       'Tracks left waiting on someone unreachable move to another copy by themselves',
-      'Settings can check every hour whether others can reach your computer, and note it in Nightjar’s log',
+      'Settings can check every hour whether others can reach your computer, and note it in nightjar’s log',
       'Fixed settings changed on your computer sometimes not reaching your phone',
-      'When an album can’t be moved because a track is playing or open elsewhere, Nightjar says which file',
+      'When an album can’t be moved because a track is playing or open elsewhere, nightjar says which file',
       'Uploads explain in plain words why a file didn’t go through, and whose side it was',
       'Clearer waiting lines and buttons in Uploads',
       'Fixed a file someone asks for again, after it didn’t go through, sometimes never starting',
@@ -89,7 +104,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
     items: [
       'Search results show much sooner, especially on a phone',
       'Searches for popular names end once the answers slow down, instead of running for a minute',
-      'Nightjar on your phone uses far less mobile data',
+      'nightjar on your phone uses far less mobile data',
     ],
   },
   {
@@ -132,7 +147,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'A paused album waits in Needs attention until you choose to delete it or keep downloading',
       'Large searches no longer slow down phones',
       'Uploads explain when an album is waiting for the same person’s previous album to finish',
-      'After an update, Nightjar reloads only once it’s ready, instead of showing a blank page',
+      'After an update, nightjar reloads only once it’s ready, instead of showing a blank page',
       'Fixed remote access setup failing on some computers',
       'Fixed occasional errors when loading profile pictures',
     ],
@@ -143,27 +158,27 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
     title: 'Updates from your phone',
     items: [
       'Updates started from your phone or another computer now finish on their own',
-      'A page left open while Nightjar was updated offers to reload',
+      'A page left open while nightjar was updated offers to reload',
       'About shows the correct version number',
-      'The bottom bar credits slskd, the engine Nightjar runs on',
+      'The bottom bar credits slskd, the engine nightjar runs on',
     ],
   },
   {
     version: '0.8',
     date: '25 Oct 2026',
-    title: 'Nightjar on your phone',
+    title: 'nightjar on your phone',
     items: [
-      'Remote access: use Nightjar from your phone or another computer, anywhere, through Tailscale. Settings → Remote access walks you through it',
+      'Remote access: use nightjar from your phone or another computer, anywhere, through Tailscale. Settings → Remote access walks you through it',
       'Everything works from your phone: search, downloads, your library, Tidy library and Check quality',
       'Sign a phone in with a QR code or a remote password, and remove signed-in devices in Settings',
-      'Add Nightjar to your iPhone’s Home Screen to open it like an app',
+      'Add nightjar to your iPhone’s Home Screen to open it like an app',
       'Play your music, with lock-screen controls; “Use less data” plays smaller copies on mobile data',
       'A full-screen player with shuffle, repeat and a queue',
       'Tap an album cover to see its tracks and play, shuffle or queue them',
       'Playlists, shared by all your devices and backed up automatically',
       'Swipe between tabs on phones and trackpads',
       'Fake albums: a folder holding a different album is flagged before you download it, and paused if found while downloading. Whoever shared it is ranked last in searches',
-      'Updates are signed, and Nightjar installs only genuine ones',
+      'Updates are signed, and nightjar installs only genuine ones',
       'Phones on your home Wi-Fi can connect without Tailscale',
       'Uploads and Activity are grouped by day; block someone straight from Uploads',
       'Click any name to see their profile',
@@ -180,7 +195,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Albums on several discs, box sets and compilations stay together',
       'Folders you made to group artists are kept, and new downloads go into them',
       'Search shows albums you already have, and when a copy is better than yours',
-      'Nightjar updates itself in one click, keeping your settings',
+      'nightjar updates itself in one click, keeping your settings',
       'Report a problem from About (reports never include passwords)',
       'Check quality reads WAV files and albums on several discs',
     ],
@@ -188,12 +203,12 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
   {
     version: '0.6',
     date: '21 Oct 2026',
-    title: 'SSK-Lite is now Nightjar',
+    title: 'SSK-Lite is now nightjar',
     items: [
       'A new name and logo',
       'A proper Windows app, with its own window and an icon next to the clock',
       'The first start guides you through your Soulseek account and folders',
-      'If something goes wrong at start, Nightjar says what and offers a fix',
+      'If something goes wrong at start, nightjar says what and offers a fix',
       'The bottom bar shows whether you’re connected to Soulseek',
       'Home shows your library, recent downloads, uploads and connection',
       'Faster downloads from several people: slow sources are replaced automatically',
@@ -214,7 +229,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Private messages, chat rooms, profiles and browsing other people’s files',
       'A wishlist that keeps searching for you',
       'Album art, and light and dark themes',
-      'Nightjar opens its port on your router so others can reach you',
+      'nightjar opens its port on your router so others can reach you',
     ],
   },
 ];
@@ -245,15 +260,15 @@ export function AboutScreen() {
         <header className="about-head">
           <Mark size={44} />
           <div>
-            <h1 className="page-title" onClick={tap}>
-              Nightjar {VERSION}
+            <h1 className="page-title about-title" onClick={tap}>
+              <span className="about-name">nightjar</span> <span className="about-version">{VERSION}</span>
             </h1>
             <p className="page-sub">A modern client for the Soulseek network.</p>
           </div>
         </header>
 
         <p className="hint-text">
-          Nightjar is a new interface on top of <a href="https://github.com/slskd/slskd" target="_blank" rel="noreferrer">slskd</a>, an
+          nightjar is a new interface on top of <a href="https://github.com/slskd/slskd" target="_blank" rel="noreferrer">slskd</a>, an
           open source Soulseek engine, used without changes. It is not the official Soulseek client and isn’t affiliated with Soulseek or
           with slskd. Both are free software under the GNU AGPL 3.0.
         </p>

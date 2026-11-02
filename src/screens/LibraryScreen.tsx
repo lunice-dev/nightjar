@@ -73,7 +73,7 @@ export function LibraryScreen() {
           )}
         </div>
 
-        {!canFiles && <p className="callout">The library lives on the computer running the Nightjar app. Open Nightjar there to see it.</p>}
+        {!canFiles && <p className="callout">The library lives on the computer running the nightjar app. Open nightjar there to see it.</p>}
         {canFiles && info && !info.root && (
           <div className="callout">
             <p>Choose your library folder first: the folder where your music lives, sorted by format and artist.</p>
@@ -82,7 +82,7 @@ export function LibraryScreen() {
             </button>
           </div>
         )}
-        {canFiles && info?.root && !info.exists && <p className="callout">Nightjar can’t find {info.root}. Is the drive connected?</p>}
+        {canFiles && info?.root && !info.exists && <p className="callout">nightjar can’t find {info.root}. Is the drive connected?</p>}
         {error && <p className="error">{error}</p>}
         {scanning && (
           <p className="hint-text lib-scanning">

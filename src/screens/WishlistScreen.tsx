@@ -44,7 +44,7 @@ export function WishlistScreen() {
             <h1 className="page-title">Wishlist</h1>
             <p className="page-sub">
               Searches that run again on their own and tell you when someone shares a new copy. Each one is checked about every{' '}
-              {Math.round(WISH_EVERY / 60_000)} minutes while Nightjar is open.
+              {Math.round(WISH_EVERY / 60_000)} minutes while nightjar is open.
             </p>
           </div>
         </div>

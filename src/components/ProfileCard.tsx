@@ -129,7 +129,7 @@ function Card({ user, onClose }: { user: string; onClose: () => void }) {
         <section className="pc-section" aria-label="Between you">
           <h3>Between you</h3>
           {nothingBetween ? (
-            <p className="dim">Nothing yet, as far as Nightjar has kept count.</p>
+            <p className="dim">Nothing yet, as far as nightjar has kept count.</p>
           ) : (
             <ul className="pc-facts">
               {history.toThem.files > 0 && (

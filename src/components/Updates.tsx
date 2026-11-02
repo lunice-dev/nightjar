@@ -125,9 +125,9 @@ function Progress({ s }: { s: UpdateState }) {
     <span className="hint-text" style={{ margin: 0 }}>
       <span className="spinner" aria-hidden />{' '}
       {restarting
-        ? 'Installing… Nightjar restarts on your computer; this page reloads by itself when it’s back.'
+        ? 'Installing… nightjar restarts on your computer; this page reloads by itself when it’s back.'
         : s.ready
-          ? 'Installing… Nightjar closes and opens again by itself.'
+          ? 'Installing… nightjar closes and opens again by itself.'
           : `Downloading ${pct}%…`}
     </span>
   );
@@ -140,7 +140,7 @@ function UpdatedBanner() {
   return (
     <div className="update-banner" role="status">
       <span>
-        <b>Nightjar {s.current.replace(/\+.*$/, '')}</b> is installed.
+        <b>nightjar {s.current.replace(/\+.*$/, '')}</b> is installed.
       </span>
       <button className="btn small" onClick={() => location.reload()}>
         Reload to use it
@@ -160,7 +160,7 @@ export function UpdateBanner() {
   return (
     <div className="update-banner" role="status">
       <span>
-        <b>Nightjar {s.latest}</b> is out.
+        <b>nightjar {s.latest}</b> is out.
       </span>
       {s.downloading || s.ready ? (
         <Progress s={s} />
@@ -200,11 +200,11 @@ export function UpdateSection() {
     <section className="updates" aria-labelledby="updates-h">
       <h2 id="updates-h">Updates</h2>
       {!s.repo ? (
-        <p className="hint-text">This copy of Nightjar isn’t set up to update itself yet.</p>
+        <p className="hint-text">This copy of nightjar isn’t set up to update itself yet.</p>
       ) : s.available ? (
         <>
           <p className="hint-text">
-            <b>Nightjar {s.latest}</b> is out (you have {s.current}). Installing keeps your settings, library and downloads; Nightjar closes for a moment
+            <b>nightjar {s.latest}</b> is out (you have {s.current}). Installing keeps your settings, library and downloads; nightjar closes for a moment
             and opens again.
           </p>
           {s.notes && <pre className="update-notes">{s.notes}</pre>}

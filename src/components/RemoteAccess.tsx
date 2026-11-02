@@ -59,7 +59,7 @@ export function RemoteAccessSection() {
 
   const removeDevice = async (d: Device) => {
     const self = d.id === st.you;
-    if (!confirm(self ? 'Sign this device out? You’ll need a new code to use Nightjar here again.' : `Remove ${d.name}? It can’t use Nightjar until it signs in again. Nightjar restarts its engine for a few seconds.`)) return;
+    if (!confirm(self ? 'Sign this device out? You’ll need a new code to use nightjar here again.' : `Remove ${d.name}? It can’t use nightjar until it signs in again. nightjar restarts its engine for a few seconds.`)) return;
     try {
       await api.removeDevice(d.id);
       if (self) {
@@ -79,15 +79,15 @@ export function RemoteAccessSection() {
       <h2 id="remote-h">Remote access</h2>
       {on ? (
         <p className="reach-line ok">
-          <span className="presence online" aria-hidden /> On. Your devices open Nightjar at <code>{st.address}</code>
+          <span className="presence online" aria-hidden /> On. Your devices open nightjar at <code>{st.address}</code>
         </p>
       ) : broken ? (
         <p className="reach-line bad">
-          <span className="presence offline bad-dot" aria-hidden /> Off: Tailscale isn’t connected on this computer, so your devices can’t reach Nightjar.
+          <span className="presence offline bad-dot" aria-hidden /> Off: Tailscale isn’t connected on this computer, so your devices can’t reach nightjar.
         </p>
       ) : (
         <p className="hint-text">
-          Use Nightjar on your phone or another computer when you’re away from home: search, downloads, your library, and
+          Use nightjar on your phone or another computer when you’re away from home: search, downloads, your library, and
           playing your music. It goes through Tailscale, a free private network between your own devices. Nothing is
           open to the internet.
         </p>
@@ -107,7 +107,7 @@ export function RemoteAccessSection() {
               </button>
               {confirmOff ? (
                 <span className="quit-confirm">
-                  Your devices won’t reach Nightjar until you turn it on again.
+                  Your devices won’t reach nightjar until you turn it on again.
                   <button
                     className="btn quiet small"
                     onClick={async () => {
@@ -163,7 +163,7 @@ export function RemoteAccessSection() {
           <button
             className="link"
             onClick={async () => {
-              if (!confirm('Sign out every phone and computer? Each one needs a new code to use Nightjar again.')) return;
+              if (!confirm('Sign out every phone and computer? Each one needs a new code to use nightjar again.')) return;
               await api.signOutAll().catch(() => undefined);
               if (asDevice) {
                 forgetDevice();
@@ -224,7 +224,7 @@ function RemotePassword({ st, onSaved }: { st: RemoteStatus; onSaved: () => void
       }
       setEditing(false);
       setPass('');
-      toast('Remote password saved. Nightjar restarts its engine for a few seconds.');
+      toast('Remote password saved. nightjar restarts its engine for a few seconds.');
       onSaved();
     } catch (err) {
       setError((err as Error).message);
@@ -281,7 +281,7 @@ function HomeNetwork({ st, onSaved }: { st: RemoteStatus; onSaved: () => void })
     try {
       const r = await api.setLan(on);
       if (!r.ok) toast(r.error ?? 'Couldn’t change it.', 'error');
-      else toast('Saved. Nightjar restarts its engine for a few seconds.');
+      else toast('Saved. nightjar restarts its engine for a few seconds.');
       onSaved();
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -299,7 +299,7 @@ function HomeNetwork({ st, onSaved }: { st: RemoteStatus; onSaved: () => void })
         {st.lan
           ? `On a phone on the same Wi-Fi, open ${st.lanAddresses.map((a) => `http://${a}:5030`).join(' or ') || 'this computer’s address with :5030'} and sign in with a code from this page or your remote password. Everything works there, playing music too. It isn’t encrypted like the Tailscale address, so use it only on your own Wi-Fi.`
           : st.passwordSet
-            ? 'Off: only this computer and your Tailscale devices can open Nightjar.'
+            ? 'Off: only this computer and your Tailscale devices can open nightjar.'
             : 'Set a remote password first: it’s what you type on the home Wi-Fi.'}
       </p>
     </div>
@@ -467,11 +467,11 @@ function RemoteGuide({ st, reload, onClose }: { st: RemoteStatus; reload: (fresh
 
         {step === 'intro' && (
           <>
-            <p>Nightjar keeps running on this computer. Your phone (or another computer) connects to it through Tailscale, a private network only your own devices can join.</p>
+            <p>nightjar keeps running on this computer. Your phone (or another computer) connects to it through Tailscale, a private network only your own devices can join.</p>
             <ul className="guide-list">
               <li>You need a free Tailscale account. You sign in with Google, Apple, Microsoft or GitHub; no new password.</li>
-              <li>Tailscale goes on this computer (Nightjar installs it) and on your phone (from the App Store).</li>
-              <li>This computer has to be on, with Nightjar running, for your phone to reach it.</li>
+              <li>Tailscale goes on this computer (nightjar installs it) and on your phone (from the App Store).</li>
+              <li>This computer has to be on, with nightjar running, for your phone to reach it.</li>
             </ul>
             <div className="setup-nav">
               <button className="btn quiet" onClick={onClose}>
@@ -486,7 +486,7 @@ function RemoteGuide({ st, reload, onClose }: { st: RemoteStatus; reload: (fresh
 
         {step === 'install' && (
           <>
-            <p>First, Tailscale on this computer. Nightjar downloads the official installer from tailscale.com, checks it’s really from Tailscale, and runs it.</p>
+            <p>First, Tailscale on this computer. nightjar downloads the official installer from tailscale.com, checks it’s really from Tailscale, and runs it.</p>
             {note && (
               <p className="hint-text" role="status">
                 {busy && <span className="spinner" aria-hidden />} {note}
@@ -540,14 +540,14 @@ function RemoteGuide({ st, reload, onClose }: { st: RemoteStatus; reload: (fresh
             {!st.address ? (
               <>
                 <p>
-                  Signed in{ts.account ? ` as ${ts.account}` : ''}. Now Nightjar gets its private address on your Tailscale network,
+                  Signed in{ts.account ? ` as ${ts.account}` : ''}. Now nightjar gets its private address on your Tailscale network,
                   with a secure (https) connection.
                 </p>
                 {consent && (
                   <div className="callout">
                     <p>
                       Tailscale needs your OK once to give your devices secure addresses. Open its page, choose <strong>Enable</strong>,
-                      then come back: Nightjar carries on by itself.
+                      then come back: nightjar carries on by itself.
                     </p>
                     <a className="btn small" href={consent} target="_blank" rel="noreferrer">
                       Open Tailscale’s page
@@ -572,7 +572,7 @@ function RemoteGuide({ st, reload, onClose }: { st: RemoteStatus; reload: (fresh
             ) : (
               <>
                 <p>
-                  Nightjar’s private address is <code>{st.address}</code>
+                  nightjar’s private address is <code>{st.address}</code>
                 </p>
                 <p className="hint-text" role="status">
                   {tested === 'testing' || tested === 'no' ? (
@@ -620,13 +620,13 @@ function RemoteGuide({ st, reload, onClose }: { st: RemoteStatus; reload: (fresh
         {step === 'done' && (
           <>
             <p>
-              <span className="presence online" aria-hidden /> Remote access is on. Open Nightjar from your Home Screen whenever Tailscale is
+              <span className="presence online" aria-hidden /> Remote access is on. Open nightjar from your Home Screen whenever Tailscale is
               on on your phone.
             </p>
             <ul className="guide-list">
               <li>To add another phone or computer: Settings → Remote access → Add a phone or computer.</li>
               <li>{st.passwordSet ? 'Your remote password also signs a device in.' : 'A remote password (below the device list) lets you sign in without a code.'}</li>
-              <li>Leave this computer on with Nightjar running; it can sit in the corner next to the clock.</li>
+              <li>Leave this computer on with nightjar running; it can sit in the corner next to the clock.</li>
             </ul>
             <div className="setup-nav">
               <span />
@@ -694,13 +694,13 @@ function PhoneSteps({ st, onPaired }: { st: RemoteStatus; onPaired: () => void }
       <div className="phone-step">
         <span className="phone-n">2</span>
         <div>
-          <strong>Open Nightjar on your phone</strong>
+          <strong>Open nightjar on your phone</strong>
           <p className="hint-text small">
-            Scan this, or type <code>{address}</code> in Safari. On an iPhone or iPad, add it to the Home Screen when Nightjar asks, then open
+            Scan this, or type <code>{address}</code> in Safari. On an iPhone or iPad, add it to the Home Screen when nightjar asks, then open
             it from the new icon.
           </p>
         </div>
-        <Qr text={address} label="Nightjar’s address" />
+        <Qr text={address} label="nightjar’s address" />
       </div>
       <div className="phone-step">
         <span className="phone-n">3</span>
