@@ -1,14 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { LibAlbum } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
 import { tone } from '../components/LibraryAlbums';
-import { PlaylistCover, fmtLength, playlistsChanged, usePlaylists } from '../components/Playlists';
+import { PlaylistCover, addToPlaylist, fmtLength, playlistsChanged, usePlaylists } from '../components/Playlists';
 import { useBlocked } from '../lib/blocking';
 import { verdictText } from '../lib/check';
 import { useSuspects } from '../lib/guard';
 import { useLibraryReview } from '../lib/libraryReview';
-import { audioCtl, fmtTime, sourceQuality, trackTier, usePlayer } from '../lib/player';
+import { audioCtl, fmtTime, sourceQuality, toQueue, trackTier, usePlayer } from '../lib/player';
 import { bytes, speed } from '../lib/quality';
 import { groupDownloads } from '../lib/transfers';
 import { uploadStats } from '../lib/uploadStats';
@@ -202,6 +203,23 @@ function Middle() {
     return [...n.entries()].sort((x, y) => (order.indexOf(x[0]) + 1 || 9) - (order.indexOf(y[0]) + 1 || 9));
   }, [albums]);
   const size = useMemo(() => albums.reduce((t, a) => t + a.size, 0), [albums]);
+  // The library line from last time stays on screen until this look at the library is done, so it doesn't start empty.
+  const [cached] = useState<{ n: number; size: number; shape: [string, number][] } | null>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nightjar-home-shape') ?? 'null');
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    if (!albums.length) return;
+    try {
+      localStorage.setItem('nightjar-home-shape', JSON.stringify({ n: albums.length, size, shape }));
+    } catch {
+      /* fine */
+    }
+  }, [albums.length, size, shape]);
+  const line = albums.length ? { n: albums.length, size, shape } : cached;
 
   // On the way: downloading or waiting.
   const coming = useMemo(
@@ -233,8 +251,9 @@ function Middle() {
       seen.add(id);
       rows.push({ h, a: h.dir ? byDir.get(h.dir.toLowerCase()) : undefined });
     }
-    // Albums that are in the library come first: the others may have been moved or deleted since.
-    return [...rows.filter((r) => r.a), ...rows.filter((r) => !r.a)].slice(0, 16);
+    // Newest first, as downloaded. (Not the ones the library already lists first: the library review doesn't look in the
+    // downloads folder, so the newest albums aren't in it yet, and they'd drop behind older ones once it was read.)
+    return rows.slice(0, 16);
   }, [history, coming, byDir]);
 
   const rediscover = useMemo(() => shuffled(albums).slice(0, 14), [albums, again]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -252,6 +271,22 @@ function Middle() {
 
   // A cover sends the album to the player beside it; the cover there opens the large player.
   const open = (dir: string) => void usePlayer.getState().playAlbum(dir);
+  const albumMenu = (dir: string): MenuItem[] => {
+    const p = usePlayer.getState();
+    return [
+      { label: 'Play', run: () => void p.playAlbum(dir) },
+      { label: 'Play next', run: () => void p.addAlbum(dir, 'next') },
+      { label: 'Add to queue', run: () => void p.addAlbum(dir, 'end') },
+      {
+        label: 'Add to playlist',
+        run: async () => {
+          const album = await backend?.library.tracks(dir);
+          if (album?.tracks.length) addToPlaylist(album.tracks.map((t) => ({ ...t, dir: album.dir })));
+        },
+      },
+      { label: 'Open album', run: () => p.openAlbum(dir) },
+    ];
+  };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (q.trim()) search(q.trim());
@@ -270,7 +305,16 @@ function Middle() {
     setNaming(false);
     setName('');
     playlistsChanged();
-    openPlaylist(r.playlist.id);
+    toast(`Made “${r.playlist.name}”.`);
+  };
+  // A playlist plays in the player beside the page, skipping tracks whose files are gone.
+  const playPlaylist = async (id: string, shuffle = false) => {
+    const pl = await backend?.library.playlist(id).catch(() => null);
+    const playable = (pl?.tracks ?? []).filter((t) => !t.missing);
+    if (!playable.length) return toast('There’s nothing to play in that playlist yet.', 'error');
+    const p = usePlayer.getState();
+    if (shuffle) p.playShuffled(toQueue(playable));
+    else p.playQueue(toQueue(playable), 0);
   };
 
   return (
@@ -281,23 +325,23 @@ function Middle() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search Soulseek for an artist, album or track" aria-label="Search Soulseek" />
           <kbd aria-hidden>/</kbd>
         </form>
-        {albums.length > 0 ? (
+        {line ? (
           <div className="hx-shape">
             <p className="hx-line">
               <span>
-                <b>{albums.length.toLocaleString()}</b> albums
+                <b>{line.n.toLocaleString()}</b> albums
               </span>
               <span>
-                <b>{bytes(size)}</b>
+                <b>{bytes(line.size)}</b>
               </span>
-              {shape.map(([f, n]) => (
+              {line.shape.map(([f, n]) => (
                 <span key={f} className={`hx-key ${tierClass(f)}`}>
                   <b>{n.toLocaleString()}</b> {f}
                 </span>
               ))}
             </p>
             <button className="hx-ribbon" onClick={() => go('library')} aria-label="Open the library" title="Open the library">
-              {shape.map(([f, n]) => (
+              {line.shape.map(([f, n]) => (
                 <i key={f} className={tierClass(f)} style={{ flexGrow: n }} />
               ))}
             </button>
@@ -340,12 +384,13 @@ function Middle() {
             tier={a ? tierClass(a.format) : ''}
             online={!a}
             onClick={() => h.dir && open(h.dir)}
+            menu={h.dir ? albumMenu(h.dir) : undefined}
           />
         )}
       </Rail>
 
       <Rail title="Rediscover" link={{ label: 'Shuffle', go: () => setAgain((n) => n + 1) }} items={rediscover}>
-        {(a: LibAlbum) => <Tile key={a.dir} dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} name={a.album} sub={[a.artist, a.year].filter(Boolean).join(' · ')} tier={tierClass(a.format)} onClick={() => open(a.dir)} />}
+        {(a: LibAlbum) => <Tile key={a.dir} dir={a.dir} artist={a.artist} album={a.album} seed={a.dir} name={a.album} sub={[a.artist, a.year].filter(Boolean).join(' · ')} tier={tierClass(a.format)} onClick={() => open(a.dir)} menu={albumMenu(a.dir)} />}
       </Rail>
 
       <Rail title="Needs a look" count={looksTotal} link={{ label: 'Open the Library', go: () => go('library') }} items={looks}>
@@ -361,6 +406,7 @@ function Middle() {
             subTone={tone(c!.severity)}
             tier={tierClass(a.format)}
             onClick={() => open(a.dir)}
+            menu={albumMenu(a.dir)}
           />
         )}
       </Rail>
@@ -369,34 +415,43 @@ function Middle() {
         <section className="hx-rail">
           <h2 className="hx-h">
             Playlists {playlists.length > 0 && <span className="n">{playlists.length}</span>}
-            {naming ? (
-              <form className="hx-new" onSubmit={createPlaylist}>
-                <input className="input" autoFocus placeholder="Name" aria-label="Playlist name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} onKeyDown={(e) => e.key === 'Escape' && setNaming(false)} />
-                <button className="btn small" disabled={!name.trim()}>
-                  Create
-                </button>
-              </form>
-            ) : (
+            {!naming && (
               <button className="hx-link" onClick={() => setNaming(true)}>
                 New playlist
               </button>
             )}
           </h2>
+          {naming && (
+            <form className="hx-newrow" onSubmit={createPlaylist}>
+              <input className="input" autoFocus placeholder="Name the playlist" aria-label="Playlist name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} onKeyDown={(e) => e.key === 'Escape' && setNaming(false)} />
+              <button className="btn small" disabled={!name.trim()}>
+                Create
+              </button>
+              <button type="button" className="hx-link" onClick={() => setNaming(false)}>
+                Cancel
+              </button>
+            </form>
+          )}
           {playlists.length === 0 ? (
-            <p className="hint-text">Open an album and use … → Add to playlist on any track or on the whole album.</p>
+            !naming && <p className="hx-empty">Add an album to a playlist from the “…” beside its name, or right-click a cover.</p>
           ) : (
             <Fit items={playlists}>
               {(p) => (
-                <button key={p.id} className="hx-tile" onClick={() => openPlaylist(p.id)}>
-                  <span className="hx-art">
-                    <PlaylistCover p={p} className="hx-cover" />
-                  </span>
-                  <span className="hx-name">{p.name}</span>
-                  <span className="hx-sub">
-                    {p.count} {p.count === 1 ? 'track' : 'tracks'}
-                    {p.seconds ? ` · ${fmtLength(p.seconds)}` : ''}
-                  </span>
-                </button>
+                <Tile
+                  key={p.id}
+                  album={p.name}
+                  seed={p.id}
+                  name={p.name}
+                  sub={`${p.count} ${p.count === 1 ? 'track' : 'tracks'}${p.seconds ? ` · ${fmtLength(p.seconds)}` : ''}`}
+                  tier=""
+                  art={<PlaylistCover p={p} className="hx-cover" />}
+                  onClick={() => void playPlaylist(p.id)}
+                  menu={[
+                    { label: 'Play', run: () => void playPlaylist(p.id) },
+                    { label: 'Shuffle', run: () => void playPlaylist(p.id, true) },
+                    { label: 'Open or edit', run: () => openPlaylist(p.id) },
+                  ]}
+                />
               )}
             </Fit>
           )}
@@ -460,6 +515,8 @@ function Tile({
   progress,
   online = false,
   onClick,
+  menu,
+  art,
 }: {
   dir?: string;
   artist?: string;
@@ -472,21 +529,102 @@ function Tile({
   progress?: number;
   online?: boolean;
   onClick: () => void;
+  /** More things to do with it: a "…" beside the name, and a right-click. Nothing is ever drawn on the cover. */
+  menu?: MenuItem[];
+  /** Something other than an album's cover (a playlist's). */
+  art?: ReactNode;
 }) {
+  const [at, setAt] = useState<{ x: number; y: number; end: boolean } | null>(null);
+  const more = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!at) return;
+    const away = (e: Event) => {
+      if (!(e.target as Element | null)?.closest?.('.hx-menu')) setAt(null);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setAt(null);
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    window.addEventListener('scroll', away, true);
+    window.addEventListener('resize', away);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+      window.removeEventListener('scroll', away, true);
+      window.removeEventListener('resize', away);
+    };
+  }, [at]);
+  const title = `${name}${artist ? `, ${artist}` : ''}`;
   return (
-    <button className={`hx-tile ${tier}`} onClick={onClick} title={`${name}${artist ? `, ${artist}` : ''}`}>
-      <span className="hx-art">
-        <Cover className="hx-cover" dir={dir} artist={artist} album={album} seed={seed} online={online} />
-      </span>
-      {progress !== undefined && (
-        <span className="hx-prog" aria-hidden>
-          <i style={{ width: `${progress}%` }} />
-        </span>
-      )}
-      <span className="hx-name">{name}</span>
-      <span className={`hx-sub ${subTone ?? ''}`}>{sub}</span>
-    </button>
+    <div
+      className={`hx-tile ${tier}`}
+      onContextMenu={
+        menu
+          ? (e) => {
+              e.preventDefault();
+              setAt({ x: e.clientX, y: e.clientY, end: false });
+            }
+          : undefined
+      }
+    >
+      <button className="hx-art-btn" onClick={onClick} title={title} aria-label={title}>
+        <span className="hx-art">{art ?? <Cover className="hx-cover" dir={dir} artist={artist} album={album} seed={seed} online={online} />}</span>
+        {progress !== undefined && (
+          <span className="hx-prog" aria-hidden>
+            <i style={{ width: `${progress}%` }} />
+          </span>
+        )}
+      </button>
+      <div className="hx-cap">
+        <button className="hx-cap-main" onClick={onClick} tabIndex={-1} aria-hidden>
+          <span className="hx-name">{name}</span>
+          <span className={`hx-sub ${subTone ?? ''}`}>{sub}</span>
+        </button>
+        {menu && (
+          <button
+            ref={more}
+            className="hx-more"
+            aria-label={`More for ${name}`}
+            aria-haspopup="menu"
+            aria-expanded={!!at}
+            onClick={() => {
+              const r = more.current?.getBoundingClientRect();
+              if (r) setAt(at ? null : { x: r.right, y: r.bottom + 4, end: true });
+            }}
+          >
+            <Icon name="more" size={16} />
+          </button>
+        )}
+      </div>
+      {at &&
+        menu &&
+        createPortal(
+          <div
+            className={`ap-menu hx-menu ${at.end ? 'end' : ''}`}
+            role="menu"
+            style={at.y > innerHeight - 240 ? { bottom: innerHeight - at.y + (at.end ? 36 : 0), left: at.x } : { top: at.y, left: at.x }}
+          >
+            {menu.map((m) => (
+              <button
+                key={m.label}
+                role="menuitem"
+                onClick={() => {
+                  setAt(null);
+                  m.run();
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </div>
   );
+}
+
+interface MenuItem {
+  label: string;
+  run: () => void;
 }
 
 // ------------------------------------------------------------------ right: activity
