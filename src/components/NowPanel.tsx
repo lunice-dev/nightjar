@@ -135,7 +135,7 @@ export function NowPanel({ variant }: { variant: 'dock' | 'card' }) {
 
   if (!t) {
     return variant === 'dock' ? (
-      <div className="np np-idle">
+      <div className="nowp np-idle">
         <h2 className="np-title">Nothing playing</h2>
         <p className="np-by">Pick an album. It plays here, and the page takes its colours from the cover.</p>
       </div>
@@ -185,7 +185,7 @@ export function NowPanel({ variant }: { variant: 'dock' | 'card' }) {
 
   if (variant === 'dock') {
     return (
-      <div className="np">
+      <div className="nowp">
         <div className="np-head">
           <button className="np-cover" onClick={openFull} aria-label="Open the large player" title="Open the large player">
             <Cover className="np-cover-img" dir={t.dir} artist={t.artist ?? undefined} album={t.album ?? undefined} seed={t.dir} />

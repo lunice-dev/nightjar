@@ -2786,7 +2786,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .np-tabs { flex: none; display: flex; gap: 18px; padding: 12px 22px 0; font-size: 13px; }
   .np-tabs button { padding: 2px 0 6px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-3); font: inherit; cursor: pointer; transition: color 0.15s; }
   .np-tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--ink); }
-  .np { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .nowp { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .np-idle { padding: 28px 22px; }
   .np-head { flex: none; padding: 16px 22px 0; }
   .np-cover { display: block; width: min(100%, 26vh); min-width: 160px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--sunken); box-shadow: 0 22px 44px -28px rgb(0 0 0 / 0.7), 0 0 0 1px var(--rule); cursor: pointer; }
@@ -2797,9 +2797,9 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .np-tier { font-weight: 600; color: var(--tier-ink, var(--ink-2)); }
   .np-seek { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; align-items: center; margin: 12px 0 4px; color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
   .np-ctl { display: flex; align-items: center; justify-content: space-between; margin: 2px 0 8px; }
-  .np .hx-ctl { gap: 6px; }
-  .np .hx-ctl button { width: 36px; height: 36px; }
-  .np .hx-ctl button.go { width: 46px; height: 46px; }
+  .nowp .hx-ctl { gap: 6px; }
+  .nowp .hx-ctl button { width: 36px; height: 36px; }
+  .nowp .hx-ctl button.go { width: 46px; height: 46px; }
   .np-more { position: relative; }
   .np-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: none; color: var(--ink-3); cursor: pointer; transition: background-color 0.12s, color 0.12s; }
   .np-icon:hover, .np-icon.on { color: var(--ink); }
@@ -2911,3 +2911,18 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .np-list { display: flex; flex-direction: column; overflow: hidden; }
 .np-list h3 { position: static; flex: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .np-list ol { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
+
+/* the large player on a computer: the tracklist spans exactly from the cover's top to the controls' bottom, and the volume shares the controls' row */
+@media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) {
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-queue.np, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details { grid-column: 2; grid-row: 2 / 6; align-self: stretch; height: auto; min-height: 0; max-height: none; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { grid-column: 1; grid-row: 5; justify-self: end; align-self: center; width: min(240px, 46%); max-width: none; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls { grid-column: 1; grid-row: 5; justify-self: start; width: auto; }
+  .full-player.rail .fp-queue-head { padding: 0 10px 8px; }
+}
+
+/* lyrics beside the art: the same quiet controls as the rest of the large player */
+@media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) {
+  .full-player.rail .fp-body.np.lyrics-on .fp-controls { justify-content: flex-start; gap: 14px; padding: 0; }
+  .full-player.rail .fp-body.np.lyrics-on .fp-controls .fp-icon.small { display: none; }
+  .full-player.rail .fp-more { display: grid; }
+}
