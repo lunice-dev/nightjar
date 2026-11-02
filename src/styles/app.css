@@ -1328,7 +1328,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .remote-lan .hint-text { margin: 4px 0 0 24px; }
 .remote-guide { width: min(640px, 100%); }
 .setup-steps li.done { color: var(--ink-2); }
-.setup-steps li.done::before { content: '✓'; }
+.setup-steps li.done::before { content: 'âœ“'; }
 .guide-list { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); font-size: 14.5px; }
 .phone-steps { display: grid; gap: 10px; }
 .phone-step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 16px; border-radius: var(--r-md); background: var(--paper); }
@@ -1469,7 +1469,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 @media (hover: none) { .album-play.overlay { opacity: 1; transform: none; } }
 .ap-more { display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 10px rgb(0 0 0 / 0.3); }
 .ap-more { width: 30px; height: 30px; background: rgb(22 21 19 / 0.7); color: #f4f1ea; backdrop-filter: blur(6px); }
-/* On a cover, "…" is just the dots in the top corner: there when you need it, out of the way of the art. */
+/* On a cover, "â€¦" is just the dots in the top corner: there when you need it, out of the way of the art. */
 .shelf-art .album-play.overlay { position: absolute; inset: 0 0 8px 0; pointer-events: none; }
 .shelf-art .album-play.overlay > * { pointer-events: auto; }
 .shelf-art .ap-more { position: absolute; top: 6px; right: 6px; width: 28px; height: 22px; border-radius: 999px; background: none; box-shadow: none; backdrop-filter: none; color: #fff; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.7)); opacity: 0.8; }
@@ -1702,7 +1702,7 @@ html.in-app, html.in-app body { overflow: hidden; }
 .dv-pl-art.pl-cover { width: min(86vw, 46vh, 520px); }
 @media (min-aspect-ratio: 1/1) and (min-width: 560px) { .dv-pl-art.pl-cover { width: min(100%, calc(100vh - 150px), 620px); } }
 
-/* "…" menus in the drawer */
+/* "â€¦" menus in the drawer */
 .dv-menu { position: relative; display: inline-flex; flex: none; }
 .dv-menu-btn { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--fp-ink-2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .dv-actions .dv-menu-btn { background: rgb(255 255 255 / 0.14); color: var(--fp-ink); }
@@ -2050,7 +2050,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   html.full-screen .full-player { bottom: auto; height: var(--screen-h); }
 }
 
-/* ---------- touch screens: the extra buttons sit behind "…" and a queue icon, not under the controls ---------- */
+/* ---------- touch screens: the extra buttons sit behind "â€¦" and a queue icon, not under the controls ---------- */
 .fp-titlerow { display: flex; align-items: flex-start; gap: 12px; }
 .fp-titlerow .fp-now { flex: 1; min-width: 0; }
 .fp-more { display: none; position: relative; flex: none; width: 36px; height: 36px; margin-top: 2px; background: rgb(255 255 255 / 0.14); }
@@ -2149,13 +2149,13 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .full-player.hush .fp-now { text-align: center; }
 .full-player.hush .fp-album { justify-content: center; }
 /* Hush, closer to the prototype: only the cover, the title, the artist and a time bar; the buttons stay for screen readers but are not drawn.
-   Shuffle, repeat and the album live in the "…" sheet. */
+   Shuffle, repeat and the album live in the "â€¦" sheet. */
 .full-player.hush .fp-controls, .full-player.hush .fp-volume, .full-player.hush .fp-options, .full-player.hush .fp-sleep, .full-player.hush .fp-jumps, .full-player.hush .fp-album, .full-player.hush .fp-facts {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
 .fp-hint { margin: 8px 0 0; font-size: 12px; color: var(--fp-ink-3); transition: opacity 300ms ease-out; }
 .full-player.hush.dozing .fp-hint { opacity: 0; }
-/* Console's queue as planned: "UP NEXT · 6 tracks", then one card per track with its cover, the format under the title and the length. */
+/* Console's queue as planned: "UP NEXT Â· 6 tracks", then one card per track with its cover, the format under the title and the length. */
 .fp-row-art, .fp-queue-count { display: none; }
 .full-player.rail .fp-queue-count { display: inline; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--fp-ink-3); margin-left: -6px; }
 .full-player.rail .fp-queue-head { border-bottom: 0; padding: 0 4px 8px; background: none; }
@@ -2177,7 +2177,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .full-player.rail .fp-queue .fp-row-t strong { font-size: 14px; font-weight: 600; -webkit-line-clamp: 1; line-clamp: 1; }
 .full-player.rail .fp-queue .fp-row-t span { font-size: 12px; }
 
-/* Hush: the title is centred on the whole screen; the "…" button sits at the right edge without pushing it. */
+/* Hush: the title is centred on the whole screen; the "â€¦" button sits at the right edge without pushing it. */
 .full-player.hush .fp-titlerow { position: relative; justify-content: center; }
 .full-player.hush .fp-titlerow .fp-now { padding: 0 52px; }
 .full-player.hush .fp-more { position: absolute; right: 0; top: 0; }
@@ -2702,3 +2702,36 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .shell > .player .player-seek-wrap { top: 0; bottom: auto; height: 12px; }
   .shell > .player .player-seek { top: 0; bottom: auto; height: 2px; background: linear-gradient(to right, var(--ink) var(--p, 0%), var(--rule-strong) var(--p, 0%)); }
 }
+
+/* ---------- Library: the chosen album's panel, docked at the right edge on a computer ---------- */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .shell .tab-pane { --lx-panel-w: clamp(380px, 24vw, 460px); }
+  .lib-slot { position: absolute; z-index: 3; top: var(--pad-top, 0px); right: 0; bottom: 0; width: var(--lx-panel-w); pointer-events: none; }
+  .lib-slot > .lx-panel { pointer-events: auto; }
+  .tab-pane:has(.lx-panel) > .page { margin-right: var(--lx-panel-w); transition: margin-right 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
+  .lx-panel { position: relative; height: 100%; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 45%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); animation: lx-panel-in 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
+  @keyframes lx-panel-in { from { opacity: 0; transform: translateX(14px); } }
+  .lx-panel-close { position: absolute; right: 20px; top: 8px; z-index: 2; padding: 4px 0; border: 0; background: none; color: var(--ink-3); font: inherit; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+  .lx-panel-close:hover { color: var(--ink); }
+  .lx-panel-head { flex: none; padding: 34px 24px 0; }
+  .lx-panel-cover { width: min(100%, 32vh); min-width: 180px; border-radius: 14px; box-shadow: 0 26px 50px -30px rgb(0 0 0 / 0.7), 0 0 0 1px var(--rule); }
+  .lx-panel-head h2 { margin: 14px 0 0; font-family: var(--font-display); font-weight: 600; font-size: 24px; line-height: 1.1; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+  .lx-panel-by { margin: 5px 0 0; color: var(--ink-2); }
+  .lx-panel-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; margin: 8px 0 0; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .lx-panel-q { font-weight: 600; color: var(--tier-ink, var(--ink-2)); }
+  .lx-flag { color: var(--t-mid); }
+  .lx-panel-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 14px 0 10px; }
+  .lx-go { border: 0; border-radius: 999px; background: var(--ink); color: var(--on-ink); padding: 8px 22px; font: 600 14px var(--font); cursor: pointer; transition: transform 0.1s; }
+  .lx-go:active { transform: scale(0.97); }
+  .lx-act, .lx-panel-acts .btn { min-height: 0; height: auto; padding: 2px 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 400; cursor: pointer; transition: color 0.15s; }
+  .lx-act:hover:not(:disabled), .lx-panel-acts .btn:hover:not(:disabled) { color: var(--ink); background: none; }
+  .lx-act:disabled { opacity: 0.4; cursor: default; }
+  .lx-panel-scroll { flex: 1; min-height: 0; overflow: auto; padding: 0 24px 20px; scrollbar-width: thin; }
+  .lx-panel-h { position: sticky; top: 0; z-index: 1; margin: 0; padding: 10px 0 8px; font: 600 13px var(--font-display); color: var(--ink-3); background: linear-gradient(var(--paper) 70%, transparent); }
+}
+/* a narrower window: the panel slides over the albums instead of squeezing them */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (max-width: 1249px) {
+  .tab-pane:has(.lx-panel) > .page { margin-right: 0; }
+  .lx-panel { background: color-mix(in srgb, var(--paper) 90%, transparent); box-shadow: -30px 0 60px -30px rgb(0 0 0 / 0.8); }
+}
+@media (prefers-reduced-motion: reduce) { .lx-panel { animation: none; } .tab-pane:has(.lx-panel) > .page { transition: none; } }
