@@ -2926,3 +2926,11 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .full-player.rail .fp-body.np.lyrics-on .fp-controls .fp-icon.small { display: none; }
   .full-player.rail .fp-more { display: grid; }
 }
+
+/* the pages scroll under the see-through top bar: their scrollbar starts below it, not behind it */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar { width: 12px; }
+  .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar-track { background: transparent; margin-top: var(--pad-top, 60px); }
+  .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--ink) 24%, transparent); background-clip: padding-box; }
+  .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--ink) 40%, transparent); background-clip: padding-box; }
+}
