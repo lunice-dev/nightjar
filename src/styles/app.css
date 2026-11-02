@@ -2782,7 +2782,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   :root { --now-w: clamp(340px, 24vw, 420px); }
   .now-dock { position: absolute; z-index: 4; top: var(--pad-top, 0px); right: 0; bottom: 0; width: var(--now-w); display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 45%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); animation: np-in 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
   @keyframes np-in { from { opacity: 0; transform: translateX(14px); } }
-  .now-open .shell .tab-pane { right: var(--now-w); transition: right 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
+  .tab-pane[data-now='open'] { right: var(--now-w); transition: right 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
   .np-tabs { flex: none; display: flex; gap: 18px; padding: 12px 22px 0; font-size: 13px; }
   .np-tabs button { padding: 2px 0 6px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-3); font: inherit; cursor: pointer; transition: color 0.15s; }
   .np-tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--ink); }
@@ -2828,10 +2828,10 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 }
 /* a narrower window: the dock slides over the page instead of squeezing it */
 @media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (max-width: 1249px) {
-  .now-open .shell .tab-pane { right: 0; }
+  .tab-pane[data-now='open'] { right: 0; }
   .now-dock { background: color-mix(in srgb, var(--paper) 92%, transparent); box-shadow: -30px 0 60px -30px rgb(0 0 0 / 0.8); }
 }
-@media (prefers-reduced-motion: reduce) { .now-dock, .np-menu { animation: none; } .now-open .shell .tab-pane { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .now-dock, .np-menu { animation: none; } .tab-pane[data-now='open'] { transition: none; } }
 
 /* ---------- the large player on a computer or a tablet held sideways: calm, one small fixed type scale ---------- */
 @media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) {

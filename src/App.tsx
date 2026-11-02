@@ -38,6 +38,7 @@ import { PlaylistPicker } from './components/Playlists';
 import { useStore, type Route } from './store';
 import { neighbourTab } from './lib/swipeNav';
 import { NowDock } from './components/NowDock';
+import { useDockOpenFor } from './lib/nowDock';
 
 const PANES: Route[] = ['search', 'wishlist', 'downloads', 'library', 'uploads', 'messages', 'rooms', 'people', 'browse', 'settings', 'about'];
 
@@ -376,6 +377,7 @@ function Shell() {
   const me = useStore((s) => s.me);
   const [theme, setTheme] = useTheme();
   const pc = usePcShell();
+  const dockFor = useDockOpenFor();
 
   // The open tab, plus the tabs either side kept ready (out of sight), so swiping shows the real page at once.
   const width = useWidth();
@@ -521,7 +523,7 @@ function Shell() {
       <UpdateBanner />
       <div className="main">
         {PANES.filter((r) => mounted.has(r)).map((r) => (
-          <div key={r} className="tab-pane" data-route={r} aria-hidden={r !== route} {...(r !== route ? ({ inert: '' } as object) : {})}>
+          <div key={r} className="tab-pane" data-route={r} data-now={pc && dockFor(r) ? 'open' : undefined} aria-hidden={r !== route} {...(r !== route ? ({ inert: '' } as object) : {})}>
             {r === 'search' && tabs.length > 0 && (
               <div className="search-tabs" role="tablist" aria-label="Your searches">
                 {tabs.map((t) => {

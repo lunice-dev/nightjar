@@ -10,6 +10,8 @@ import { useStore } from '../store';
  */
 /** Pictures already found, by folder and album: a cover shown once appears at once the next time. */
 const found = new Map<string, string>();
+/** The last picture shown for an album at any size: a cover that mounts again shows it at once, then sharpens if needed. */
+const foundAny = new Map<string, string>();
 
 export function Cover({
   dir,
@@ -34,16 +36,23 @@ export function Cover({
   // The size it's shown at (sharp on this screen), in the steps the computer makes copies in.
   const [px, setPx] = useState(0);
   const cacheKey = `${dir ?? ''}|${artist ?? ''}|${album ?? ''}|${px}`;
-  const known = px ? found.get(cacheKey) : undefined;
+  const baseKey = `${dir ?? ''}|${artist ?? ''}|${album ?? ''}`;
+  const known = (px ? found.get(cacheKey) : undefined) ?? foundAny.get(baseKey);
   const [seen, setSeen] = useState(false);
   const [srcs, setSrcs] = useState<string[]>(known ? [known] : []);
   const [i, setI] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  // A picture shown before is already decoded: it appears at once instead of fading in again.
+  const [loaded, setLoaded] = useState(!!known);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const size = () => setPx(coverSize(Math.max(el.getBoundingClientRect().width, 60) * (window.devicePixelRatio || 1)));
+    // Only ever asks for a sharper copy: a cover that shrinks (the window or a panel changed size) keeps its picture
+    // instead of fetching a smaller one and blinking.
+    const size = () => {
+      const n = coverSize(Math.max(el.getBoundingClientRect().width, 60) * (window.devicePixelRatio || 1));
+      setPx((cur) => (n > cur ? n : cur));
+    };
     size();
     const io = new IntersectionObserver(
       (e) => {
@@ -73,14 +82,18 @@ export function Cover({
     if (hit) {
       setSrcs([hit]);
       setI(0);
+      setLoaded(true);
       setLocalDone(true);
       askedOnline.current = true;
       return;
     }
     let gone = false;
-    setSrcs([]);
+    // A picture of this album is already on screen: it stays while a sharper one is fetched.
+    if (!foundAny.has(baseKey)) {
+      setSrcs([]);
+      setLoaded(false);
+    }
     setI(0);
-    setLoaded(false);
     setLocalDone(false);
     askedOnline.current = false;
     (async () => {
@@ -90,14 +103,21 @@ export function Cover({
           backend.files.coverUrl(dir, px).catch(() => null),
           new Promise<null>((r) => setTimeout(() => r(null), 3000)),
         ]);
-        if (!gone && local) setSrcs([local]);
+        if (!gone && local) {
+          // Already showing this album: the sharper copy takes over only once it has loaded, so nothing blinks.
+          if (foundAny.has(baseKey)) {
+            const im = new Image();
+            im.onload = () => !gone && setSrcs([local]);
+            im.src = local;
+          } else setSrcs([local]);
+        }
       }
       if (!gone) setLocalDone(true);
     })();
     return () => {
       gone = true;
     };
-  }, [seen, dir, backend, cacheKey, px]);
+  }, [seen, dir, backend, cacheKey, px, baseKey]);
 
   // Only when there's no picture on this computer: ask the Cover Art Archive.
   const exhausted = localDone && i >= srcs.length;
@@ -123,6 +143,7 @@ export function Cover({
           onLoad={() => {
             setLoaded(true);
             found.set(cacheKey, src);
+            foundAny.set(baseKey, src);
           }}
           onError={() => {
             setLoaded(false);
