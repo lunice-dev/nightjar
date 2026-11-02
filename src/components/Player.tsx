@@ -8,6 +8,7 @@ import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
 import { prefetchLyrics } from '../lib/lyrics';
+import { usePcShell } from '../lib/pcShell';
 
 /**
  * Tells the lock screen exactly where the song is, at the moments its own guess would drift: a new track,
@@ -41,7 +42,8 @@ const loads = (src: string) =>
 export function Player() {
   const backend = useStore((s) => s.backend);
   const toast = useStore((s) => s.toast);
-  const { queue, index, playing, dataSaver, converted, expanded } = usePlayer();
+  const { queue, index, playing, dataSaver, converted, expanded, volume } = usePlayer();
+  const pc = usePcShell();
   const audio = useRef<HTMLAudioElement | null>(null);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -259,20 +261,30 @@ export function Player() {
 
   return (
     <>
-    <div className={`player ${tint ? 'tinted' : ''}`} style={tint ? ({ '--tint': tint } as React.CSSProperties) : undefined} role="region" aria-label="Now playing">
+    <div className={`player ${tint && !pc ? 'tinted' : ''}`} style={tint && !pc ? ({ '--tint': tint } as React.CSSProperties) : undefined} role="region" aria-label="Now playing">
       {element}
       <div className="player-bar">
-        <button className="player-art" onClick={openLarge} aria-label="Open the player">
-          <img src={cover ?? generatedCover(track.dir)} alt="" />
-        </button>
-        <button className="player-text" onClick={openLarge}>
-          <strong>{track.title}</strong>
-          <span>
-            <QualityChip />
-            {[track.artist, track.album].filter(Boolean).join(' · ')}
-            {waiting && audioCtl.wantPlay ? ' · loading…' : ''}
-          </span>
-        </button>
+        {/* On a computer the bar is three zones (cover and names, controls and position, details); elsewhere the zones
+            dissolve into the one row, and the parts only the computer shows stay hidden. */}
+        <div className="player-l">
+          <button className="player-art" onClick={openLarge} aria-label="Open the player">
+            <img src={cover ?? generatedCover(track.dir)} alt="" />
+          </button>
+          <button className="player-text" onClick={openLarge}>
+            <strong>{track.title}</strong>
+            <span>
+              <span className="player-q-inline">
+                <QualityChip />
+              </span>
+              {[track.artist, track.album].filter(Boolean).join(' · ')}
+              {waiting && audioCtl.wantPlay ? ' · loading…' : ''}
+            </span>
+            <span className="player-q">
+              <QualityChip />
+            </span>
+          </button>
+        </div>
+        <div className="player-m">
         <div className="player-controls">
           <button className={`player-btn scan hide-narrow ${back.scanning ? 'on' : ''}`} {...back.props} aria-label="Previous track" title="Previous track (hold to rewind)">
             <Icon name="prev" size={20} />
@@ -290,30 +302,62 @@ export function Player() {
             <Icon name="next" size={20} />
           </button>
         </div>
-        <span className="player-time hide-narrow">
-          {fmtTime(scrub.shown)} / {fmtTime(duration)}
-        </span>
-        <button className="player-btn close" onClick={() => p.stop()} aria-label="Stop and close the player">
-          <Icon name="close" size={16} />
-        </button>
-        <div className="player-seek-wrap" {...scrub.wrap}>
-          {scrub.drag && (
-            <span className="seek-bubble" style={{ left: `${progress}%` }}>
-              {fmtTime(scrub.shown)}
-              {scrub.drag.label && <small>{scrub.drag.label}</small>}
+        <div className="player-sk">
+          <span className="player-t">{fmtTime(scrub.shown)}</span>
+          <div className="player-seek-wrap" {...scrub.wrap}>
+            {scrub.drag && (
+              <span className="seek-bubble" style={{ left: `${progress}%` }}>
+                {fmtTime(scrub.shown)}
+                {scrub.drag.label && <small>{scrub.drag.label}</small>}
+              </span>
+            )}
+            <input
+              className="player-seek"
+              type="range"
+              min={0}
+              max={duration || 0}
+              step={1}
+              value={Math.min(scrub.shown, duration || 0)}
+              aria-label="Position"
+              style={{ ['--p' as string]: `${progress}%` }}
+              {...scrub.props}
+            />
+          </div>
+          <span className="player-t">{fmtTime(duration)}</span>
+        </div>
+        </div>
+        <div className="player-r">
+          <span className="player-time hide-narrow">
+            {fmtTime(scrub.shown)} / {fmtTime(duration)}
+          </span>
+          <span className="player-n">
+            Track {index + 1} of {queue.length}
+          </span>
+          {canSetVolume && (
+            <span className="player-vol">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4Z" />
+                <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+              </svg>
+              <input
+                className="player-vol-range"
+                type="range"
+                min={0}
+                max={1}
+                step={0.02}
+                value={volume}
+                aria-label="Volume"
+                style={{ ['--p' as string]: `${volume * 100}%` }}
+                onChange={(e) => p.setVolume(parseFloat(e.target.value))}
+              />
             </span>
           )}
-          <input
-            className="player-seek"
-            type="range"
-            min={0}
-            max={duration || 0}
-            step={1}
-            value={Math.min(scrub.shown, duration || 0)}
-            aria-label="Position"
-            style={{ ['--p' as string]: `${progress}%` }}
-            {...scrub.props}
-          />
+          <button className="player-btn close" onClick={() => p.stop()} aria-label="Stop and close the player">
+            <Icon name="close" size={16} />
+          </button>
+          <button className="player-stop" onClick={() => p.stop()} title="Stop and close the player">
+            Stop
+          </button>
         </div>
       </div>
     </div>

@@ -2633,3 +2633,42 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .hdr-menu .hdr-credit-menu { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hdr-menu { animation: none; } }
+/* ---------- the small player: one row on phones and tablets, a bottom bar with three zones on a computer ---------- */
+.player-l, .player-m, .player-r, .player-sk, .player-q-inline { display: contents; }
+.player-q, .player-n, .player-vol, .player-stop, .player-t { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  :root .shell > .player { margin: 0; padding: 0 var(--hx-edge); border-radius: 0; overflow: visible; background: color-mix(in srgb, var(--paper) 62%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.3); backdrop-filter: blur(22px) saturate(1.3); box-shadow: inset 0 1px 0 var(--rule); }
+  .shell > .player .player-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 640px) minmax(0, 1fr); align-items: center; gap: 28px; height: 84px; padding: 0; }
+  .player-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .shell > .player .player-art { width: 56px; height: 56px; border-radius: 10px; box-shadow: 0 0 0 1px var(--rule), 0 10px 22px -12px rgb(0 0 0 / 0.7); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .shell > .player .player-art:hover { transform: scale(1.04); }
+  .shell > .player .player-text { gap: 2px; }
+  .shell > .player .player-text strong { font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 1.2; letter-spacing: -0.01em; }
+  .shell > .player .player-text span { color: var(--ink-2); }
+  .shell > .player .player-q .pq-chip { padding: 0; background: none; font-size: 12px; font-weight: 600; color: var(--tier-ink, var(--ink-2)); }
+  .player-m { display: grid; gap: 4px; justify-items: center; min-width: 0; }
+  .shell > .player .player-controls { gap: 8px; }
+  .shell > .player .player-btn { width: 34px; height: 34px; color: var(--ink-2); transition: background-color 0.12s, color 0.12s, transform 0.1s; }
+  .shell > .player .player-btn:active:not(:disabled) { transform: scale(0.94); }
+  .shell > .player .player-btn.main { width: 40px; height: 40px; background: var(--ink); color: var(--on-ink); }
+  .shell > .player .player-btn.hide-narrow { display: grid; }
+  .player-sk { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; color: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .player-t { display: block; }
+  .shell > .player .player-seek-wrap { position: relative; left: auto; right: auto; bottom: auto; height: 18px; display: flex; align-items: center; }
+  .shell > .player .player-seek { position: relative; bottom: auto; height: 3px; border-radius: 3px; background: linear-gradient(to right, var(--ink) var(--p, 0%), var(--rule-strong) var(--p, 0%)); }
+  .player-r { display: flex; justify-content: flex-end; align-items: center; gap: 22px; min-width: 0; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
+  .shell > .player .player-time, .shell > .player .player-btn.close, .player-q-inline { display: none; }
+  .player-stop { display: inline; padding: 2px 0; border: 0; background: none; color: var(--ink-3); font: inherit; cursor: pointer; transition: color 0.15s; }
+  .player-stop:hover { color: var(--ink); }
+  .player-vol { align-items: center; gap: 9px; }
+  .player-vol-range { -webkit-appearance: none; appearance: none; width: 92px; height: 3px; margin: 0; border-radius: 3px; background: linear-gradient(to right, var(--ink-2) var(--p, 0%), var(--rule-strong) var(--p, 0%)); cursor: pointer; }
+  .player-vol-range::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: var(--ink); opacity: 0; transition: opacity 0.15s; }
+  .player-vol-range:hover::-webkit-slider-thumb, .player-vol-range:focus-visible::-webkit-slider-thumb { opacity: 1; }
+}
+/* narrower than this, the quality stays beside the artist and the details thin out */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (max-width: 1249px) {
+  .shell > .player .player-bar { gap: 18px; }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 1250px) { .player-q, .player-n { display: block; } }
+@media (hover: hover) and (pointer: fine) and (min-width: 1500px) { .player-vol { display: inline-flex; } }
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) and (prefers-reduced-transparency: reduce) { :root .shell > .player { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
