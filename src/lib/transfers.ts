@@ -211,3 +211,16 @@ export function eta(remaining: number, speed: number) {
   if (s < 3600) return `${Math.round(s / 60)} min left`;
   return `${(s / 3600).toFixed(1)} h left`;
 }
+
+/**
+ * Files that arrived twice: when a file is downloaded again into a folder that already has it, the engine keeps the
+ * new one under a name that ends in a long number ("A1 - Song_639292310260049475.flac"). These are those, among a
+ * folder's file paths, but only when the plain-named original is there too.
+ */
+export function extraCopyPaths(paths: string[]): string[] {
+  const names = new Set(paths.map((p) => p.split(/[\\/]/).pop()!.toLowerCase()));
+  return paths.filter((p) => {
+    const name = p.split(/[\\/]/).pop()!;
+    return /_\d{15,}\.[A-Za-z0-9]+$/.test(name) && names.has(name.replace(/_\d{15,}(\.[A-Za-z0-9]+)$/, '$1').toLowerCase());
+  });
+}

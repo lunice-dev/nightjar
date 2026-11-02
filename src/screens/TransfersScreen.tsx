@@ -4,8 +4,8 @@ import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Direction } from '../api/backend';
 import { Icon } from '../components/Icon';
-import { AUDIO_EXT, bytes, extOf, speed } from '../lib/quality';
-import { clock, dayLabel, eta, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
+import { AUDIO_EXT, basename, bytes, extOf, speed } from '../lib/quality';
+import { clock, dayLabel, eta, extraCopyPaths, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
 import { albumSize, changedSize, failureReason, shownNotes } from '../lib/smart';
 import { parkedRetries, uploadKey, uploadReason } from '../lib/uploads';
@@ -612,10 +612,38 @@ function TransferRow({
   };
   // Tracks of the album that never arrived and aren't in the list any more (removed, or lost when the engine stopped).
   const planTracks = g.plan ? g.plan.tracks.filter((k) => !k.dropped) : [];
-  const missing =
+  const notListed =
     direction === 'download' && g.plan
       ? planTracks.filter((k) => !g.files.some((f) => f.username === k.username && f.filename === k.filename))
       : [];
+  // The list forgets files that finished when "Clear finished" is pressed, even while the rest of the album is still
+  // coming. So "not in the list" doesn't mean "not downloaded": look in the album's folder before calling it missing.
+  const diskDir = direction === 'download' && g.plan ? groupCoverDir(g, local, where.downloadDir) : undefined;
+  const [onDisk, setOnDisk] = useState<{ path: string }[] | null | undefined>(undefined);
+  const [diskTick, setDiskTick] = useState(0);
+  const checkDisk = notListed.length > 0 || g.phase === 'done';
+  useEffect(() => {
+    if (!diskDir || !backend || !canFiles || !checkDisk) return;
+    let alive = true;
+    backend.library
+      .tracks(diskDir)
+      .then((a) => alive && setOnDisk(a ? a.tracks.map((t) => ({ path: t.path })) : []))
+      .catch(() => alive && setOnDisk(null));
+    return () => {
+      alive = false;
+    };
+  }, [diskDir, backend, canFiles, checkDisk, diskTick, g.counts.done]); // eslint-disable-line react-hooks/exhaustive-deps
+  const onDiskNames = useMemo(() => new Set((onDisk ?? []).map((t) => basename(t.path).toLowerCase())), [onDisk]);
+  // Still being looked up: don't offer anything yet.
+  const missing = onDisk === undefined && notListed.length > 0 ? [] : onDisk ? notListed.filter((k) => !onDiskNames.has(basename(k.filename).toLowerCase())) : notListed;
+  // Tracks that arrived twice: the engine keeps a second copy of a file under a name ending in a long number.
+  const extraCopies = useMemo(() => extraCopyPaths((onDisk ?? []).map((t) => t.path)), [onDisk]);
+  const removeExtras = async () => {
+    const r = await backend?.files.trashDownload({ folders: [], files: extraCopies, partials: [] });
+    if (r == null) toast('Couldn’t reach the Nightjar app to delete files.', 'error');
+    else toast(`Moved ${extraCopies.length} extra ${extraCopies.length === 1 ? 'copy' : 'copies'} to the Recycle Bin`, 'info');
+    setDiskTick((n) => n + 1);
+  };
   const audioDone = g.files.filter((f) => AUDIO_EXT.has(extOf(f.filename)) && phaseOf(f.state) === 'done').length;
   // The copy itself is short: the person shares only part of the album.
   const expected = g.plan?.expected ? albumSize(g.plan) : 0;
@@ -624,8 +652,17 @@ function TransferRow({
   const shownNoteList = useMemo(() => (g.plan ? shownNotes(g.plan, complete) : notes), [g.plan, complete, notes]);
   const shortCopy = direction === 'download' && expected > 0 && planTracks.length < expected * 0.75;
   const getMissing = async () => {
+    // Look in the folder once more right now, so a track that is already there is never fetched a second time.
+    const here = diskDir ? await backend?.library.tracks(diskDir).catch(() => null) : null;
+    const have = new Set((here?.tracks ?? []).map((t) => basename(t.path).toLowerCase()));
+    const really = here ? missing.filter((k) => !have.has(basename(k.filename).toLowerCase())) : missing;
+    if (really.length === 0) {
+      toast('Every track is already in the album’s folder.', 'info');
+      setDiskTick((n) => n + 1);
+      return;
+    }
     const byUser = new Map<string, { filename: string; size: number }[]>();
-    missing.forEach((k) => byUser.set(k.username, [...(byUser.get(k.username) ?? []), { filename: k.filename, size: k.size }]));
+    really.forEach((k) => byUser.set(k.username, [...(byUser.get(k.username) ?? []), { filename: k.filename, size: k.size }]));
     for (const [user, list] of byUser) await requeue(user, list);
   };
   const removeFromList = async (files: Transfer[]) => {
@@ -916,9 +953,20 @@ function TransferRow({
       )}
       {missing.length > 0 && unfinished.length === 0 && g.plan?.identity?.state !== 'mismatch' && (
         <p className="incomplete-line">
-          <b>Incomplete:</b> {audioDone} of {planTracks.length} tracks arrived.{' '}
+          <b>Incomplete:</b> {onDisk ? planTracks.length - missing.length : audioDone} of {planTracks.length} tracks arrived.{' '}
           <button className="link" onClick={getMissing}>
             Get the {missing.length} missing {missing.length === 1 ? 'track' : 'tracks'}
+          </button>
+        </p>
+      )}
+      {extraCopies.length > 0 && unfinished.length === 0 && (
+        <p className="incomplete-line">
+          <b>
+            {extraCopies.length} {extraCopies.length === 1 ? 'track' : 'tracks'} arrived twice.
+          </b>{' '}
+          The extra {extraCopies.length === 1 ? 'copy keeps' : 'copies keep'} a long number in {extraCopies.length === 1 ? 'its' : 'their'} name.{' '}
+          <button className="link" onClick={removeExtras}>
+            Move the extra {extraCopies.length === 1 ? 'copy' : 'copies'} to the Recycle Bin
           </button>
         </p>
       )}

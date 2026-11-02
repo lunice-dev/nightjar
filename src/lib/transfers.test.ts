@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Transfer, TransferUser } from '../api/types';
 import type { DownloadPlan } from '../prefs';
-import { groupDownloads, planFinder } from './transfers';
+import { extraCopyPaths, groupDownloads, planFinder } from './transfers';
 
 const DIR = 'Labels1\\Vision\\[VSN173] VISION and Noisia - 20 Years of VISION (2025)';
 const track = (n: number) => `${DIR}\\${String(n).padStart(2, '0')}-vision.flac`;
@@ -47,5 +47,14 @@ describe('an album interrupted by a restart', () => {
     expect(find(transfer(1, undefined, 'Other\\Folder\\01.flac'))).toBeUndefined();
     const other = { ...plan, id: 'p2', batches: ['b2'], createdAt: 2 } as DownloadPlan;
     expect(planFinder([plan, other])(transfer(1, 'b1'))?.id).toBe('p1');
+  });
+});
+
+describe('tracks that arrived twice', () => {
+  it('finds the numbered copies that sit next to their original', () => {
+    const d = "C:\\Music\\FLAC\\UNSORTED\\93 'til Infinity [vinyl]\\";
+    const paths = [d + "A1 - Let 'Em Know.flac", d + "A1 - Let 'Em Know_639292310260049475.flac", d + 'A2 - Live and Let Live.flac', d + 'B2 - Disseshowedo_639292310426434672.flac'];
+    // B2's original isn't there, so its numbered file is the only copy and stays.
+    expect(extraCopyPaths(paths)).toEqual([d + "A1 - Let 'Em Know_639292310260049475.flac"]);
   });
 });
