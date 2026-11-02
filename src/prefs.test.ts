@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeShared } from './prefs';
+import { mergeShared, usePrefs } from './prefs';
 
 const saved = (state: Record<string, unknown>) => JSON.stringify({ state, version: 3 });
 const plan = (id: string, batches: number, createdAt: number) => ({ id, batches: Array(batches).fill('b'), notes: [], createdAt, tracks: [] });
@@ -38,5 +38,14 @@ describe('preferences shared by two devices', () => {
     const pc = saved({ plans: [plan('a', 1, 1)] });
     expect(mergeShared(pc, pc)).toBe(pc);
     expect(mergeShared(pc, null)).toBe(pc);
+  });
+});
+
+describe('an album moved into the library', () => {
+  it('takes its history with it, disc folders included', () => {
+    const fin = (key: string, dir: string) => ({ key, title: key, dir, size: 1, tracks: 1, from: [], at: 1 });
+    usePrefs.setState({ finished: [fin('a', 'C:\\dl\\Album'), fin('b', 'c:\\dl\\album\\CD1'), fin('c', 'C:\\dl\\Other')], fakes: [], checks: {}, moves: {} });
+    usePrefs.getState().albumMoved('C:\\dl\\Album', 'C:\\Music\\FLAC\\Artist\\2020 - Album');
+    expect(usePrefs.getState().finished.map((f) => f.dir)).toEqual(['C:\\Music\\FLAC\\Artist\\2020 - Album', 'C:\\Music\\FLAC\\Artist\\2020 - Album\\CD1', 'C:\\dl\\Other']);
   });
 });

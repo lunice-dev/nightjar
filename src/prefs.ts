@@ -499,6 +499,10 @@ export const usePrefs = create<Prefs>()(
             checks[to.toLowerCase()] = c;
           }
           const moved = (d?: string) => !!d && d.toLowerCase() === from.toLowerCase();
+          // The folder itself, or one inside it (a disc folder: "Album\CD1" went along with "Album").
+          const inside = (d?: string) => !!d && d.toLowerCase().startsWith(from.toLowerCase().replace(/[\\/]+$/, '') + '\\');
+          const follow = <T extends { dir?: string }>(a: T): T =>
+            moved(a.dir) ? { ...a, dir: to } : inside(a.dir) ? { ...a, dir: to.replace(/[\\/]+$/, '') + a.dir!.slice(from.replace(/[\\/]+$/, '').length) } : a;
           // Where downloaded files went: a move of a move follows on.
           const moves: Record<string, string> = {};
           for (const [k, v] of Object.entries(s.moves ?? {})) moves[k] = moved(v) ? to : v;
@@ -509,8 +513,8 @@ export const usePrefs = create<Prefs>()(
           return {
             moves,
             checks,
-            finished: s.finished.map((a) => (moved(a.dir) ? { ...a, dir: to } : a)),
-            fakes: s.fakes.map((f) => (moved(f.dir) ? { ...f, dir: to } : f)),
+            finished: s.finished.map(follow),
+            fakes: s.fakes.map(follow),
           };
         }),
       fakes: [],
