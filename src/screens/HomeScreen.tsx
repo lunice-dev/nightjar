@@ -247,7 +247,8 @@ function Middle() {
   );
   const looksTotal = useMemo(() => albums.filter((a) => (checks[a.dir.toLowerCase()]?.severity ?? 0) >= 3).length, [albums, checks]);
 
-  const open = (dir: string) => void usePlayer.getState().openOrPlayAlbum(dir);
+  // A cover sends the album to the player beside it; the cover there opens the large player.
+  const open = (dir: string) => void usePlayer.getState().playAlbum(dir);
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (q.trim()) search(q.trim());
