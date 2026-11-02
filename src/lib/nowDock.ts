@@ -44,3 +44,10 @@ export const useNowDock = create<{
     },
   ),
 );
+
+/** Which screens have the dock open, so each page keeps its own width whichever screen is showing (no resizing, no blinking covers). */
+export function useDockOpenFor(): (route: string) => boolean {
+  const open = useNowDock((s) => s.open);
+  const albumDir = useNowDock((s) => s.albumDir);
+  return (route) => open[dockGroupOf(route)] || (route === 'library' && !!albumDir);
+}
