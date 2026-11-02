@@ -62,25 +62,41 @@ function format(measure: Measure, v: number) {
 function useHistory() {
   const backend = useStore((s) => s.backend);
   const [rows, setRows] = useState<Row[] | null>(cache && cache.backend === backend ? cache.rows : null);
-  const [failed, setFailed] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [again, setAgain] = useState(0);
   useEffect(() => {
     if (!backend) return;
-    if (cache && cache.backend === backend && Date.now() - cache.at < 5 * 60_000) return;
+    if (again === 0 && cache && cache.backend === backend && Date.now() - cache.at < 5 * 60_000) return;
     let live = true;
-    Promise.all([backend.history('download'), backend.history('upload')])
-      .then(([down, up]) => {
-        const all = [...toRows(down, 'in'), ...toRows(up, 'out')];
-        cache = { at: Date.now(), backend, rows: all };
-        if (live) setRows(all);
-      })
-      .catch(() => live && setFailed(true));
+    setProblem(null);
+    (async () => {
+      // One after the other: the engine refuses some requests that arrive together, and a phone's connection is slow.
+      const all: Row[] = [];
+      const missed: string[] = [];
+      let why = '';
+      for (const [dir, way, name] of [['download', 'in', 'what came in'], ['upload', 'out', 'what went out']] as const) {
+        try {
+          all.push(...toRows(await backend.history(dir), way));
+        } catch (e) {
+          missed.push(name);
+          why = why || (e as Error).message;
+        }
+      }
+      if (!live) return;
+      if (missed.length === 2) {
+        setProblem(`The history could not be read (${why}).`);
+        return;
+      }
+      if (missed.length === 0) cache = { at: Date.now(), backend, rows: all };
+      setRows(all);
+      if (missed.length) setProblem(`Couldn’t read ${missed[0]} (${why}). Showing the rest.`);
+    })();
     return () => {
       live = false;
     };
-  }, [backend]);
-  return { rows, failed };
+  }, [backend, again]);
+  return { rows, problem, retry: () => setAgain((n) => n + 1) };
 }
-
 function Chart({ a, b, measure }: { a: number[]; b: number[]; measure: Measure }) {
   const [at, setAt] = useState<number | null>(null);
   const W = 720;
@@ -162,7 +178,7 @@ function People({ title, rows }: { title: string; rows: Row[] }) {
 }
 
 export function StatsScreen() {
-  const { rows, failed } = useHistory();
+  const { rows, problem, retry } = useHistory();
   const [range, setRange] = useState<RangeKey>('30d');
   const [measure, setMeasure] = useState<Measure>('size');
   const now = useMemo(() => Date.now(), [rows]);
@@ -213,8 +229,15 @@ export function StatsScreen() {
           ))}
         </div>
 
-        {failed && <p className="st-empty">The history could not be read. Check that the engine is running, then open this page again.</p>}
-        {!rows && !failed && <p className="st-empty">Reading your history…</p>}
+        {problem && (
+          <p className="st-empty">
+            {problem}{' '}
+            <button className="link" onClick={retry}>
+              Try again
+            </button>
+          </p>
+        )}
+        {!rows && !problem && <p className="st-empty">Reading your history… this can take a moment on a phone.</p>}
 
         {view && (
           <>

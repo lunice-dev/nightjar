@@ -624,6 +624,9 @@ function Shell() {
                 {counts[n.route] ? <span className="count">{counts[n.route]}</span> : null}
               </button>
             ))}
+            <button className="nav-item" aria-current={isCurrent('stats') ? 'page' : undefined} onClick={() => open('stats')}>
+              <Icon name="speed" /> Statistics
+            </button>
             <div className="sheet-foot">
               <LinkStatus demo={kind === 'demo'} me={me} />
               <ThemeSwitch theme={theme} onChange={setTheme} />
