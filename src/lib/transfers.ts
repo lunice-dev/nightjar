@@ -14,6 +14,10 @@ export function phaseOf(state: string): Phase {
   return 'queued';
 }
 
+/** When each album last had a track moving, and how long it keeps counting as downloading between tracks. */
+const lastActive = new Map<string, number>();
+const BETWEEN_TRACKS_MS = 30_000;
+
 export interface DownloadGroup {
   key: string;
   /** The first (or only) person sending this album. */
@@ -120,7 +124,11 @@ export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []
       if (p === 'active') speed += f.averageSpeed;
       if (f.placeInQueue) place = Math.min(place ?? Infinity, f.placeInQueue);
     }
-    const phase: Phase = counts.active ? 'active' : counts.queued ? 'queued' : counts.failed ? 'failed' : counts.done ? 'done' : 'cancelled';
+    // Between two tracks nothing is moving for a moment: an album that was coming a few seconds ago still is.
+    const now = Date.now();
+    if (counts.active) lastActive.set(key, now);
+    const justNow = now - (lastActive.get(key) ?? 0) < BETWEEN_TRACKS_MS || (counts.done > 0 && now - ended < BETWEEN_TRACKS_MS);
+    const phase: Phase = counts.active || (counts.queued && justNow) ? 'active' : counts.queued ? 'queued' : counts.failed ? 'failed' : counts.done ? 'done' : 'cancelled';
     const usernames = [...new Set(files.filter((f) => phaseOf(f.state) !== 'cancelled').map((f) => f.username))];
     // What really arrived over the last seconds; slskd's per-file averages until there's enough history.
     const measured = sourceRates(
