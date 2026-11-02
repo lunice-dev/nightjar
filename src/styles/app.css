@@ -1600,7 +1600,7 @@ html.in-app, html.in-app body { overflow: hidden; }
   .fp-art-col { flex: 1 1 50%; padding: 0; }
   .fp-art { width: min(100%, 76vh, 640px); }
   .fp-side { flex: 1 1 50%; width: auto; max-width: 620px; min-height: 0; justify-content: center; }
-  .fp-queue, .fp-details { flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+  .fp-queue, .fp-details { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
   }
 .fp-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .fp-pill { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.12); color: var(--fp-ink-2); font: inherit; font-size: 13.5px; font-weight: 550; cursor: pointer; }
@@ -2751,7 +2751,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .lx-act, .lx-panel-acts .btn { min-height: 0; height: auto; padding: 2px 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 400; cursor: pointer; transition: color 0.15s; }
   .lx-act:hover:not(:disabled), .lx-panel-acts .btn:hover:not(:disabled) { color: var(--ink); background: none; }
   .lx-act:disabled { opacity: 0.4; cursor: default; }
-  .lx-panel-scroll { flex: 1; min-height: 0; overflow: auto; padding: 0 24px 20px; scrollbar-width: thin; }
+  .lx-panel-scroll { flex: 1; min-height: 0; overflow: auto; padding: 0 24px 20px; }
   .lx-panel-h { position: sticky; top: 0; z-index: 1; margin: 0; padding: 10px 0 8px; font: 600 13px var(--font-display); color: var(--ink-3); background: linear-gradient(var(--paper) 70%, transparent); }
 }
 /* a narrower window: the panel slides over the albums instead of squeezing them */
@@ -2808,7 +2808,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .np-menu button { display: flex; justify-content: space-between; gap: 16px; width: 100%; padding: 9px 11px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
   .np-menu button:hover { background: var(--hover); }
   .np-menu span { color: var(--ink-3); }
-  .np-list { flex: 1; min-height: 0; overflow: auto; padding: 0 22px 14px; scrollbar-width: thin; }
+  .np-list { flex: 1; min-height: 0; overflow: auto; padding: 0 22px 14px; }
   .np-list h3 { position: sticky; top: 0; z-index: 1; margin: 0; padding: 8px 0 6px; font: 600 12.5px var(--font-display); color: var(--ink-3); background: linear-gradient(var(--paper) 70%, transparent); }
   .np-list ol { margin: 0; padding: 0; list-style: none; }
   .np-list li button { display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; min-height: 38px; padding: 0; border: 0; border-top: 1px solid var(--rule); background: none; color: var(--ink-2); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; }
@@ -2910,7 +2910,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 /* the Now panel's header over a scrolling tracklist: frosted, not a block of the page colour */
 .np-list { display: flex; flex-direction: column; overflow: hidden; }
 .np-list h3 { position: static; flex: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.np-list ol { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
+.np-list ol { flex: 1; min-height: 0; overflow: auto; }
 
 /* the large player on a computer: the tracklist spans exactly from the cover's top to the controls' bottom, and the volume shares the controls' row */
 @media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) {
@@ -2933,4 +2933,14 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar-track { background: transparent; margin-top: var(--pad-top, 60px); }
   .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--ink) 24%, transparent); background-clip: padding-box; }
   .shell .tab-pane > :is(.page, .results, .hx-scroll)::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--ink) 40%, transparent); background-clip: padding-box; }
+}
+
+/* One scrollbar for all of nightjar (where there's a mouse): slim, round, in a tint of the text colour, so it suits every theme.
+   Places that hide theirs (rows of covers, the lyrics) keep doing so. */
+@media (hover: hover) and (pointer: fine) {
+  *::-webkit-scrollbar { width: 12px; height: 12px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+  *::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--ink) 24%, transparent); background-clip: padding-box; }
+  *::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--ink) 40%, transparent); background-clip: padding-box; }
 }
