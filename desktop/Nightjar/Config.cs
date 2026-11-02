@@ -140,7 +140,7 @@ namespace Nightjar
             // and scanning files that are only in the cloud would download them all).
             var shares = "";
             var text =
-                "# slskd config written by Nightjar. Safe to edit; Nightjar keeps your comments.\n" +
+                "# slskd config written by nightjar. Safe to edit; nightjar keeps your comments.\n" +
                 "remote_configuration: true\n" +
                 "directories:\n" +
                 "  downloads: " + Yaml(downloads) + "\n" +
@@ -164,7 +164,7 @@ namespace Nightjar
                 "      ttl: 2073600000\n" +
                 "soulseek:\n" +
                 "  listen_port: 50300\n" +
-                "  description: 'Sharing with Nightjar.'\n";
+                "  description: 'Sharing with nightjar.'\n";
             Save(text);
             Log.Write("First config written");
         }
@@ -185,7 +185,7 @@ namespace Nightjar
             if (!string.IsNullOrEmpty(picture) && !CanRead(picture))
             {
                 fixedText = Regex.Replace(fixedText, @"(?m)^\s*picture:.*\r?\n?", "");
-                notes.Add("Your profile picture (" + picture + ") couldn't be opened, so Nightjar took it off your profile. Choose it again in Settings.");
+                notes.Add("Your profile picture (" + picture + ") couldn't be opened, so nightjar took it off your profile. Choose it again in Settings.");
                 Log.Write("Removed unreadable profile picture " + picture);
             }
 
@@ -197,7 +197,7 @@ namespace Nightjar
             foreach (var dir in new[] { Value(fixedText, "downloads"), Value(fixedText, "incomplete") })
             {
                 try { if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir); }
-                catch (Exception e) { notes.Add("Nightjar couldn't create the folder " + dir + ": " + e.Message); }
+                catch (Exception e) { notes.Add("nightjar couldn't create the folder " + dir + ": " + e.Message); }
             }
             return notes;
         }

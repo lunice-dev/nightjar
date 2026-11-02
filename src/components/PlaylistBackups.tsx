@@ -42,7 +42,7 @@ export function PlaylistBackupsSection() {
     <section className="settings-block" aria-labelledby="plb-h">
       <h2 id="plb-h">Playlist backups</h2>
       <p className="hint-text">
-        Nightjar keeps copies of your playlists on this computer, when it starts and as you change them (the last few, plus one a day for
+        nightjar keeps copies of your playlists on this computer, when it starts and as you change them (the last few, plus one a day for
         two weeks). A damaged playlists file is fixed from the newest copy on its own.
       </p>
       {list.length === 0 ? (

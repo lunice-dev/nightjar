@@ -197,7 +197,7 @@ namespace Nightjar
                     {
                         var signer = Signer(msi);
                         if (!IsTailscaleSigner(signer))
-                            throw new Exception("The downloaded installer isn't signed by Tailscale" + (signer == null ? "" : " (signed by " + signer + ")") + ", so Nightjar didn't run it.");
+                            throw new Exception("The downloaded installer isn't signed by Tailscale" + (signer == null ? "" : " (signed by " + signer + ")") + ", so nightjar didn't run it.");
                         job.step = "install";
                         Log.Write("Installing Tailscale from " + name);
                         var p = Process.Start(new ProcessStartInfo("msiexec.exe", "/i \"" + msi + "\" /passive /norestart") { Verb = "runas", UseShellExecute = true });

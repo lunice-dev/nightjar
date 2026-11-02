@@ -803,7 +803,7 @@ export class SlskdBackend implements Backend {
       }
     },
     pickImage: async () => {
-      if (asDevice) throw new ApiError('Choose a new picture on the computer Nightjar runs on.', 403);
+      if (asDevice) throw new ApiError('Choose a new picture on the computer nightjar runs on.', 403);
       const res = await fetch(`${HELPER}/pick-image`);
       if (!res.ok) throw new ApiError('The file dialog is not available', res.status);
       const r = (await res.json()) as { path: string | null; error?: string };
@@ -837,7 +837,7 @@ export class SlskdBackend implements Backend {
         const res = await fetch(`${HELPER}/lease?id=${enc(id)}`, { method: 'POST', signal: AbortSignal.timeout(3000) });
         return res.ok && ((await res.json()) as { mine?: boolean }).mine === true;
       } catch {
-        return false; // a phone, or no Nightjar app: the computer's window does the managing
+        return false; // a phone, or no nightjar app: the computer's window does the managing
       }
     },
     shareRoots: async () => {

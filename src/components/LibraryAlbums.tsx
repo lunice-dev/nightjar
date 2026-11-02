@@ -269,7 +269,7 @@ function LibraryBar({
               </button>
             )}
             {counts.unchecked > 0 ? (
-              <button className="btn small" onClick={() => startAll(false)} title="A check reads every file: real lossless, real hi-res, honest bitrate, damaged files. About half a minute per album; it carries on while you use Nightjar.">
+              <button className="btn small" onClick={() => startAll(false)} title="A check reads every file: real lossless, real hi-res, honest bitrate, damaged files. About half a minute per album; it carries on while you use nightjar.">
                 Check {counts.unchecked === total ? 'all' : `the ${counts.unchecked} left`}
               </button>
             ) : (
@@ -566,7 +566,7 @@ export function AlbumDetail({ a, onClose, docked = false, onPlayed }: { a: LibAl
           ))}
         </ol>
       ) : (
-        <p className="hint-text">Nightjar couldn’t read the tracks. The folder may have been moved.</p>
+        <p className="hint-text">nightjar couldn’t read the tracks. The folder may have been moved.</p>
       )}
     </aside>
   );

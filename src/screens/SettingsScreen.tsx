@@ -324,7 +324,7 @@ export function SettingsScreen() {
           <p className="hint-text small">
             {canPick
               ? 'Changes here apply straight away.'
-              : 'Type the full path as it is on the computer running Nightjar. Changes here apply straight away.'}{' '}
+              : 'Type the full path as it is on the computer running nightjar. Changes here apply straight away.'}{' '}
             {shared.length > 0 && `${shared.length} of ${draft.length} folders shared.`}
           </p>
         </section>
@@ -451,14 +451,14 @@ export function SettingsScreen() {
                     toast('Restarted. The new settings are in use.');
                     await load();
                   } else {
-                    toast('Couldn’t restart from here. Quit Nightjar and open it again from the Start menu.', 'error');
+                    toast('Couldn’t restart from here. Quit nightjar and open it again from the Start menu.', 'error');
                   }
                 }}
               >
                 {restarting ? <span className="spinner" aria-hidden /> : null} {restarting ? 'Restarting…' : 'Restart now'}
               </button>
             ) : (
-              <span className="dim">Quit Nightjar and open it again from the Start menu.</span>
+              <span className="dim">Quit nightjar and open it again from the Start menu.</span>
             )}
           </div>
         )}
@@ -466,7 +466,7 @@ export function SettingsScreen() {
         {ro && (
           <p className="callout">
             You can see these settings but not change them here. To allow changes, set <code>remote_configuration: true</code> in
-            the engine’s config file (data\slskd.yml) and restart Nightjar.
+            the engine’s config file (data\slskd.yml) and restart nightjar.
           </p>
         )}
         <div className="st">
@@ -507,7 +507,7 @@ function Notifications() {
     <section className="settings-block" aria-labelledby="notify-h">
       <h2 id="notify-h">Notifications</h2>
       <p className="hint-text">
-        Nightjar shows these in the corner of the window. When the window is in the background it can also use your
+        nightjar shows these in the corner of the window. When the window is in the background it can also use your
         system’s notifications.
       </p>
       <div className="checks">
@@ -584,7 +584,7 @@ function Reachability() {
     const r = await backend.allowFirewall();
     setFixing('');
     if (!r) setNote('The helper on this computer didn’t answer.');
-    else if (r.ok) setNote('Windows Firewall now lets people connect to Nightjar.');
+    else if (r.ok) setNote('Windows Firewall now lets people connect to nightjar.');
     else setNote(r.error ?? 'Windows permission was not given.');
     check();
   };
@@ -611,10 +611,10 @@ function Reachability() {
               <span className="presence offline bad-dot" aria-hidden /> Not directly. Port {r.port} is closed. Downloads and browsing
               fail with people whose port is closed too, and they look offline.
             </p>
-            <p className="hint-text">Open the port on your router and allow Nightjar through Windows Firewall, then check again.</p>
+            <p className="hint-text">Open the port on your router and allow nightjar through Windows Firewall, then check again.</p>
           </div>
         ) : (
-          <p className="hint-text">This can only be checked in the Nightjar app on this computer.</p>
+          <p className="hint-text">This can only be checked in the nightjar app on this computer.</p>
         )}
         <div className="reach-actions">
           {canFix && (
@@ -641,10 +641,10 @@ function Reachability() {
               onChange={(e) => {
                 // Saved straight away, like the other switches here (only the engine's settings have a Save button).
                 setPortWatch(e.target.checked);
-                useStore.getState().toast(e.target.checked ? 'Saved: Nightjar checks your port every hour' : 'Saved: no hourly port checks');
+                useStore.getState().toast(e.target.checked ? 'Saved: nightjar checks your port every hour' : 'Saved: no hourly port checks');
               }}
             />
-            Check every hour and note it in Nightjar’s log, to find out when the port closes by itself
+            Check every hour and note it in nightjar’s log, to find out when the port closes by itself
           </label>
         )}
       </div>
@@ -665,7 +665,7 @@ function LibrarySection() {
     backend?.library.info().then(setInfo);
     backend?.folders.known().then((k) => setMusic(k.music)).catch(() => {});
   }, [backend]);
-  if (!info) return null; // no Nightjar app on this computer (a phone)
+  if (!info) return null; // no nightjar app on this computer (a phone)
   const choose = async () => {
     const p = await backend!.folders.pick(info.root ?? music ?? undefined).catch(() => null);
     if (!p) return;
@@ -698,7 +698,7 @@ function LibrarySection() {
       </div>
       {!onThisComputer && (
         <p className="hint-text">
-          {info.root ? 'To change it' : 'To choose it'}, use Nightjar on the computer: the library folder decides which folders your other devices can reach.
+          {info.root ? 'To change it' : 'To choose it'}, use nightjar on the computer: the library folder decides which folders your other devices can reach.
         </p>
       )}
       {onThisComputer && !info.root && music && (
@@ -1076,7 +1076,7 @@ function ProfileSection({
       <h2 id="profile-h">Your profile</h2>
       <p className="hint-text">This is what people see when they open your profile. A friendly line about what you share helps.</p>
       <p className="hint-text">
-        Pictures: JPG, PNG, GIF or BMP, square works best, up to 5 MB. Nightjar keeps its own copy, so the picture keeps working
+        Pictures: JPG, PNG, GIF or BMP, square works best, up to 5 MB. nightjar keeps its own copy, so the picture keeps working
         even if the original moves or lives only in OneDrive.
       </p>
       <div className="profile-edit">

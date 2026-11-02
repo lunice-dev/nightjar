@@ -101,11 +101,11 @@ export async function pair(base: string, secret: string): Promise<PairResult> {
       signal: AbortSignal.timeout(15_000),
     });
     const j = (await res.json().catch(() => ({}))) as { token?: string; error?: string; wait?: number };
-    if (!res.ok || !j.token) return { ok: false, error: j.error ?? `Nightjar answered ${res.status}.`, wait: j.wait };
+    if (!res.ok || !j.token) return { ok: false, error: j.error ?? `nightjar answered ${res.status}.`, wait: j.wait };
     localStorage.setItem(DEVICE_KEY, j.token);
     return { ok: true };
   } catch {
-    return { ok: false, error: 'Nightjar on your computer isn’t answering. Check that it’s running and that Tailscale is on here.' };
+    return { ok: false, error: 'nightjar on your computer isn’t answering. Check that it’s running and that Tailscale is on here.' };
   }
 }
 

@@ -9,7 +9,7 @@ export const SETTINGS_TABS: { id: SettingsTab; label: string; hint: string; sub:
   { id: 'protection', label: 'Protection', hint: 'Keep programs away', sub: 'Keep programs and mass downloaders away from your share.' },
   { id: 'library', label: 'Library', hint: 'Your music and playlists', sub: 'Your music folder, how it is organised, and your playlists.' },
   { id: 'account', label: 'Account', hint: 'Sign-in and profile', sub: 'Your Soulseek sign-in and the profile other people see.' },
-  { id: 'connection', label: 'Connection', hint: 'Reachability and phone', sub: 'Whether others can reach you, and reaching Nightjar from your phone.' },
+  { id: 'connection', label: 'Connection', hint: 'Reachability and phone', sub: 'Whether others can reach you, and reaching nightjar from your phone.' },
   { id: 'app', label: 'App', hint: 'Notifications, player, help', sub: 'Notifications, the large player, and getting help.' },
 ];
 

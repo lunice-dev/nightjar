@@ -55,7 +55,7 @@ export function GuardSection({ settings, readOnly, onSaved }: { settings: Settin
     <section className="settings-block" id="programs" aria-labelledby="programs-h">
       <h2 id="programs-h">Programs and heavy downloading</h2>
       <p className="hint-text">
-        Nightjar is for people. When something uses your share far faster than a person could, it gets blocked, and nobody can take more than
+        nightjar is for people. When something uses your share far faster than a person could, it gets blocked, and nobody can take more than
         the limits below.
       </p>
 
@@ -66,7 +66,7 @@ export function GuardSection({ settings, readOnly, onSaved }: { settings: Settin
           <small className="dim" style={{ display: 'block' }}>
             Anyone who opens more than 40 of your folders in a minute, asks for 1,000 files in half an hour or takes 800 files in an hour is blocked
             at once and their downloads stop. People on your People list are never blocked.
-            {!onThisComputer && ' This runs on the computer where Nightjar is installed.'}
+            {!onThisComputer && ' This runs on the computer where nightjar is installed.'}
           </small>
         </span>
       </label>
@@ -89,7 +89,7 @@ export function GuardSection({ settings, readOnly, onSaved }: { settings: Settin
         </label>
       </div>
       <p className="hint-text small">
-        An album is 10 to 25 files. Nightjar suggests {RECOMMENDED.queued} waiting at once and {RECOMMENDED.daily} a day, enough for several albums a day and far
+        An album is 10 to 25 files. nightjar suggests {RECOMMENDED.queued} waiting at once and {RECOMMENDED.daily} a day, enough for several albums a day and far
         too little for a machine. Without a daily limit, slskd still stops one person at 1,500 files a week.
       </p>
       <div className="save-row tight">

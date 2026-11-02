@@ -88,7 +88,7 @@ const PALETTES = [
   ['#2b2b2b', '#b8a47a'],
   ['#41322f', '#c47a6a'],
   ['#2d3436', '#a3b18a'],
-  ['#1f2a36', '#e0a458'],
+  ['#1f2a36', '#e8b45a'],
 ];
 
 function hash(s: string) {

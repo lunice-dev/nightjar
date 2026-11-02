@@ -5,16 +5,23 @@
     <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <title>Nightjar</title>
+    <title>nightjar</title>
+    <script>
+      // The saved theme, applied before anything paints (the app sets it again once it starts).
+      try {
+        var t = localStorage.getItem('ssk-lite.theme');
+        if (t && t !== 'system') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="./manifest.json" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Nightjar" />
+    <meta name="apple-mobile-web-app-title" content="nightjar" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#e6e3dd" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e4e1da" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f111a" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
     <div id="root"></div>

@@ -4,6 +4,7 @@
  * and close) and talks to the app through WebView2's message channel.
  *
  * Messages to the app: { type: 'window', action: 'drag' | 'minimize' | 'maximize' | 'close' | 'quit' },
+ * { type: 'theme', theme } when the theme changes (the app's opening screen follows it),
  * and { type: 'window', action: 'resize', edge } to start resizing from a border or corner.
  * Messages from it:    { type: 'window', maximized: boolean }.
  */
@@ -27,6 +28,11 @@ export type WindowEdge = 'left' | 'right' | 'top' | 'bottom' | 'topleft' | 'topr
 /** Starts resizing the window from one of its borders or corners (the app takes over the drag). */
 export function windowResize(edge: WindowEdge) {
   webview?.postMessage({ type: 'window', action: 'resize', edge });
+}
+
+/** Tells the Windows app which theme is chosen, so its own opening screen (before this page loads) matches. */
+export function tellTheme(theme: string) {
+  webview?.postMessage({ type: 'theme', theme });
 }
 
 /** `resizable`: this version of the app resizes from the page's edges (older ones don't say). */

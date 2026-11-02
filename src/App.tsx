@@ -7,8 +7,10 @@ import { WindowControls } from './components/WindowControls';
 import { setSettingsTarget } from './lib/settingsNav';
 import { useShellGlow } from './lib/useCoverGlow';
 import { usePcShell } from './lib/pcShell';
-import { inApp, windowAction } from './lib/host';
+import { inApp, tellTheme, windowAction } from './lib/host';
 import { Mark } from './components/Mark';
+import { Intro } from './components/Intro';
+import { INTRO_SECONDS } from './components/introSvg';
 import { speed } from './lib/quality';
 import { groupDownloads } from './lib/transfers';
 import { BrowseScreen } from './screens/BrowseScreen';
@@ -72,11 +74,16 @@ export function App() {
   const ready = useStore((s) => s.ready);
   const [error, setError] = useState<string>();
   const [connecting, setConnecting] = useState(true);
-  // On a phone or another computer, the opening screen stays at least 2.5 s (the Windows app has its own splash).
+  // On a phone or another computer, the opening screen stays until the bird's flight has finished (the Windows
+  // app plays the flight on its own opening screen and waits for it there). With Reduce Motion, a short moment.
   const [splash, setSplash] = useState(!inApp);
   useEffect(() => {
     if (!splash) return;
-    const t = setTimeout(() => setSplash(false), 2500);
+    // Half a second on the finished logo after the bird lands, then the app fades in (see .intro-done in app.css).
+    const t = setTimeout(() => {
+      document.documentElement.classList.add('intro-done');
+      setSplash(false);
+    }, reducedMotion() ? 1200 : INTRO_SECONDS * 1000 + 650);
     return () => clearTimeout(t);
   }, [splash]);
 
@@ -191,6 +198,7 @@ function useTheme() {
       m.dataset.original ??= m.content;
       m.content = theme === 'oled' ? '#000000' : m.dataset.original;
     });
+    tellTheme(theme);
     try {
       localStorage.setItem('ssk-lite.theme', theme);
     } catch {
@@ -336,7 +344,7 @@ function HeaderEnd({
             </div>
             <hr />
             <button role="menuitem" aria-current={route === 'about' ? 'page' : undefined} onClick={then(() => openRoute('about'))}>
-              <span>About Nightjar</span>
+              <span>About nightjar</span>
             </button>
             <div className="hdr-credit-menu">
               <EngineCredit />
@@ -473,11 +481,11 @@ function Shell() {
       {/* The window's glow, from the cover of what's playing (drawn on a computer's window; see the shell styles). */}
       <div className="shell-sky" aria-hidden />
       <header className="topbar">
-        <button className="brand" onClick={() => open('search')} aria-label="Nightjar home">
+        <button className="brand" onClick={() => open('search')} aria-label="nightjar home">
           <span className="brand-mark">
             <Mark size={24} />
           </span>
-          <span className="brand-name">Nightjar</span>
+          <span className="brand-name">nightjar</span>
         </button>
         <nav className="topnav" aria-label="Main">
           {NAV.map((n) => (
@@ -780,14 +788,14 @@ function QuitButton({ busy }: { busy: number }) {
   };
   if (asking)
     return (
-      <span className="quit-confirm" role="alertdialog" aria-label="Quit Nightjar">
+      <span className="quit-confirm" role="alertdialog" aria-label="Quit nightjar">
         {busy} {busy === 1 ? 'album is' : 'albums are'} still downloading. They continue next time.
         <button className="foot-item danger" onClick={quit}>Quit</button>
         <button className="foot-item" onClick={() => setAsking(false)}>Keep running</button>
       </span>
     );
   return (
-    <button className="foot-item quit" onClick={() => (busy ? setAsking(true) : quit())} title="Stop Nightjar completely, including the icon next to the clock">
+    <button className="foot-item quit" onClick={() => (busy ? setAsking(true) : quit())} title="Stop nightjar completely, including the icon next to the clock">
       <Icon name="power" size={14} /> Quit
     </button>
   );
@@ -810,10 +818,11 @@ function ClosedScreen() {
   return (
     <main className="connect">
       <div className="connect-card closed">
-        <h1>
-          <Mark size={34} /> Nightjar is closed
-        </h1>
-        <p>Downloads and sharing are stopped. Open Nightjar from the Start menu or the desktop to start it again.</p>
+        <p className="lockup" aria-hidden>
+          <Mark size={34} /> nightjar
+        </p>
+        <h1 className="closed-title">nightjar is closed</h1>
+        <p>Downloads and sharing are stopped. Open nightjar from the Start menu or the desktop to start it again.</p>
         <p className="hint-text small">You can close this window.</p>
       </div>
     </main>
@@ -841,7 +850,7 @@ function EngineCredit() {
       href="https://github.com/slskd/slskd"
       target="_blank"
       rel="noreferrer"
-      title="Nightjar runs slskd, an open source Soulseek engine, without changes. Nightjar isn’t made by or affiliated with the slskd project."
+      title="nightjar runs slskd, an open source Soulseek engine, without changes. nightjar isn’t made by or affiliated with the slskd project."
     >
       Engine: slskd{version ? ` ${version}` : ''} · AGPLv3
     </a>
@@ -864,29 +873,39 @@ function RemoteFoot({ onOpen }: { onOpen: () => void }) {
   }, []);
   if (!state) return null;
   return (
-    <button className={`foot-item remote-foot ${state}`} onClick={onOpen} title={state === 'on' ? 'Your devices can reach Nightjar through Tailscale' : 'Tailscale isn’t connected: your devices can’t reach Nightjar'}>
+    <button className={`foot-item remote-foot ${state}`} onClick={onOpen} title={state === 'on' ? 'Your devices can reach nightjar through Tailscale' : 'Tailscale isn’t connected: your devices can’t reach nightjar'}>
       <Icon name="phone" size={14} /> {state === 'on' ? 'Remote on' : 'Remote off'}
     </button>
   );
 }
 
-/** While Nightjar reaches the engine: the bird, breathing. Words only if it takes a while. */
+// In the Windows app the opening screen has just faded out: the app fades in (see .intro-done in app.css).
+if (inApp && typeof document !== 'undefined') document.documentElement.classList.add('intro-done');
+
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * While Nightjar reaches the engine. On a phone or another computer the bird flies in and lands on the moon;
+ * in the Windows app it already did that on the opening screen, so this shows the finished logo.
+ * Words once the flight is over, or if it takes a while.
+ */
 function LoadingScreen() {
+  const play = !inApp && !reducedMotion();
   const [slow, setSlow] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setSlow(true), 3500);
+    const t = setTimeout(() => setSlow(true), play ? INTRO_SECONDS * 1000 - 150 : 3500);
     return () => clearTimeout(t);
-  }, []);
+  }, [play]);
   return (
-    <main className="connect loading-screen" aria-busy="true">
-      <div className="loading-mark">
-        <Mark size={64} />
-      </div>
-      <h1 className="loading-name">Nightjar</h1>
+    <main className={`connect loading-screen`} aria-busy="true">
+      {/* In the Windows app the logo was just shown (and faded out) on the opening screen: no second logo here. */}
+      <h1 className="loading-title">
+        {!inApp && <Intro play={play} />}
+      </h1>
       <p className={`loading-text ${slow ? 'in' : ''}`} role="status">
-        {onThisComputer ? 'Starting Nightjar…' : 'Connecting to your computer…'}
+        {onThisComputer ? 'Starting nightjar…' : 'Connecting to your computer…'}
       </p>
-      <span className="signature loading-sig" aria-hidden>coded by lunice</span>
+      {!inApp && <span className="signature loading-sig" aria-hidden>coded by lunice</span>}
     </main>
   );
 }

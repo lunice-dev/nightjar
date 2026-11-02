@@ -271,7 +271,7 @@ namespace Nightjar
             head.Append("Content-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\n");
             head.Append("Content-Length: ").Append(bytes.Length).Append("\r\n");
             if (origin != null)
-                head.Append("Access-Control-Allow-Origin: ").Append(origin).Append("\r\nAccess-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-Nightjar-Device\r\nAccess-Control-Allow-Private-Network: true\r\nVary: Origin\r\n");
+                head.Append("Access-Control-Allow-Origin: ").Append(origin).Append("\r\nAccess-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-nightjar-Device\r\nAccess-Control-Allow-Private-Network: true\r\nVary: Origin\r\n");
             head.Append("\r\n");
             var h = Encoding.ASCII.GetBytes(head.ToString());
             stream.Write(h, 0, h.Length);
@@ -619,9 +619,9 @@ namespace Nightjar
                 }
                 device = Remote.Check(req.Headers.TryGetValue("x-nightjar-device", out var t) ? t : null);
                 if (device == null) { Reply(stream, 401, origin, new { error = "signin" }); return; }
-                if (ThisComputerOnly.Contains(req.Path)) { Reply(stream, 403, origin, new { error = "Only possible on the computer Nightjar runs on." }); return; }
+                if (ThisComputerOnly.Contains(req.Path)) { Reply(stream, 403, origin, new { error = "Only possible on the computer nightjar runs on." }); return; }
                 // The library folder decides which folders other devices may reach, so only this computer changes it.
-                if (req.Path == "/library" && req.Method == "POST") { Reply(stream, 403, origin, new { ok = false, error = "Change the library folder on the computer Nightjar runs on." }); return; }
+                if (req.Path == "/library" && req.Method == "POST") { Reply(stream, 403, origin, new { ok = false, error = "Change the library folder on the computer nightjar runs on." }); return; }
             }
 
             // Only now, with the sender known: pictures for playlist covers may be large, everything else is small.
@@ -874,7 +874,7 @@ namespace Nightjar
                         var start = req.Q("start");
                         var chosen = onUi(() =>
                         {
-                            using (var d = new FolderBrowserDialog { Description = "Choose a folder for Nightjar", ShowNewFolderButton = true })
+                            using (var d = new FolderBrowserDialog { Description = "Choose a folder for nightjar", ShowNewFolderButton = true })
                             {
                                 if (!string.IsNullOrEmpty(start) && Directory.Exists(start)) d.SelectedPath = start;
                                 return d.ShowDialog() == DialogResult.OK ? d.SelectedPath : null;
@@ -902,7 +902,7 @@ namespace Nightjar
                         }
                         catch (Exception e)
                         {
-                            Reply(stream, 200, origin, new { path = (string)null, error = "Nightjar couldn't read that picture: " + e.Message });
+                            Reply(stream, 200, origin, new { path = (string)null, error = "nightjar couldn't read that picture: " + e.Message });
                         }
                         return;
                     }

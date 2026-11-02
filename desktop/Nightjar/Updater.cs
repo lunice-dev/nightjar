@@ -162,7 +162,7 @@ namespace Nightjar
                         // arrived intact from wherever the release came from.
                         if (signatureUrl == null) throw new IOException("the release isn't signed");
                         var signature = await c.GetByteArrayAsync(signatureUrl);
-                        if (!UpdateSignature.Valid(file, signature)) throw new IOException("the installer's signature isn't Nightjar's");
+                        if (!UpdateSignature.Valid(file, signature)) throw new IOException("the installer's signature isn't nightjar's");
                     }
                     Log.Write("Installing update " + version);
                     lock (Gate) { state.ready = true; state.downloading = false; }

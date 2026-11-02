@@ -376,7 +376,7 @@ export function FullPlayer({
           <Icon name="chevron" size={22} />
         </button>
         <span className="fp-brand-name">
-          Nightjar
+          nightjar
         </span>
         <span className="fp-top-end">
           {view.kind !== 'now' && track && (

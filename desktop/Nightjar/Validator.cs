@@ -68,7 +68,7 @@ namespace Nightjar
                 {
                     var kinds = all.Where(Organizer.IsAudio).Select(f => Path.GetExtension(f).TrimStart('.').ToUpperInvariant()).Distinct().ToList();
                     job.error = kinds.Count > 0
-                        ? "Nightjar can check FLAC, WAV and MP3 files; this album is " + string.Join(" and ", kinds) + "."
+                        ? "nightjar can check FLAC, WAV and MP3 files; this album is " + string.Join(" and ", kinds) + "."
                         : "There's no music in this folder any more.";
                     return;
                 }
@@ -78,7 +78,7 @@ namespace Nightjar
                     Track t;
                     var ext = Path.GetExtension(f).ToLowerInvariant();
                     try { t = ext == ".flac" ? Flac(f) : ext == ".wav" ? Wav(f) : Mp3(f); }
-                    catch (Exception e) { t = new Track { verdict = "Unreadable", note = "Nightjar couldn't read it: " + e.Message, severity = 9 }; }
+                    catch (Exception e) { t = new Track { verdict = "Unreadable", note = "nightjar couldn't read it: " + e.Message, severity = 9 }; }
                     t.file = f;
                     t.name = f.Substring(job.dir.TrimEnd(Path.DirectorySeparatorChar).Length + 1);
                     lock (job.tracks) job.tracks.Add(t);
@@ -186,7 +186,7 @@ namespace Nightjar
             int rate, channels, bits;
             long total;
             ReadStreamInfo(file, out rate, out channels, out bits, out total);
-            if (!File.Exists(FlacExe)) throw new FileNotFoundException("The FLAC decoder is missing; install Nightjar again.");
+            if (!File.Exists(FlacExe)) throw new FileNotFoundException("The FLAC decoder is missing; install nightjar again.");
 
             int n = rate > 48000 ? 8192 : 4096;
             var picker = new Windows(total, n, 48);

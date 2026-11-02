@@ -268,7 +268,7 @@ export function helperLibrary(helper: string): LibraryAccess {
       });
       return (await res.json()) as T;
     } catch (e) {
-      return { ok: false, error: `The Nightjar app didn’t answer (${(e as Error).message}).` } as T;
+      return { ok: false, error: `The nightjar app didn’t answer (${(e as Error).message}).` } as T;
     }
   };
   const enc = encodeURIComponent;
@@ -276,7 +276,7 @@ export function helperLibrary(helper: string): LibraryAccess {
     info: () => get<LibraryInfo>('/library', 4000),
     setRoot: (root) => post('/library', { root }, 10_000),
     waiting: () => get('/organize/waiting', 30_000),
-    plan: async (dir) => (await get<OrganizePlan | { error: string }>(`/organize/plan?dir=${enc(dir)}`, 60_000)) ?? { error: 'The Nightjar app didn’t answer.' },
+    plan: async (dir) => (await get<OrganizePlan | { error: string }>(`/organize/plan?dir=${enc(dir)}`, 60_000)) ?? { error: 'The nightjar app didn’t answer.' },
     move: (dir, format, artist, folder, group) => post('/organize/move', { dir, format, artist, folder, group: group ?? null }),
     undo: (id) => post('/organize/undo', { id }),
     check: (dir) => post('/validate', { dir }, 15_000),

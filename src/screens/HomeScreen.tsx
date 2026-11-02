@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { usePcShell } from '../lib/pcShell';
 import { NowPanel } from '../components/NowPanel';
@@ -395,13 +395,14 @@ function Rail<T>({ title, count, link, items, children }: { title: string; count
 function Fit<T>({ items, children }: { items: T[]; children: (item: T) => ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(6);
-  // A phone: the row is a strip to swipe through, not a fixed few.
-  const [strip, setStrip] = useState(false);
+  // A phone: the row is a strip to swipe through, not a fixed few. A tablet or other touch screen: a strip too, with
+  // the tiles the size they'd be in the grid and the next one peeking in. A mouse: the few that fit.
+  const [strip, setStrip] = useState<false | 'phone' | 'touch'>(false);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      setStrip(matchMedia('(max-width: 900px)').matches);
+      setStrip(matchMedia('(max-width: 900px)').matches ? 'phone' : matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : false);
       setCols(Math.max(2, Math.floor((el.clientWidth + GAP) / (MIN_TILE + GAP))));
     };
     measure();
@@ -410,7 +411,11 @@ function Fit<T>({ items, children }: { items: T[]; children: (item: T) => ReactN
     return () => ro.disconnect();
   }, []);
   return (
-    <div ref={ref} className={strip ? 'hx-row hx-strip' : 'hx-row'} style={strip ? undefined : { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+    <div
+      ref={ref}
+      className={strip === 'phone' ? 'hx-row hx-strip' : strip === 'touch' ? 'hx-row hx-strip hx-strip-touch' : 'hx-row'}
+      style={strip === 'touch' ? ({ '--cols': cols } as CSSProperties) : strip ? undefined : { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+    >
       {items.slice(0, strip ? 24 : cols).map((it) => children(it))}
     </div>
   );

@@ -109,7 +109,7 @@ namespace Nightjar
             sb.AppendLine("  " + Try(() =>
             {
                 var t = Tailscale.Status();
-                return "Tailscale: " + (t.installed ? "installed, " + (t.backend ?? "unknown") + ", https " + (t.https ? "allowed" : "not allowed") + ", Nightjar " + (t.serving ? "served" : "not served") : "not installed");
+                return "Tailscale: " + (t.installed ? "installed, " + (t.backend ?? "unknown") + ", https " + (t.https ? "allowed" : "not allowed") + ", nightjar " + (t.serving ? "served" : "not served") : "not installed");
             }));
             sb.AppendLine("  " + Try(() => "Home Wi-Fi access: " + (Config.WebAddress().StartsWith("0.0.0.0") ? "on" : "off")));
             sb.AppendLine("  " + Try(() => "Remote password set: " + Remote.RemotePasswordSet));

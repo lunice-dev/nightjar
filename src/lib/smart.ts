@@ -521,7 +521,7 @@ export async function manageDownloads() {
       updatePlan(plan.id, {
         tracks: [...plan.tracks],
         batches: [...plan.batches, batchId],
-        notes: [...plan.notes, { at: now, text: `Asked ${user} again for ${n} ${n === 1 ? 'track' : 'tracks'}: Nightjar's engine restarted while ${n === 1 ? 'it was' : 'they were'} coming in.` }],
+        notes: [...plan.notes, { at: now, text: `Asked ${user} again for ${n} ${n === 1 ? 'track' : 'tracks'}: nightjar's engine restarted while ${n === 1 ? 'it was' : 'they were'} coming in.` }],
       });
       useStore.getState().refreshTransfers('download');
       return;
