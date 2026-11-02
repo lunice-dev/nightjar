@@ -285,7 +285,7 @@ export const useStore = create<State>((set, get) => ({
     const keys = fresh.map((f) => `${username}\u0000${f.filename}`);
     set((s) => ({ queuedKeys: new Set([...s.queuedKeys, ...keys]) }));
     try {
-      await backend.enqueue(username, fresh, destination ? { batchId: uuid(), destination } : undefined);
+      await (await import('./lib/ask')).enqueueOnce(backend, username, fresh, destination ? { batchId: uuid(), destination } : undefined);
       get().toast(`Queued ${label} from ${username}`);
       get().refreshTransfers('download');
     } catch (e) {

@@ -1,3 +1,4 @@
+import { forgetRecent } from './ask';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Backend } from '../api/backend';
 import { usePrefs } from '../prefs';
@@ -68,7 +69,10 @@ describe('a folder listed flat (disc folders left out)', () => {
 });
 
 describe('starting a download when someone can’t be reached', () => {
-  beforeEach(() => usePrefs.setState({ plans: [], smart: { enabled: true, queueMinutes: 10, parallel: true } }));
+  beforeEach(() => {
+    forgetRecent();
+    usePrefs.setState({ plans: [], smart: { enabled: true, queueMinutes: 10, parallel: true } });
+  });
 
   it('gives the chosen person’s tracks to the helpers who answered', async () => {
     const asked = engine(['chosen']);

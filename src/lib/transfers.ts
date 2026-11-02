@@ -1,6 +1,7 @@
 import type { Transfer, TransferUser } from '../api/types';
 import type { DownloadPlan } from '../prefs';
 import { AUDIO_EXT, basename, extOf, parseRelease, splitFolder } from './quality';
+import { mergeDuplicatePlans } from './plans';
 import { sourceRates } from './rates';
 
 export type Phase = 'active' | 'queued' | 'done' | 'failed' | 'cancelled';
@@ -67,6 +68,7 @@ const folderKey = (username: string, filename: string) => `${username}\u0000${fi
  */
 export function groupDownloads(users: TransferUser[], plans: DownloadPlan[] = []): DownloadGroup[] {
   const buckets = new Map<string, { files: Transfer[]; plan?: DownloadPlan; directory: string; username: string }>();
+  plans = mergeDuplicatePlans(plans);
   const planOf = planFinder(plans);
   for (const u of users) {
     for (const d of u.directories) {

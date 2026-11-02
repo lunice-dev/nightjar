@@ -1,3 +1,4 @@
+import { enqueueOnce } from '../lib/ask';
 import { usePlayer } from '../lib/player';
 import { AlbumPlay } from '../components/AlbumPlay';
 import { onThisComputer } from '../api/remote';
@@ -597,8 +598,7 @@ function TransferRow({
     const batches = [...plan.batches];
     for (const dest of new Set(list.map((f) => destOf(f.filename)))) {
       const batchId = uuid();
-      const ok = await backend!
-        .enqueue(user, list.filter((f) => destOf(f.filename) === dest), { batchId, destination: dest })
+      const ok = await enqueueOnce(backend!, user, list.filter((f) => destOf(f.filename) === dest), { batchId, destination: dest })
         .then(() => true)
         .catch(() => false);
       if (!ok) {
@@ -614,7 +614,10 @@ function TransferRow({
   const planTracks = g.plan ? g.plan.tracks.filter((k) => !k.dropped) : [];
   const notListed =
     direction === 'download' && g.plan
-      ? planTracks.filter((k) => !g.files.some((f) => f.username === k.username && f.filename === k.filename))
+      ? planTracks.filter(
+          // A track nightjar itself is asking for again is on its way back (its old entry was removed for the retry): not missing.
+          (k) => !g.files.some((f) => f.username === k.username && f.filename === k.filename) && !((k.attempts ?? 0) > 0 && (k.attempts ?? 0) < RETRY_DELAYS.length),
+        )
       : [];
   // The list forgets files that finished when "Clear finished" is pressed, even while the rest of the album is still
   // coming. So "not in the list" doesn't mean "not downloaded": look in the album's folder before calling it missing.

@@ -1,3 +1,4 @@
+import { enqueueOnce } from './ask';
 import type { Transfer, TransferUser } from '../api/types';
 import { usePrefs, type DownloadPlan } from '../prefs';
 import { useStore } from '../store';
@@ -104,8 +105,7 @@ export async function keepDownloading(plan: DownloadPlan) {
   const batches: string[] = [];
   for (const list of groups.values()) {
     const batchId = uuid();
-    await backend
-      .enqueue(list[0].username, list.map((p) => ({ filename: p.filename, size: p.size })), { batchId, destination: list[0].dest ?? plan.destination })
+    await enqueueOnce(backend, list[0].username, list.map((p) => ({ filename: p.filename, size: p.size })), { batchId, destination: list[0].dest ?? plan.destination })
       .then(() => batches.push(batchId))
       .catch(() => undefined);
   }

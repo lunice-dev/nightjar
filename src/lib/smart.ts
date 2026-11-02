@@ -1,3 +1,5 @@
+import { enqueueOnce } from './ask';
+import { mergeDuplicatePlans } from './plans';
 import type { EnqueueFile, Transfer, TransferUser } from '../api/types';
 import { usePrefs, type DownloadPlan, type PlanTrack, type SourceOption } from '../prefs';
 import { useStore } from '../store';
@@ -335,7 +337,7 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
     try {
       for (const [dest, list] of byDest) {
         const batchId = uuid();
-        await backend.enqueue(s.username, list, { batchId, destination: dest || plan.destination });
+        await enqueueOnce(backend, s.username, list, { batchId, destination: dest || plan.destination });
         plan.batches.push(batchId);
       }
     } catch {
@@ -359,7 +361,7 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
         for (const dest of new Set(list.map((t) => t.dest))) {
           const batchId = uuid();
           const files = moved.filter((m) => m.t.dest === dest).map((m) => ({ filename: m.file!.filename, size: m.file!.size }));
-          await backend.enqueue(user, files, { batchId, destination: dest ?? plan.destination });
+          await enqueueOnce(backend, user, files, { batchId, destination: dest ?? plan.destination });
           ids.push(batchId);
         }
       } catch {
@@ -454,13 +456,20 @@ const PERMANENT = /no longer share|copy changed|blocked|don’t allow|refused/i;
 const isTransient = (t: Transfer) => phaseOf(t.state) === 'failed' && !ourFault(t) && !PERMANENT.test(failureReason(t) ?? '');
 
 export async function manageDownloads() {
-  const { smart, plans, updatePlan } = usePrefs.getState();
+  const { smart, updatePlan } = usePrefs.getState();
+  let { plans } = usePrefs.getState();
   const { backend, downloads, toast } = useStore.getState();
   if (!backend || !smart.enabled) return;
 
   const transfers = downloads.flatMap((u: TransferUser) => u.directories.flatMap((d) => d.files));
   const now = Date.now();
 
+  // One album asked for twice is one plan (two clicks, or two devices): fold them before looking after them.
+  const folded = mergeDuplicatePlans(plans);
+  if (folded.length !== plans.length) {
+    usePrefs.setState({ plans: folded });
+    plans = folded;
+  }
   const planOf = planFinder(plans);
   for (const plan of plans) {
     if (plan.finishedAt) continue;
@@ -521,8 +530,7 @@ export async function manageDownloads() {
         k.retries = (k.retries ?? 0) + 1;
       }
       const batchId = uuid();
-      await backend
-        .enqueue(user, again.map(({ k }) => ({ filename: k.filename, size: k.size })), { batchId, destination: dest ?? plan.destination })
+      await enqueueOnce(backend, user, again.map(({ k }) => ({ filename: k.filename, size: k.size })), { batchId, destination: dest ?? plan.destination })
         .catch(() => undefined);
       const n = again.length;
       updatePlan(plan.id, {
@@ -531,7 +539,7 @@ export async function manageDownloads() {
         notes: [...plan.notes, { at: now, text: `Asked ${user} again for ${n} ${n === 1 ? 'track' : 'tracks'}: nightjar's engine restarted while ${n === 1 ? 'it was' : 'they were'} coming in.` }],
       });
       useStore.getState().refreshTransfers('download');
-      return;
+      continue; // the other albums are looked after in this round too
     }
 
     // 1. Tracks that need a new home: refused or failed, or stuck in a remote queue.
@@ -614,8 +622,7 @@ export async function manageDownloads() {
           k.retryAt = undefined;
         }
         const batchId = uuid();
-        await backend
-          .enqueue(user, again.map(({ k, t }) => ({ filename: k.filename, size: (t && changedSize(t)) || k.size })), { batchId, destination: dest ?? plan.destination })
+        await enqueueOnce(backend, user, again.map(({ k, t }) => ({ filename: k.filename, size: (t && changedSize(t)) || k.size })), { batchId, destination: dest ?? plan.destination })
           .catch(() => undefined);
         const n = again.length;
         const tryNo = Math.max(...again.map(({ k }) => k.attempts ?? 1));
@@ -626,7 +633,7 @@ export async function manageDownloads() {
           notes: [...plan.notes, { at: now, text: `Asked ${user} again for ${n} ${n === 1 ? 'track' : 'tracks'} (try ${tryNo} of ${RETRY_DELAYS.length}): ${why}.` }],
         });
         useStore.getState().refreshTransfers('download');
-        return;
+        continue;
       }
     }
 
@@ -749,7 +756,7 @@ export async function manageDownloads() {
     }
     const batchId = uuid();
     try {
-      await backend.enqueue(toUser, files, { batchId, destination: groupDest ?? plan.destination });
+      await enqueueOnce(backend, toUser, files, { batchId, destination: groupDest ?? plan.destination });
     } catch {
       // That source isn't reachable: count it as failed for these tracks and try again next round.
       group.forEach((m) => plan.tracks[m.i].failedBy.push(toUser));
@@ -878,7 +885,7 @@ export async function retryLooseDownloads() {
     if (now < st.due) continue;
     looseTries.set(key, { n: st.n + 1, due: 0 });
     await backend.cancel('download', t.username, t.id, true).catch(() => undefined);
-    await backend.enqueue(t.username, [{ filename: t.filename, size: changedSize(t) ?? t.size }]).catch(() => undefined);
+    await enqueueOnce(backend, t.username, [{ filename: t.filename, size: changedSize(t) ?? t.size }]).catch(() => undefined);
     useStore.getState().refreshTransfers('download');
     return;
   }
