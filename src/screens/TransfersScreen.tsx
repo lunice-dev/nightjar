@@ -849,18 +849,18 @@ function TransferRow({
           className={
             // An upload that stopped on their side isn't alarming: red only for a problem on this computer.
             (g.phase === 'failed' && (direction === 'download' || [...reasons.values()].some((r) => r.ours))) || (direction === 'download' && wrongAlbum(g))
-              ? 'state-failed'
+              ? 'state-failed dl-m-state'
               : g.phase === 'done'
-                ? 'state-done'
-                : ''
+                ? 'state-done dl-m-state'
+                : 'dl-m-state'
           }
         >
           {stateLine(g, direction, ahead, wait)}
         </span>
-        <span>
+        <span className="dl-m-bytes">
           {bytes(g.transferred)} of {bytes(g.size)}
         </span>
-        {g.phase === 'active' && <span>{eta(g.size - g.transferred, g.speed)}</span>}
+        {g.phase === 'active' && <span className="dl-m-eta">{eta(g.size - g.transferred, g.speed)}</span>}
         <span>
           {direction === 'upload' ? 'to ' : 'from '}
           {g.usernames.map((u, i) => (
