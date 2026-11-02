@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { AUDIO_EXT, basename, bytes, extOf, speed } from '../lib/quality';
 import { clock, dayLabel, eta, extraCopyPaths, fileName, groupDownloads, phaseOf, span, type DownloadGroup } from '../lib/transfers';
 import type { LocalFiles, Transfer } from '../api/types';
-import { albumSize, changedSize, failureReason, shownNotes } from '../lib/smart';
+import { albumSize, changedSize, failureReason, RETRY_DELAYS, shownNotes } from '../lib/smart';
 import { parkedRetries, uploadKey, uploadReason } from '../lib/uploads';
 import { QualityGuide } from '../components/QualityGuide';
 import { usePrefs, type ActivityEvent } from '../prefs';
@@ -951,6 +951,21 @@ function TransferRow({
           ))}
         </ul>
       )}
+      {direction === 'download' && failed.length > 0 && !asking && (() => {
+        // Failures that usually pass are asked for again by themselves (see manageDownloads); say when.
+        const next = (g.plan?.tracks ?? []).filter((k) => !k.dropped && k.retryAt).sort((a, b) => a.retryAt! - b.retryAt!)[0];
+        if (!next) return null;
+        const s = Math.max(0, Math.round((next.retryAt! - now) / 1000));
+        const wait = s < 90 ? 'a minute' : s < 5400 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`;
+        return (
+          <p className="incomplete-line">
+            Trying again by itself in {wait} (try {(next.attempts ?? 0) + 1} of {RETRY_DELAYS.length}).{' '}
+            <button className="link" onClick={retry}>
+              Retry now
+            </button>
+          </p>
+        );
+      })()}
       {missing.length > 0 && unfinished.length === 0 && g.plan?.identity?.state !== 'mismatch' && (
         <p className="incomplete-line">
           <b>Incomplete:</b> {onDisk ? planTracks.length - missing.length : audioDone} of {planTracks.length} tracks arrived.{' '}
