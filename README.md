@@ -16,6 +16,10 @@ Website: **[lunice-dev.github.io/nightjar](https://lunice-dev.github.io/nightjar
 
 - **A new look.** A new logo (a nightjar crossing a full moon), new colours, a new typeface, and the name written in lowercase everywhere.
 - **A new opening.** The bird flies in, drops the letters of its name and lands on the moon. The opening screen follows your theme, on the computer and on phones.
+- **One Now panel.** On a computer, what's playing and the whole tracklist sit at the right of every screen, and the player bar along the bottom is always there. The large player is calmer, with Repeat, Shuffle, Use less data and the sleep timer behind a "…".
+- **A new Home and Library** on a computer: search, your library at a glance, rows of covers and the day's activity; the Library opens the album you pick in the same panel. A cover plays its album, and a "…" beside its name queues it or adds it to a playlist.
+- **Protection.** nightjar notices people downloading from you faster than a person could, and can block them; you can limit how much one person may queue.
+- **Downloads that mend themselves.** Failures that usually pass are tried again, a little later each time, and a track already in an album's folder is never fetched twice.
 - **Home on an iPad:** rows of covers swipe sideways, and tapping a cover plays the album in the player beside it.
 
 ## What's new in 0.8
