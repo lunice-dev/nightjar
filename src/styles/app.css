@@ -2844,3 +2844,40 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .full-player.rail .fp-queue .fp-row.next, .full-player.rail .fp-queue .fp-row.played, .full-player.rail .fp-queue .fp-row.now { background: none; border-radius: 0; box-shadow: none; border-top: 1px solid rgb(255 255 255 / 0.08); }
   .full-player.rail .fp-queue .fp-row.now { background: rgb(255 255 255 / 0.06); }
 }
+
+/* ---------- Messages and Rooms: one quiet look in every theme (tints of the ink on the glow, no boxes) ---------- */
+.split { grid-template-columns: 280px minmax(0, 1fr); }
+.split-list { background: color-mix(in srgb, var(--ink) 2.5%, transparent); border-right: 1px solid var(--rule); padding: 16px 0; }
+.start-chat { padding: 0 14px 12px; }
+.split-list .input, .composer .input, .composer textarea { border: 0; border-radius: 12px; background: color-mix(in srgb, var(--ink) 5.5%, transparent); box-shadow: inset 0 0 0 1px var(--rule); color: var(--ink); }
+.split-list .input:focus-visible, .composer textarea:focus-visible { box-shadow: inset 0 0 0 1.5px var(--focus); outline: 0; }
+.list-head { margin: 16px 0 6px; padding: 0 18px; font: 600 12.5px var(--font-display); letter-spacing: 0; color: var(--ink-3); }
+.list-head:first-child { margin-top: 4px; }
+.convos { padding: 0 8px; }
+.convo { padding: 9px 12px; border-radius: 10px; transition: background-color 0.12s; }
+@media (hover: hover) { .convo:hover { background: var(--hover); } }
+.convo[aria-current='true'] { background: color-mix(in srgb, var(--ink) 8%, transparent); box-shadow: none; }
+.convo-name { font-weight: 560; }
+.convo-last { font-size: 13px; }
+.thread-head { padding: 14px 28px; border-bottom: 1px solid var(--rule); }
+.thread-title { font-family: var(--font-display); font-weight: 600; font-stretch: 100%; font-size: 22px; letter-spacing: -0.02em; }
+.thread-head .btn { height: auto; padding: 4px 10px; border: 0; border-radius: 8px; background: none; box-shadow: none; color: var(--ink-2); font-size: 13.5px; font-weight: 450; }
+@media (hover: hover) { .thread-head .btn:hover { background: var(--hover); color: var(--ink); } }
+.messages { padding: 18px 28px; }
+.msg-head { font-size: 12.5px; }
+.msg-body { font-size: 14.5px; line-height: 1.45; }
+.split-main > .thread .msg.mine .msg-body { background: color-mix(in srgb, var(--ink) 13%, transparent); border: 0; border-radius: 14px 14px 4px 14px; padding: 7px 13px; }
+.split-main > .thread .msg:not(.mine) .msg-body { background: color-mix(in srgb, var(--ink) 6.5%, transparent); border-radius: 14px 14px 14px 4px; padding: 7px 13px; }
+.composer { gap: 10px; padding: 12px 28px 18px; border-top: 1px solid var(--rule); }
+.composer textarea { padding: 11px 16px; }
+.composer .btn { border: 0; background: var(--ink); color: var(--on-ink); }
+.composer .btn:disabled { background: color-mix(in srgb, var(--ink) 12%, transparent); color: var(--ink-3); }
+.room { grid-template-columns: minmax(0, 1fr) 250px; }
+.people { border-left: 1px solid var(--rule); background: color-mix(in srgb, var(--ink) 2.5%, transparent); padding: 12px 0; }
+.person { padding: 5px 10px; border-radius: 8px; }
+@media (hover: hover) { .person:hover { background: var(--hover); } }
+.empty h2 { font-family: var(--font-display); font-weight: 600; font-stretch: 100%; letter-spacing: -0.02em; }
+/* the Now panel's header over a scrolling tracklist: frosted, not a block of the page colour */
+.np-list { display: flex; flex-direction: column; overflow: hidden; }
+.np-list h3 { position: static; flex: none; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.np-list ol { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
