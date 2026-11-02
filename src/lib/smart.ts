@@ -232,7 +232,14 @@ export function splitRuns(n: number, weights: number[]) {
 export async function smartDownload(release: Release, chosen: FolderResult) {
   const { backend, toast, refreshTransfers } = useStore.getState();
   if (!backend) return;
-  const { smart } = usePrefs.getState();
+  const { smart, plans } = usePrefs.getState();
+
+  // The same album asked for again while it is still coming would be a second plan, a second card and a second set of files.
+  const again = plans.find((p) => p.key === chosen.key && !p.finishedAt && Date.now() - p.createdAt < 6 * 3_600_000);
+  if (again) {
+    toast(`${again.title} is already downloading`);
+    return;
+  }
 
   // A search result lists only the files that matched your words, and some clients cap how many they send.
   // Ask for the whole folder (and its disc folders) so the album arrives complete.
