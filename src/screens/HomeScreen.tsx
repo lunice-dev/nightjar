@@ -10,10 +10,10 @@ import { verdictText } from '../lib/check';
 import { useSuspects } from '../lib/guard';
 import { useLibraryReview } from '../lib/libraryReview';
 import { audioCtl, fmtTime, sourceQuality, toQueue, trackTier, usePlayer } from '../lib/player';
-import { bytes, speed } from '../lib/quality';
+import { bytes, normalise, speed } from '../lib/quality';
 import { groupDownloads } from '../lib/transfers';
 import { uploadStats } from '../lib/uploadStats';
-import { groupCoverDir, useLocalFiles } from '../lib/useLocal';
+import { groupCoverDir, relocatedDir, useLocalFiles } from '../lib/useLocal';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { openSettings } from '../lib/settingsNav';
@@ -188,6 +188,7 @@ function Middle() {
   const history = usePrefs((s) => s.finished);
   const downloads = useStore((s) => s.downloads);
   const plans = usePrefs((s) => s.plans);
+  const moves = usePrefs((s) => s.moves);
   const where = useStore((s) => s.local);
   const files = useLocalFiles();
   const [q, setQ] = useState('');
@@ -249,12 +250,14 @@ function Middle() {
       const id = `${(h.artist ?? '').toLowerCase()}|${h.title.toLowerCase()}`;
       if (seen.has(id)) continue;
       seen.add(id);
-      rows.push({ h, a: h.dir ? byDir.get(h.dir.toLowerCase()) : undefined });
+      // Where it is now: albums Nightjar moved into the library (Put in library, Tidy) went along with their folder.
+      const dir = h.dir ? relocatedDir(h.dir, moves) : h.dir;
+      rows.push({ h: dir === h.dir ? h : { ...h, dir }, a: dir ? byDir.get(dir.toLowerCase()) : undefined });
     }
     // Newest first, as downloaded. (Not the ones the library already lists first: the library review doesn't look in the
     // downloads folder, so the newest albums aren't in it yet, and they'd drop behind older ones once it was read.)
     return rows.slice(0, 16);
-  }, [history, coming, byDir]);
+  }, [history, coming, byDir, moves]);
 
   const rediscover = useMemo(() => shuffled(albums).slice(0, 14), [albums, again]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -271,10 +274,24 @@ function Middle() {
 
   // A cover sends the album to the player beside it; the cover there opens the large player.
   const open = (dir: string) => void usePlayer.getState().playAlbum(dir);
-  const albumMenu = (dir: string): MenuItem[] => {
+  // An album from the history: if its folder isn't where it was saved (moved or renamed in a way Nightjar didn't hear
+  // about), find it in the library by name, play that, and remember where it is now.
+  const playRecent = async (dir: string, title: string, artist?: string) => {
+    const p = usePlayer.getState();
+    const here = await backend?.library.tracks(dir).catch(() => null);
+    if (here?.tracks.length) return void p.playAlbum(dir);
+    const name = normalise(title);
+    const found =
+      albums.find((a) => normalise(a.album) === name && normalise(a.artist) === normalise(artist ?? '')) ??
+      (name.length >= 6 ? albums.find((a) => normalise(a.album) === name) : undefined);
+    if (!found) return void p.playAlbum(dir); // says by itself that it couldn't find the music
+    usePrefs.getState().albumMoved(dir, found.dir);
+    void p.playAlbum(found.dir);
+  };
+  const albumMenu = (dir: string, again?: () => void): MenuItem[] => {
     const p = usePlayer.getState();
     return [
-      { label: 'Play', run: () => void p.playAlbum(dir) },
+      { label: 'Play', run: again ?? (() => void p.playAlbum(dir)) },
       { label: 'Play next', run: () => void p.addAlbum(dir, 'next') },
       { label: 'Add to queue', run: () => void p.addAlbum(dir, 'end') },
       {
@@ -383,8 +400,8 @@ function Middle() {
             sub={[h.artist, a?.year].filter(Boolean).join(' · ')}
             tier={a ? tierClass(a.format) : ''}
             online={!a}
-            onClick={() => h.dir && open(h.dir)}
-            menu={h.dir ? albumMenu(h.dir) : undefined}
+            onClick={() => h.dir && void playRecent(h.dir, h.title, h.artist)}
+            menu={h.dir ? albumMenu(h.dir, () => void playRecent(h.dir!, h.title, h.artist)) : undefined}
           />
         )}
       </Rail>
