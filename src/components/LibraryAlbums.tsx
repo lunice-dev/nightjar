@@ -1,9 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import type { AlbumTracks, LibAlbum } from '../api/library';
 import { onThisComputer } from '../api/remote';
 import { useCheckAll, verdictText } from '../lib/check';
 import { usePcShell } from '../lib/pcShell';
+import { useNowDock } from '../lib/nowDock';
 import { usePlayer } from '../lib/player';
 import { bytes } from '../lib/quality';
 import { usePrefs, type SavedCheck } from '../prefs';
@@ -71,15 +71,18 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).
  * Every album in the library. The top shows the library's shape (how much is Hi-Res, FLAC, MP3) and what needs
  * attention; below it a cover wall or a list, and on a wide window the chosen album's details sit beside it.
  */
-export function AlbumsView({ albums, onReview, panelSlot }: { albums: LibAlbum[]; onReview: () => void; /** On a computer, where the chosen album's panel is docked (beside the page, not in it). */ panelSlot?: HTMLElement | null }) {
-  const docked = usePcShell() && !!panelSlot;
+export function AlbumsView({ albums, onReview }: { albums: LibAlbum[]; onReview: () => void }) {
+  // On a computer the album you pick opens in the Now panel docked at the right (the Album tab); elsewhere it opens beside the covers.
+  const docked = usePcShell();
+  const dockAlbum = useNowDock((s) => s.albumDir);
   const checks = usePrefs((s) => s.checks);
   const [filter, setFilter] = useState<Filter>('all');
   const [format, setFormat] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [view, setView] = useStored<View>('view', 'covers', ['covers', 'list']);
   const [sort, setSort] = useStored<Sort>('sort', 'artist', ['artist', 'year', 'size', 'check']);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [localSelected, setSelected] = useState<string | null>(null);
+  const selected = docked ? dockAlbum : localSelected;
 
   const list = useMemo(() => albums.filter((a) => a.status !== 'skip'), [albums]);
   const checkOf = useCallback((a: LibAlbum) => checks[a.dir.toLowerCase()], [checks]);
@@ -134,11 +137,11 @@ export function AlbumsView({ albums, onReview, panelSlot }: { albums: LibAlbum[]
   }, [shown, sort]);
 
   const current = selected ? list.find((a) => a.dir === selected) : undefined;
-  const select = useCallback((dir: string) => setSelected((s) => (s === dir ? null : dir)), []);
+  const select = useCallback((dir: string) => (docked ? useNowDock.getState().pickAlbum(dir) : setSelected((s) => (s === dir ? null : dir))), [docked]);
   useEffect(() => {
     if (!current) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) setSelected(null);
+      if (e.key === 'Escape' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) (docked ? useNowDock.getState().closeAlbum() : setSelected(null));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -196,7 +199,7 @@ export function AlbumsView({ albums, onReview, panelSlot }: { albums: LibAlbum[]
               <AlbumTable albums={shown} checkOf={checkOf} selected={selected} onSelect={select} sort={sort} onSort={setSort} />
             )}
           </div>
-          {current && (docked ? createPortal(<AlbumDetail key={current.dir} a={current} docked onClose={() => setSelected(null)} />, panelSlot!) : <AlbumDetail key={current.dir} a={current} onClose={() => setSelected(null)} />)}
+          {current && !docked && <AlbumDetail key={current.dir} a={current} onClose={() => setSelected(null)} />}
         </div>
       </div>
     </>
@@ -401,7 +404,7 @@ function AlbumTable({
 
 // ------------------------------------------------------------------ one album
 
-function AlbumDetail({ a, onClose, docked = false }: { a: LibAlbum; onClose: () => void; docked?: boolean }) {
+export function AlbumDetail({ a, onClose, docked = false, onPlayed }: { a: LibAlbum; onClose: () => void; docked?: boolean; /** Something from this album was sent to the player. */ onPlayed?: () => void }) {
   const backend = useStore((s) => s.backend);
   const toast = useStore((s) => s.toast);
   const searchFor = useStore((s) => s.search);
@@ -440,7 +443,7 @@ function AlbumDetail({ a, onClose, docked = false }: { a: LibAlbum; onClose: () 
             <ol className="lx-tracks">
               {tracks.tracks.map((t, i) => (
                 <li key={t.path}>
-                  <button className={`lx-track${playing === t.path ? ' now' : ''}`} onClick={() => void p.playAlbum(a.dir, i)} title="Play from this track">
+                  <button className={`lx-track${playing === t.path ? ' now' : ''}`} onClick={() => { void p.playAlbum(a.dir, i); onPlayed?.(); }} title="Play from this track">
                     <span className="lx-no">{discs && t.disc ? `${t.disc}.` : ''}{t.no || ''}</span>
                     <span className="lx-track-title">{t.title}</span>
                     <span className="dim">{t.seconds ? mmss(t.seconds) : ''}</span>
@@ -479,7 +482,7 @@ function AlbumDetail({ a, onClose, docked = false }: { a: LibAlbum; onClose: () 
             {a.dupKey && <span className="lx-flag">copy</span>}
           </p>
           <div className="lx-panel-acts">
-            <button className="lx-go" onClick={() => void p.playAlbum(a.dir)}>
+            <button className="lx-go" onClick={() => { void p.playAlbum(a.dir); onPlayed?.(); }}>
               Play
             </button>
             <button className="lx-act" onClick={() => void p.addAlbum(a.dir, 'next')}>

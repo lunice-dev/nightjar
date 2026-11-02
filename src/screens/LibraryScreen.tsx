@@ -23,8 +23,6 @@ export function LibraryScreen() {
   const [info, setInfo] = useState<LibraryInfo | null>();
   const [view, setView] = useState<'albums' | 'review'>('albums');
   const { scan, scanning, error, load } = useLibraryReview();
-  // On a computer the chosen album's panel is docked beside the page, so it needs a place outside the scrolling part.
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!backend || !canFiles) return;
@@ -37,7 +35,6 @@ export function LibraryScreen() {
   const albums = scan?.albums ?? [];
 
   return (
-    <>
     <div className="page">
       <div className={`page-inner${view === 'albums' ? ' wide' : ''}`}>
         <div className="page-head">
@@ -93,11 +90,9 @@ export function LibraryScreen() {
           </p>
         )}
 
-        {scan && info?.root && (view === 'albums' ? <AlbumsView albums={albums} onReview={() => setView('review')} panelSlot={slot} /> : <ReviewView albums={albums} root={info.root} />)}
+        {scan && info?.root && (view === 'albums' ? <AlbumsView albums={albums} onReview={() => setView('review')} /> : <ReviewView albums={albums} root={info.root} />)}
       </div>
     </div>
-    <div className="lib-slot" ref={setSlot} />
-    </>
   );
 }
 

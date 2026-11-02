@@ -8,6 +8,8 @@ import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
 import { prefetchLyrics } from '../lib/lyrics';
+import { dockGroupOf, useNowDock } from '../lib/nowDock';
+import { useDockVisible } from './NowDock';
 
 /**
  * Tells the lock screen exactly where the song is, at the moments its own guess would drift: a new track,
@@ -43,6 +45,7 @@ export function Player() {
   const toast = useStore((s) => s.toast);
   const { queue, index, playing, dataSaver, converted, expanded, volume } = usePlayer();
   const audio = useRef<HTMLAudioElement | null>(null);
+  const dockOn = useDockVisible();
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cover, setCover] = useState<string | null>(null);
@@ -329,6 +332,9 @@ export function Player() {
           <span className="player-n">
             Track {index + 1} of {queue.length}
           </span>
+          <button className={`player-queue-btn${dockOn ? ' on' : ''}`} onClick={() => useNowDock.getState().toggle(dockGroupOf(useStore.getState().route))} aria-pressed={dockOn} title="Show or hide the panel with the tracklist">
+            Queue
+          </button>
           {canSetVolume && (
             <span className="player-vol">
               <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
