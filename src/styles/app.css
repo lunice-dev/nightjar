@@ -2432,10 +2432,19 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 }
 @media (max-width: 900px) {
   .hx-page { grid-template-columns: minmax(0, 1fr); padding-top: 20px; }
-  .hx-now { position: static; grid-template-columns: 120px minmax(0, 1fr); column-gap: 16px; align-items: start; }
-  .hx-now > * { grid-column: 1 / -1; }
-  .hx-now > .hx-now-art { grid-column: 1; grid-row: 1 / span 3; }
-  .hx-now > .hx-now-text, .hx-now > .hx-now-meta { grid-column: 2; }
+  /* A phone: what's playing is one compact card (cover, names, controls). The seek bar and the queue live in the
+     player; the search is already in the bar at the top. */
+  .hx-now { position: static; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto auto; gap: 4px 16px; align-items: start; }
+  .hx-now > .hx-now-art { grid-column: 1; grid-row: 1 / span 3; border-radius: 12px; }
+  .hx-now > .hx-now-text, .hx-now > .hx-now-meta, .hx-now > .hx-ctl { grid-column: 2; }
+  .hx-now > .hx-seekbox, .hx-now > .hx-nextbox, .hx-now .hx-stop { display: none; }
+  .hx-now-title { font-size: 21px; }
+  .hx-now-by { margin-top: 2px; font-size: 14px; }
+  .hx-now-meta { flex-wrap: wrap; gap: 4px 12px; }
+  .hx-now > .hx-ctl { justify-content: flex-start; gap: 6px; margin: 2px 0 0 -8px; }
+  .hx-ctl button { width: 40px; height: 40px; }
+  .hx-ctl button.go { width: 46px; height: 46px; }
+  .hx-search { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hx, .hx-art, .hx-bar i { transition: none; } }
 /* ---------- the large player on a big PC window: the cover leads, the controls beside it, the queue to the right ---------- */

@@ -122,7 +122,7 @@ function Now() {
           Stop
         </button>
       </div>
-      <div>
+      <div className="hx-seekbox">
         <input
           className="hx-seek"
           type="range"
@@ -154,7 +154,7 @@ function Now() {
         </button>
       </div>
       {next.length > 0 && (
-        <div>
+        <div className="hx-nextbox">
           <h2 className="hx-h small">Up next</h2>
           <ul className="hx-next">
             {next.map((n, i) => (
