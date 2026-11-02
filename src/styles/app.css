@@ -2445,6 +2445,11 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .hx-ctl button { width: 40px; height: 40px; }
   .hx-ctl button.go { width: 46px; height: 46px; }
   .hx-search { display: none; }
+  /* A row of covers is a strip to swipe through; the next cover peeks in from the edge. The page's own sideways
+     swipe (between tabs) stays out of it. */
+  .hx-strip { grid-auto-flow: column; grid-auto-columns: calc((100% - 18px) / 2.25); grid-template-columns: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter, 20px)); padding: 0 var(--gutter, 20px); scroll-padding: 0 var(--gutter, 20px); }
+  .hx-strip::-webkit-scrollbar { display: none; }
+  .hx-strip > .hx-tile { scroll-snap-align: start; }
   /* The library line stays on one line */
   .hx-shape .hx-line { flex-wrap: nowrap; gap: 0 12px; font-size: 12.5px; white-space: nowrap; }
   .hx-shape .hx-key { gap: 5px; }

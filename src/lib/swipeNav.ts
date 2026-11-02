@@ -138,7 +138,7 @@ function snapshot(el: HTMLElement, dx: number) {
 
 /** Things you drag sideways yourself: a swipe that starts on them is theirs. */
 const ownsSideways = (t: EventTarget | null) =>
-  !!(t as HTMLElement | null)?.closest?.('input[type="range"], .search-tabs, .tiers, .fp-seek, .player-seek, .dv-handle, .modal');
+  !!(t as HTMLElement | null)?.closest?.('input[type="range"], .search-tabs, .tiers, .hx-strip, .fp-seek, .player-seek, .dv-handle, .modal');
 
 export function startSwipeNav() {
   // Fingers: anywhere on the page, once the movement is clearly sideways.

@@ -423,18 +423,23 @@ function Rail<T>({ title, count, link, items, children }: { title: string; count
 function Fit<T>({ items, children }: { items: T[]; children: (item: T) => ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(6);
+  // A phone: the row is a strip to swipe through, not a fixed few.
+  const [strip, setStrip] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setCols(Math.max(2, Math.floor((el.clientWidth + GAP) / (MIN_TILE + GAP))));
+    const measure = () => {
+      setStrip(matchMedia('(max-width: 900px)').matches);
+      setCols(Math.max(2, Math.floor((el.clientWidth + GAP) / (MIN_TILE + GAP))));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
   return (
-    <div ref={ref} className="hx-row" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-      {items.slice(0, cols).map((it) => children(it))}
+    <div ref={ref} className={strip ? 'hx-row hx-strip' : 'hx-row'} style={strip ? undefined : { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      {items.slice(0, strip ? 24 : cols).map((it) => children(it))}
     </div>
   );
 }
