@@ -2445,6 +2445,10 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .hx-ctl button { width: 40px; height: 40px; }
   .hx-ctl button.go { width: 46px; height: 46px; }
   .hx-search { display: none; }
+  /* The library line stays on one line */
+  .hx-shape .hx-line { flex-wrap: nowrap; gap: 0 12px; font-size: 12.5px; white-space: nowrap; }
+  .hx-shape .hx-key { gap: 5px; }
+  .hx-shape .hx-key::before { width: 7px; height: 7px; }
 }
 @media (prefers-reduced-motion: reduce) { .hx, .hx-art, .hx-bar i { transition: none; } }
 /* ---------- the large player on a big PC window: the cover leads, the controls beside it, the queue to the right ---------- */
