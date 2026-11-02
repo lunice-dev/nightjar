@@ -287,6 +287,10 @@ export interface PlanTrack {
   dest?: string;
   /** How often it was asked for again after failing on this computer's side (the engine restarted). */
   retries?: number;
+  /** How often the same person was asked again after a failure that usually passes (see manageDownloads). */
+  attempts?: number;
+  /** When the next of those tries is due. */
+  retryAt?: number;
 }
 
 /**

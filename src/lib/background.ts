@@ -9,7 +9,7 @@ import { groupDownloads } from './transfers';
 import { groupCoverDir, useLocalFiles } from './useLocal';
 import { parseActivity, uploadsActivity } from './activity';
 import { runGuard } from './guard';
-import { manageDownloads } from './smart';
+import { manageDownloads, retryLooseDownloads } from './smart';
 import { watchIdentity } from './identityWatch';
 import { onThisComputer } from '../api/remote';
 import { portCheck } from './portCheck';
@@ -279,6 +279,7 @@ function useDownloadManager() {
         // Whose album is it really? Before anything else moves tracks around.
         await watchIdentity((title, body) => notify('downloads', title, body, () => useStore.getState().go('downloads'))).catch(() => undefined);
         await manageDownloads();
+        await retryLooseDownloads().catch(() => undefined);
       } finally {
         busy = false;
       }

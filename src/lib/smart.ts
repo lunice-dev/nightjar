@@ -439,6 +439,13 @@ function latest(transfers: Transfer[], username: string, filename: string) {
 
 const notStarted = (t: Transfer | undefined) => !!t && t.bytesTransferred === 0 && (t.state.startsWith('Queued') || t.state === 'Requested');
 
+/** How long to wait before each try at asking the same person again: a minute, then longer and longer. */
+export const RETRY_DELAYS = [60_000, 5 * 60_000, 15 * 60_000, 45 * 60_000, 2 * 3_600_000, 6 * 3_600_000];
+
+/** Failures that usually pass by themselves. Someone who doesn't share the file, blocked you, or changed it won't. */
+const PERMANENT = /no longer share|copy changed|blocked|don’t allow|refused/i;
+const isTransient = (t: Transfer) => phaseOf(t.state) === 'failed' && !ourFault(t) && !PERMANENT.test(failureReason(t) ?? '');
+
 export async function manageDownloads() {
   const { smart, plans, updatePlan } = usePrefs.getState();
   const { backend, downloads, toast } = useStore.getState();
@@ -563,6 +570,58 @@ export async function manageDownloads() {
     const fastest = Math.max(0, ...observed.values());
     const busy = (u: string) => live.some(({ k, t }) => k.username === u && t && ['active', 'queued'].includes(phaseOf(t.state)));
     const failed = (u: string) => plan.tracks.some((k) => k.failedBy.includes(u));
+
+    // 1a. A failure that usually passes (the connection dropped, no answer in time, they were closing their client or
+    //     were offline for a moment) and nobody else has this exact copy: ask the same person again, a little later
+    //     each time, instead of leaving the track for you to retry by hand.
+    {
+      const due: { k: PlanTrack; t?: Transfer }[] = [];
+      const keep = new Set<number>(); // tracks waiting for their next try: not "out of copies"
+      for (const { k, t } of live) {
+        const n = k.attempts ?? 0;
+        // A track whose entry was removed for a retry that then couldn't be placed has no transfer: it goes on being tried.
+        const pending = !t && n > 0;
+        if (!pending && !(t && isTransient(t))) continue;
+        if (!pending && pickTarget(plan, k, observed, busy)) continue; // another copy exists: that's step 1
+        keep.add(plan.tracks.indexOf(k));
+        if (n >= RETRY_DELAYS.length) {
+          if (!plan.notes.some((x) => x.text.startsWith('Gave up'))) {
+            updatePlan(plan.id, { notes: [...plan.notes, { at: now, text: `Gave up asking ${k.username} again after ${RETRY_DELAYS.length} tries. Retry it yourself, or search for another copy.` }] });
+          }
+          keep.delete(plan.tracks.indexOf(k));
+          continue;
+        }
+        if (!k.retryAt) {
+          k.retryAt = now + RETRY_DELAYS[n];
+          changed = true;
+        } else if (now >= k.retryAt) due.push({ k, t });
+      }
+      for (let j = needy.length - 1; j >= 0; j--) if (keep.has(needy[j].i)) needy.splice(j, 1);
+      if (due.length) {
+        const user = due[0].k.username;
+        const dest = due[0].k.dest;
+        const again = due.filter(({ k }) => k.username === user && k.dest === dest);
+        for (const { k, t } of again) {
+          if (t) await backend.cancel('download', t.username, t.id, true).catch(() => undefined);
+          k.attempts = (k.attempts ?? 0) + 1;
+          k.retryAt = undefined;
+        }
+        const batchId = uuid();
+        await backend
+          .enqueue(user, again.map(({ k, t }) => ({ filename: k.filename, size: (t && changedSize(t)) || k.size })), { batchId, destination: dest ?? plan.destination })
+          .catch(() => undefined);
+        const n = again.length;
+        const tryNo = Math.max(...again.map(({ k }) => k.attempts ?? 1));
+        const why = again[0].t ? (failureReason(again[0].t) ?? 'it failed').toLowerCase() : 'it hadn’t started';
+        updatePlan(plan.id, {
+          tracks: [...plan.tracks],
+          batches: [...plan.batches, batchId],
+          notes: [...plan.notes, { at: now, text: `Asked ${user} again for ${n} ${n === 1 ? 'track' : 'tracks'} (try ${tryNo} of ${RETRY_DELAYS.length}): ${why}.` }],
+        });
+        useStore.getState().refreshTransfers('download');
+        return;
+      }
+    }
 
     // 1b. A track coming in far slower than this album's other sources goes to a faster one, but only when
     //     starting it again there finishes sooner than waiting, and never more than twice per track.
@@ -785,3 +844,35 @@ const movedRecently = new Set<string>();
 /** The copy the album was started from. */
 const firstSource = (plan: DownloadPlan) => plan.key.split('\u0000')[0];
 
+// ---------------------------------------------------------------------------
+// Downloads that aren't part of an album plan (a single file, a folder from Browse): the same patience.
+
+const looseTries = new Map<string, { n: number; due: number }>();
+
+/**
+ * A file that failed in a way that usually passes is asked for again from the same person, a little later each time
+ * (see RETRY_DELAYS). One per pass. What was tried is remembered until the page reloads.
+ */
+export async function retryLooseDownloads() {
+  const { smart, plans } = usePrefs.getState();
+  const { backend, downloads } = useStore.getState();
+  if (!backend || !smart.enabled) return;
+  const planOf = planFinder(plans);
+  const now = Date.now();
+  for (const t of downloads.flatMap((u: TransferUser) => u.directories.flatMap((d) => d.files))) {
+    if (planOf(t) || !isTransient(t)) continue;
+    const key = `${t.username}\u0000${t.filename}`;
+    const st = looseTries.get(key) ?? { n: 0, due: 0 };
+    if (st.n >= RETRY_DELAYS.length) continue;
+    if (!st.due) {
+      looseTries.set(key, { n: st.n, due: now + RETRY_DELAYS[st.n] });
+      continue;
+    }
+    if (now < st.due) continue;
+    looseTries.set(key, { n: st.n + 1, due: 0 });
+    await backend.cancel('download', t.username, t.id, true).catch(() => undefined);
+    await backend.enqueue(t.username, [{ filename: t.filename, size: changedSize(t) ?? t.size }]).catch(() => undefined);
+    useStore.getState().refreshTransfers('download');
+    return;
+  }
+}
