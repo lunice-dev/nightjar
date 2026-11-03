@@ -77,9 +77,15 @@ export function OutputControl({ compact = false }: { compact?: boolean }) {
     <div className={`so${compact ? ' compact' : ''}`} ref={box}>
       <button className={`so-btn so-${s.kind}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} title={`${label} · ${s.short}`}>
         <span className="so-dot" aria-hidden />
-        {!compact && <strong>{label}</strong>}
-        {!compact && <span className="so-sep" aria-hidden>·</span>}
-        <span className="so-state">{s.short}</span>
+        {compact ? (
+          <span className="so-state">{s.short}</span>
+        ) : (
+          // Two lines, so a long device name is never cut short beside the play buttons.
+          <span className="so-text">
+            <strong>{label}</strong>
+            <span className="so-state">{s.short}</span>
+          </span>
+        )}
         <svg className="so-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="m6 15 6-6 6 6" />
         </svg>
