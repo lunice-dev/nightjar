@@ -4,6 +4,7 @@ import { ClassicPlayerSwitch } from '../components/ClassicPlayerSwitch';
 import { SETTINGS_TABS, lastSettingsTab, rememberSettingsTab, takeSettingsTarget, type SettingsTab } from '../lib/settingsNav';
 import { PlaylistBackupsSection } from '../components/PlaylistBackups';
 import { ReportProblem } from '../components/ReportProblem';
+import { BitPerfectSection } from '../components/BitPerfectSection';
 import { onThisComputer } from '../api/remote';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { LeechMode, Settings, ShareStatus } from '../api/types';
@@ -398,6 +399,8 @@ export function SettingsScreen() {
         <Notifications />
 
         <ClassicPlayerSwitch />
+
+        <BitPerfectSection />
 
         <ReportProblem />
       </>

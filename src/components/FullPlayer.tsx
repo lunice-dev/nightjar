@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { audioCtl, canSetVolume, fmtTime, trackTier, usePlayer, type QueueItem } from '../lib/player';
+import { useEngine } from '../lib/engine';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
 import { WindowControls } from './WindowControls';
@@ -40,6 +41,7 @@ export function FullPlayer({
   chip: React.ReactNode;
 }) {
   const { queue, index, playing, shuffle, repeat, dataSaver, converted, view, volume, sleep } = usePlayer();
+  const exclusive = useEngine((s) => s.now?.mode === 'engine');
   const p = usePlayer.getState();
   // Swipe up anywhere on the player (except the seek bar and the volume, which are dragged sideways): the queue rises as the
   // finger moves, and is fully up once the finger has travelled most of the way from where it started to the top of the panel.
@@ -526,7 +528,7 @@ export function FullPlayer({
             </button>
           </div>
 
-          {canSetVolume && (
+          {canSetVolume && !exclusive && (
             <div className="fp-volume">
               <VolumeGlyph level={0} />
               <input

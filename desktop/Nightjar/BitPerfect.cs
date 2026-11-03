@@ -132,8 +132,9 @@ namespace Nightjar
                 {
                     var dev = Find(en, deviceId);
                     var plan = MakePlan(dev, file);
+                    var seconds = plan.Source != null ? plan.Source.Frames / (double)plan.Source.Rate : 0;
                     plan.Source?.Dispose();
-                    return new { ok = plan.Source != null, format = plan.Describe, reason = plan.Why, device = dev.FriendlyName };
+                    return new { ok = plan.Source != null, format = plan.Describe, reason = plan.Why, device = dev.FriendlyName, duration = seconds };
                 }
             }
             catch (Exception e) { return new { ok = false, reason = "No sound device is available: " + e.Message }; }

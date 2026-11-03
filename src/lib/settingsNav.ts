@@ -10,7 +10,7 @@ export const SETTINGS_TABS: { id: SettingsTab; label: string; hint: string; sub:
   { id: 'library', label: 'Library', hint: 'Your music and playlists', sub: 'Your music folder, how it is organised, and your playlists.' },
   { id: 'account', label: 'Account', hint: 'Sign-in and profile', sub: 'Your Soulseek sign-in and the profile other people see.' },
   { id: 'connection', label: 'Connection', hint: 'Reachability and phone', sub: 'Whether others can reach you, and reaching nightjar from your phone.' },
-  { id: 'app', label: 'App', hint: 'Notifications, player, help', sub: 'Notifications, the large player, and getting help.' },
+  { id: 'app', label: 'App', hint: 'Notifications, player, help', sub: 'Notifications, the player, sound output, and getting help.' },
 ];
 
 const KEY = 'nightjar.settingsTab';
