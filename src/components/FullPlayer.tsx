@@ -617,10 +617,10 @@ export function FullPlayer({
           {details ? (
             <div className="fp-details">
               <div className="fp-panel-head">
-                <strong>Sound quality</strong>
+                <strong>{bitPerfectAvailable ? 'Sound' : 'Sound quality'}</strong>
                 <span className="fp-gap" />
                 <button className="fp-edit" onClick={() => setPanel('none')}>
-                  {mode === 'rail' ? 'Back to the queue' : 'Done'}
+                  {mode === 'rail' ? 'Show the queue' : 'Done'}
                 </button>
               </div>
               {quality}

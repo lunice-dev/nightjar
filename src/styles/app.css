@@ -3000,9 +3000,18 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .player.tinted .so { --so-ok: #9fe0b4; --so-warn: #f2c38b; --so-off: rgb(255 255 255 / 0.55); --so-ink: #fff; --so-ink-2: rgb(255 255 255 / 0.8); --so-ink-3: rgb(255 255 255 / 0.6); --so-line: rgb(255 255 255 / 0.16); --so-menu: #1b1716; }
 .so-btn { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 4px 6px 4px 0; border: 0; border-radius: 6px; background: none; color: var(--so-ink-2); font: inherit; font-size: 13px; cursor: pointer; transition: color 0.15s; }
 .so-btn:hover { color: var(--so-ink); }
+/* In the large player: "● KM-HIFI-384KHZ · Bit-perfect · 24/96" on one line, as in the mockup. Only when the column is
+   too narrow for both does the state go under the name (never cut short). */
+.fp-sound .so { container-type: inline-size; }
 .so-text { display: grid; min-width: 0; text-align: left; line-height: 1.3; }
 .so-text strong { color: var(--so-ink); font-weight: 600; overflow-wrap: anywhere; }
 .so-text .so-state { color: var(--so-ink-3); font-size: 12px; }
+@container (min-width: 280px) {
+  .so-text { display: flex; align-items: baseline; gap: 8px; line-height: inherit; }
+  .so-text strong::after { content: '·'; margin-left: 8px; color: var(--so-ink-3); font-weight: 400; }
+  .so-text .so-state { color: inherit; font-size: inherit; }
+  .fp-sound .so-btn:has(.so-text) .so-dot, .fp-sound .so-btn:has(.so-text) .so-caret { align-self: center; margin-top: 0; }
+}
 .so-state { white-space: nowrap; }
 .so-btn:has(.so-text) .so-dot { align-self: flex-start; margin-top: 5px; }
 .so-btn:has(.so-text) .so-caret { align-self: flex-start; margin-top: 3px; }
@@ -3045,23 +3054,29 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .fp-vol-row { display: flex; align-items: center; gap: 10px; }
 .fp-held { margin: 0; color: var(--fp-ink-3); font-size: 13px; }
 
-.snd { padding: 22px 24px 20px; border-radius: 16px; background: rgb(0 0 0 / 0.22); color: var(--fp-ink); font-size: 14px; --hl: var(--fp-ink-2); }
+.snd { padding: 26px 28px 24px; border-radius: 16px; background: rgb(20 10 8 / 0.34); color: var(--fp-ink); font-size: 15px; line-height: 1.45; --hl: var(--fp-ink-2); }
 .fp-details .snd { margin-bottom: 12px; }
-/* Beside the player, the panel takes the queue's place: its head (with the way back to the queue) and the Sound panel
-   stay together as one block in the middle of that space, on the same left edge, without a box of their own. */
+/* Beside the player the panel takes the queue's place, so it needs its head (the way back to the queue). With the Sound
+   panel it is one box sized to its contents, in the middle of that place, with a small head inside: as in the mockup. */
 .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details .fp-panel-head { display: flex; position: static; }
-.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) { display: flex; flex-direction: column; justify-content: center; }
-.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details > .snd { margin: 0; padding: 10px 4px 0; background: none; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) {
+  height: auto; min-height: 0; max-height: 100%; align-self: center; overflow-y: auto; scrollbar-width: none;
+  padding: 26px 28px 24px; border-radius: 16px; background: rgb(20 10 8 / 0.34); box-shadow: none;
+}
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) .fp-panel-head { margin: 0 0 18px; padding: 0; border: 0; background: none; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) .fp-panel-head strong { color: var(--fp-ink-3); font-size: 11px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) .fp-edit { padding: 2px 4px; font-size: 13px; font-weight: 400; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details > .snd { margin: 0; padding: 0; border-radius: 0; background: none; }
 .snd-perfect { --hl: var(--so-ok); }
 .snd-converted { --hl: var(--so-warn); }
 .snd-verdict { display: flex; align-items: center; gap: 12px; }
 .snd-verdict .so-dot { width: 10px; height: 10px; }
-.snd-verdict h3 { margin: 0; font: 600 28px/1.1 var(--font-display); letter-spacing: -0.02em; text-wrap: balance; }
+.snd-verdict h3 { margin: 0; font: 650 30px/1.1 var(--font-display); letter-spacing: -0.02em; text-wrap: balance; }
 .snd-perfect h3 { color: var(--so-ok); }
 .snd-converted h3 { color: var(--so-warn); }
-.snd-lede { max-width: 46ch; margin: 8px 0 0; color: var(--fp-ink-2); text-wrap: pretty; }
-.snd-chain { display: grid; margin: 24px 0 0; padding: 0; list-style: none; }
-.snd-chain li { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 14px; padding-bottom: 16px; }
+.snd-lede { max-width: 42ch; margin: 8px 0 0; color: var(--fp-ink-2); text-wrap: pretty; }
+.snd-chain { display: grid; margin: 26px 0 0; padding: 0; list-style: none; }
+.snd-chain li { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 14px; padding-bottom: 18px; }
 .snd-chain li:last-child { padding-bottom: 0; }
 .snd-chain li::before { content: ''; position: absolute; left: 8.5px; top: 16px; bottom: -2px; width: 1px; background: var(--fp-line); }
 .snd-chain li:last-child::before { display: none; }
@@ -3071,7 +3086,7 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .snd-v { font-weight: 600; }
 .snd-chain li.hl .snd-v { color: var(--hl); }
 .snd-d { color: var(--fp-ink-2); font-size: 13px; }
-.snd-aside { display: grid; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--fp-line); color: var(--fp-ink-2); font-size: 13px; }
+.snd-aside { display: grid; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--fp-line); color: var(--fp-ink-2); font-size: 13px; }
 .snd-aside p { margin: 0; }
 .snd-act { justify-self: start; padding: 0; border: 0; background: none; color: var(--fp-ink); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .snd-act:hover { text-decoration: underline; text-underline-offset: 3px; }
