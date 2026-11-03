@@ -46,6 +46,17 @@ export function onWindowState(fn: (s: { maximized: boolean; resizable: boolean }
   return () => webview.removeEventListener('message', listener);
 }
 
+/** The keyboard's media keys, which the app passes on while its bit-perfect player has a track. */
+export function onMediaKey(fn: (action: 'playpause' | 'next' | 'previous' | 'stop') => void) {
+  if (!webview) return () => {};
+  const listener = (e: { data: unknown }) => {
+    const d = e.data as { type?: string; action?: string };
+    if (d?.type === 'media' && (d.action === 'playpause' || d.action === 'next' || d.action === 'previous' || d.action === 'stop')) fn(d.action);
+  };
+  webview.addEventListener('message', listener);
+  return () => webview.removeEventListener('message', listener);
+}
+
 if (inApp) {
   document.documentElement.classList.add('in-app');
   // The top bar is the title bar: press and drag on an empty part of it to move the window, double-click to maximise.

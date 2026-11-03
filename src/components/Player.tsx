@@ -11,6 +11,7 @@ import { prefetchLyrics } from '../lib/lyrics';
 import { dockGroupOf, useNowDock } from '../lib/nowDock';
 import { useDockVisible } from './NowDock';
 import { bitPerfectAvailable, takeOver, useEngine } from '../lib/engine';
+import { onMediaKey } from '../lib/host';
 
 /**
  * Tells the lock screen exactly where the song is, at the moments its own guess would drift: a new track,
@@ -75,7 +76,18 @@ export function Player() {
   useEffect(() => {
     const el = audio.current;
     if (!el || !bitPerfect || !bitPerfectAvailable) return;
-    return takeOver(el);
+    const release = takeOver(el);
+    const keys = onMediaKey((action) => {
+      const p = usePlayer.getState();
+      if (action === 'playpause') p.toggle();
+      else if (action === 'next') p.next();
+      else if (action === 'previous') p.prev();
+      else p.pause();
+    });
+    return () => {
+      keys();
+      release();
+    };
   }, [bitPerfect]);
 
   // A new track starts at 0 (its file may already be in the element: buttons load it at once).

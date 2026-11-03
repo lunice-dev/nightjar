@@ -249,6 +249,14 @@ namespace Nightjar
         {
             // WM_NCCALCSIZE: the page covers the whole window, so there is no frame to make room for.
             if (m.Msg == 0x0083 && m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; }
+            // WM_HOTKEY: a media key while the bit-perfect player has a track.
+            if (m.Msg == 0x0312)
+            {
+                int i = m.WParam.ToInt32() - MediaKeyId;
+                if (i >= 0 && i < MediaActions.Length)
+                    try { web.CoreWebView2?.PostWebMessageAsJson("{\"type\":\"media\",\"action\":\"" + MediaActions[i] + "\"}"); } catch { }
+                return;
+            }
             base.WndProc(ref m);
         }
 
@@ -258,6 +266,26 @@ namespace Nightjar
             // Rounded corners on Windows 11.
             int round = 2;
             try { Native.DwmSetWindowAttribute(Handle, 33, ref round, sizeof(int)); } catch { }
+            BitPerfect.Holding += on => { try { BeginInvoke((Action)(() => MediaKeys(on))); } catch { } };
+        }
+
+        // The keyboard's media keys reach the page through the system only while a page plays sound itself. With the
+        // bit-perfect player the sound comes from here, so the window takes the keys for as long as it has a track.
+        const int MediaKeyId = 0x4E4A;
+        static readonly int[] MediaKeyCodes = { 0xB3, 0xB0, 0xB1, 0xB2 }; // play/pause, next, previous, stop
+        static readonly string[] MediaActions = { "playpause", "next", "previous", "stop" };
+        bool mediaKeys;
+
+        void MediaKeys(bool on)
+        {
+            if (on == mediaKeys || !IsHandleCreated) return;
+            mediaKeys = on;
+            for (int i = 0; i < MediaKeyCodes.Length; i++)
+            {
+                if (!on) Native.UnregisterHotKey(Handle, MediaKeyId + i);
+                else if (!Native.RegisterHotKey(Handle, MediaKeyId + i, 0x4000 /* MOD_NOREPEAT */, MediaKeyCodes[i]))
+                    Log.Write("Bit-perfect: another program has media key " + MediaKeyCodes[i].ToString("X2"));
+            }
         }
 
         public async Task Prepare()
@@ -510,6 +538,8 @@ namespace Nightjar
         [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
         [DllImport("user32.dll")] public static extern bool ReleaseCapture();
         [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, int key);
+        [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     }
 
     /// <summary>Moving from SSK-Lite: its settings, login, history and preferences come along, once.</summary>

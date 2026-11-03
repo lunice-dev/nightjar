@@ -29,6 +29,27 @@ namespace Nightjar
         static double duration, startAt;
         static string state = "idle"; // idle, playing, paused, ended, failed
 
+        // After a while paused the device is let go, so other programs can use it; playing again takes it back.
+        static readonly TimeSpan ParkAfter = TimeSpan.FromSeconds(30);
+        static System.Threading.Timer parkTimer;
+        static bool parked;
+        static double parkedAt;
+        static string lastDevice;
+
+        /// <summary>True while the engine has a track (playing, paused or just ended): the window takes the media keys then.</summary>
+        public static event Action<bool> Holding;
+        static bool holding;
+
+        static void Notify()
+        {
+            bool now;
+            lock (gate) now = path != null && (state == "playing" || state == "paused" || state == "ended");
+            if (now == holding) return;
+            holding = now;
+            var h = Holding;
+            if (h != null) System.Threading.Tasks.Task.Run(() => h(now));
+        }
+
         // --- Devices ------------------------------------------------------------------------------
 
         static MMDevice Find(MMDeviceEnumerator en, string id)
@@ -144,12 +165,20 @@ namespace Nightjar
 
         public static object Play(string file, double from, string deviceId)
         {
+            try { return Start(file, from, deviceId); }
+            finally { Notify(); }
+        }
+
+        static object Start(string file, double from, string deviceId)
+        {
             lock (turn)
             {
                 Release();
                 lock (gate)
                 try
                 {
+                    parked = false;
+                    parkTimer?.Dispose(); parkTimer = null;
                     using (var en = new MMDeviceEnumerator())
                     {
                         var dev = Find(en, deviceId);
@@ -176,8 +205,9 @@ namespace Nightjar
                                 else state = "ended";
                                 if (state == "failed") Log.Write("Bit-perfect stopped: " + failure);
                             }
+                            Notify();
                         };
-                        output = o; feed = f;
+                        output = o; feed = f; lastDevice = deviceId;
                         path = file; deviceName = dev.FriendlyName; formatText = plan.Describe;
                         duration = plan.Source.Frames / (double)plan.Source.Rate; startAt = from; failure = null;
                         o.Play();
@@ -208,14 +238,66 @@ namespace Nightjar
 
         // Pausing keeps the stream running and sends silence: stopping an exclusive stream makes some
         // devices repeat their last buffer, which sounds like the track got stuck.
-        public static object Pause() { lock (gate) { if (feed != null && state == "playing") { feed.Paused = true; state = "paused"; } return Status(); } }
-        public static object Resume() { lock (gate) { if (feed != null && state == "paused") { feed.Paused = false; state = "playing"; } return Status(); } }
+        public static object Pause()
+        {
+            lock (gate)
+            {
+                if (feed != null && state == "playing")
+                {
+                    feed.Paused = true;
+                    state = "paused";
+                    parkTimer?.Dispose();
+                    parkTimer = new System.Threading.Timer(_ => Park(), null, ParkAfter, System.Threading.Timeout.InfiniteTimeSpan);
+                }
+                return Status();
+            }
+        }
+
+        public static object Resume()
+        {
+            string file, device; double at;
+            lock (turn)
+            {
+                lock (gate)
+                {
+                    if (feed != null && state == "paused")
+                    {
+                        feed.Paused = false;
+                        state = "playing";
+                        parkTimer?.Dispose(); parkTimer = null;
+                        return Status();
+                    }
+                    if (!parked || state != "paused" || path == null) return Status();
+                    file = path; device = lastDevice; at = parkedAt;
+                }
+                // Let go of during the pause: open the device again where the track was.
+                return Play(file, at, device);
+            }
+        }
+
+        /// <summary>Still paused after a while: lets go of the device but keeps the track and the place in it.</summary>
+        static void Park()
+        {
+            lock (turn)
+            {
+                lock (gate)
+                {
+                    if (state != "paused" || feed == null || parked) return;
+                    parkedAt = Position();
+                    parked = true; // from here the position comes from parkedAt
+                }
+                Release();
+                Log.Write("Bit-perfect: paused a while, so the sound device is free for other programs");
+            }
+        }
+
         public static object Stop()
         {
             lock (turn)
             {
                 Release();
-                lock (gate) { state = "idle"; path = null; }
+                lock (gate) { state = "idle"; path = null; failure = null; parked = false; parkTimer?.Dispose(); parkTimer = null; }
+                Notify();
                 return Status();
             }
         }
@@ -235,12 +317,17 @@ namespace Nightjar
 
         public static object Status()
         {
+            lock (gate) return new { state, path, position = Position(), duration, format = formatText, device = deviceName, reason = failure };
+        }
+
+        static double Position()
+        {
             lock (gate)
             {
-                double pos = feed != null ? startAt + feed.Frames / (double)Math.Max(1, feed.Rate) - 0.1 : (state == "ended" ? duration : 0);
+                double pos = parked ? parkedAt : feed != null ? startAt + feed.Frames / (double)Math.Max(1, feed.Rate) - 0.1 : (state == "ended" ? duration : 0);
                 if (pos < 0) pos = 0;
                 if (duration > 0 && pos > duration) pos = duration;
-                return new { state, path, position = pos, duration, format = formatText, device = deviceName, reason = failure };
+                return pos;
             }
         }
 
