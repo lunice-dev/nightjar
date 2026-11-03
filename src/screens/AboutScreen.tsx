@@ -60,6 +60,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'One slim scrollbar wherever there is a mouse',
       'The large player’s tracklist lines up with the cover and the controls',
       'Fixed the lyrics layout in the large player',
+      'Fixed pop-up messages being hard to read in the Glass theme',
     ],
   },
   {
