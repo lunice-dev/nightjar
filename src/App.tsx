@@ -411,11 +411,32 @@ function Shell() {
     setBarScrolled(!!sc && sc.scrollTop > 8);
   }, [route]);
 
+  // Downloads and uploads: every second while something is moving or their page is open, every few seconds when all is
+  // quiet (a new upload shows within that), and rarely while the window is hidden.
   useEffect(() => {
-    const tick = () => refresh();
+    let stop = false;
+    let t: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      await refresh();
+      if (stop) return;
+      const s = useStore.getState();
+      const moving = [...s.downloads, ...s.uploads].some((u) => u.directories.some((d) => d.files.some((f) => !f.state.startsWith('Completed'))));
+      const watching = s.route === 'downloads' || s.route === 'uploads';
+      t = setTimeout(tick, document.hidden ? 15_000 : moving || watching ? 1000 : 5000);
+    };
     tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
+    // Coming back to the window: catch up at once.
+    const back = () => {
+      if (document.hidden) return;
+      clearTimeout(t);
+      void tick();
+    };
+    document.addEventListener('visibilitychange', back);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+      document.removeEventListener('visibilitychange', back);
+    };
   }, [refresh]);
 
   const watchLink = useStore((s) => s.watchLink);

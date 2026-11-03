@@ -143,7 +143,10 @@ export function RemoteAccessSection() {
                   {d.name}
                   {d.id === st.you && <span className="dim"> (this device)</span>}
                 </span>
-                <span className="dim rd-seen">last used {when(d.lastSeen)}</span>
+                {/* Phones all call themselves "iPhone": when each one signed in tells them apart. */}
+                <span className="dim rd-seen">
+                  added {new Date(d.created).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · last used {when(d.lastSeen)}
+                </span>
                 <button className="link" onClick={() => removeDevice(d)}>
                   {d.id === st.you ? 'Sign out' : 'Remove'}
                 </button>

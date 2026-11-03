@@ -138,6 +138,9 @@ async function fetchShared(base: string, maxAge = 0) {
 
 /** The newest copy waiting to go to the shared one. */
 let pending: string | null = null;
+/** The last copy sent, without its time stamp: a save that changed nothing else isn't sent again (it is over a megabyte). */
+let lastSent = '';
+const content = (v: string) => v.replace(/"savedAt":\d+/, '');
 
 /**
  * Sends this window's copy to the shared one, at most every 1.5 s. Changes in between ride along with the next
@@ -145,6 +148,7 @@ let pending: string | null = null;
  */
 function push(v: string) {
   if (!sharedAt) return;
+  if (content(v) === lastSent) return;
   pending = v;
   if (pushTimer) return;
   pushTimer = setTimeout(() => {
@@ -167,7 +171,11 @@ function send(v: string) {
     // launcher's small helper can count characters as bytes.
     const ascii = merged.replace(/[\u007f-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
     fetch(`${base}/prefs`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: ascii })
-      .then((r) => r.ok && (lastShared = { at: Date.now(), prefs: merged }))
+      .then((r) => {
+        if (!r.ok) return;
+        lastShared = { at: Date.now(), prefs: merged };
+        lastSent = content(v);
+      })
       .catch(() => undefined);
   })();
 }

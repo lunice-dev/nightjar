@@ -69,6 +69,10 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Uploads that the other person stopped go to Finished instead of Needs attention',
       'Fixed some upload problems showing Windows’ own error text',
       'Search names an album kept in a folder like “24bit” or “FLAC” after its real folder',
+      'nightjar checks for changes less often when nothing is moving or the window is hidden',
+      'People shows how many can’t download from you, and the first few until you ask for all',
+      'Signed-in devices show when each one was added, so phones with the same name can be told apart',
+      'A search with more than a thousand answers says so',
     ],
   },
   {

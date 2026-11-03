@@ -12,6 +12,9 @@ const seen = (b: Buddy) => {
   return m < 60 ? `Last seen ${Math.max(1, m)} min ago` : m < 1440 ? `Last seen ${Math.round(m / 60)} h ago` : 'Offline';
 };
 
+/** The blocked list can grow to dozens of names: the first ones, and the rest on request. */
+const BLOCKED_SHOWN = 12;
+
 export function PeopleScreen() {
   const buddies = usePrefs((s) => s.buddies);
   const ignored = usePrefs((s) => s.ignored);
@@ -19,6 +22,7 @@ export function PeopleScreen() {
   const unignore = usePrefs((s) => s.unignore);
   const openProfile = useStore((s) => s.openProfile);
   const [name, setName] = useState('');
+  const [showAll, setShowAll] = useState(false);
   const { list: blocked, editable, reload } = useBlocked();
   useEffect(() => {
     reload();
@@ -32,7 +36,7 @@ export function PeopleScreen() {
 
   return (
     <div className="page">
-      <div className="page-inner narrow">
+      <div className="page-inner">
         <div className="page-head">
           <div>
             <h1 className="page-title">People</h1>
@@ -96,7 +100,9 @@ export function PeopleScreen() {
         </section>
 
         <section className="settings-block" aria-labelledby="blocked-h">
-          <h2 id="blocked-h">Can’t download from you</h2>
+          <h2 id="blocked-h">
+            Can’t download from you{blocked?.length ? <span className="n">{blocked.length}</span> : null}
+          </h2>
           <p className="hint-text">
             These people can still see you and talk to you, but nightjar refuses their downloads.
             {!editable && ' To change this list here, turn on remote_configuration in the engine’s config (data\\slskd.yml).'}
@@ -107,7 +113,7 @@ export function PeopleScreen() {
             <p className="hint-text dim">Nobody.</p>
           ) : (
             <ul className="chips">
-              {blocked.map((u) => (
+              {(showAll ? blocked : blocked.slice(0, BLOCKED_SHOWN)).map((u) => (
                 <li key={u} className="chip plain">
                   <button className="user-link" onClick={() => openProfile(u)}>
                     {u}
@@ -123,6 +129,13 @@ export function PeopleScreen() {
                   </button>
                 </li>
               ))}
+              {blocked.length > BLOCKED_SHOWN && (
+                <li>
+                  <button className="link" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? 'Show fewer' : `Show all ${blocked.length}`}
+                  </button>
+                </li>
+              )}
             </ul>
           )}
         </section>

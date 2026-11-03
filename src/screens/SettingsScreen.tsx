@@ -113,19 +113,24 @@ export function SettingsScreen() {
   useEffect(() => {
     if (!backend) return;
     let alive = true;
+    let t: ReturnType<typeof setTimeout>;
+    // Every second while your folders are being scanned (the count moves), otherwise now and then: this page also stays
+    // mounted while its neighbours in the tab bar are open.
     const poll = async () => {
+      let scanning = false;
       try {
         const st = await backend.shareStatus();
+        scanning = !!st.scanning;
         if (alive) setStatus(st);
       } catch {
         /* keep the last value */
       }
+      if (alive) t = setTimeout(poll, scanning ? 1000 : 15_000);
     };
     poll();
-    const t = setInterval(poll, 1000);
     return () => {
       alive = false;
-      clearInterval(t);
+      clearTimeout(t);
     };
   }, [backend]);
 

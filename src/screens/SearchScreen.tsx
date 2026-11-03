@@ -549,9 +549,12 @@ function Results({ id }: { id: string }) {
                 <span>
                   {waitingTurn
                     ? 'Waiting for the previous search to end…'
-                    : users > 0
-                      ? `Searching, ${users} ${users === 1 ? 'person has' : 'people have'} answered. Results show when it ends`
-                      : 'Searching…'}
+                    : users >= 990
+                      ? // A search takes the first thousand answers (the engine's limit), so the count stops just short of it.
+                        'Searching, over a thousand people have answered. Results show when it ends'
+                      : users > 0
+                        ? `Searching, ${users} ${users === 1 ? 'person has' : 'people have'} answered. Results show when it ends`
+                        : 'Searching…'}
                 </span>
                 {!waitingTurn && (
                   <button className="link" onClick={() => stopSearch(id)}>
