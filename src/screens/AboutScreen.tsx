@@ -73,6 +73,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'People shows how many can’t download from you, and the first few until you ask for all',
       'Signed-in devices show when each one was added, so phones with the same name can be told apart',
       'A search with more than a thousand answers says so',
+      'Fixed Escape closing the whole large player when only its “…” menu was open',
     ],
   },
   {

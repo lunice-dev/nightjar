@@ -211,9 +211,17 @@ export function FullPlayer({
   const current = useRef<HTMLLIElement>(null);
   const queueRef = useRef<HTMLDivElement>(null);
 
-  // Escape closes; the current track scrolls into view when the player opens.
+  // Escape closes what is on top: the "…" menu, then the queue or sound panel, then the player itself.
+  // The current track scrolls into view when the player opens.
+  const layers = useRef({ more: false, panel: 'none' as typeof panel });
+  layers.current = { more: moreOpen, panel };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (layers.current.more) setMoreOpen(false);
+      else if (layers.current.panel !== 'none') setPanel('none');
+      else close();
+    };
     window.addEventListener('keydown', onKey);
     // On wide screens the list scrolls by itself: show the current track. Upright, the art stays on top.
     const list = queueRef.current, row = current.current;
