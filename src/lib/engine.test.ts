@@ -54,7 +54,7 @@ class FakeAudio extends EventTarget implements MediaLike {
 const FILE = 'C:\\Music\\Album\\01.flac';
 const url = (extra = '') => `http://127.0.0.1:5031/stream?k=x&path=${encodeURIComponent(FILE)}${extra}`;
 
-function engine(check: Partial<EngineCheck> = {}) {
+function engine(check: Partial<EngineCheck> = {}, playTakes = 0) {
   const calls: string[] = [];
   const devices: (string | null)[] = [];
   const volumes: number[] = [];
@@ -67,6 +67,7 @@ function engine(check: Partial<EngineCheck> = {}) {
     play: async (path, from, device) => {
       calls.push(`play ${from}`);
       devices.push(device);
+      if (playTakes) await new Promise((r) => setTimeout(r, playTakes));
       st = { ...st, state: 'playing', path, position: from };
       return st;
     },
@@ -94,10 +95,10 @@ function engine(check: Partial<EngineCheck> = {}) {
   return { api, calls, devices, volumes, set: (s: Partial<EngineStatus>) => (st = { ...st, ...s }) };
 }
 
-function setup(check: Partial<EngineCheck> = {}) {
+function setup(check: Partial<EngineCheck> = {}, playTakes = 0) {
   const el = new FakeAudio();
   const fb = new FakeAudio();
-  const e = engine(check);
+  const e = engine(check, playTakes);
   const reports: (EngineNow | null)[] = [];
   const release = takeOver(el, { api: e.api, makeFallback: () => fb, device: () => useEngine.getState().device, report: (n) => reports.push(n), every: 5 });
   return { el, fb, ...e, reports, release, now: () => reports[reports.length - 1] };
@@ -226,6 +227,38 @@ describe('bit-perfect playback standing in for the audio element', () => {
     expect(t.el.paused).toBe(false);
     t.release();
     useEngine.getState().setDevice(null);
+  });
+
+  it('a device switch near the end keeps the place, and the position keeps moving', async () => {
+    useEngine.getState().setDevice(null);
+    const t = setup();
+    t.el.src = url();
+    await t.el.play();
+    t.set({ position: 199.9 });
+    await vi.waitFor(() => expect(t.el.currentTime).toBe(199.9));
+    const before = t.calls.length;
+    useEngine.getState().setDevice('headset-id');
+    await vi.waitFor(() => expect(t.devices[t.devices.length - 1]).toBe('headset-id'));
+    expect(t.calls.slice(before)).not.toContain('play 0');
+    expect(t.calls[t.calls.length - 1]).toBe('play 199.5'); // just short of the end
+    t.set({ position: 199.8 });
+    await vi.waitFor(() => expect(t.el.currentTime).toBe(199.8));
+    t.release();
+    useEngine.getState().setDevice(null);
+  });
+
+  it('a seek made while the track is starting is carried out once it has started', async () => {
+    const t = setup({}, 30);
+    t.el.src = url();
+    const started = t.el.play();
+    await vi.waitFor(() => expect(t.calls).toContain('play 0'));
+    t.el.currentTime = 40;
+    await started;
+    await vi.waitFor(() => expect(t.calls).toContain('play 40'));
+    await new Promise((r) => setTimeout(r, 60)); // the engine's slow start finishes
+    t.set({ position: 41 });
+    await vi.waitFor(() => expect(t.el.currentTime).toBe(41));
+    t.release();
   });
 
   it('sends an AAC copy straight to the usual player without asking the engine', async () => {

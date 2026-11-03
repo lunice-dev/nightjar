@@ -309,25 +309,34 @@ export function takeOver(el: MediaLike, opts: Options = {}): () => void {
       return;
     }
     if (mode !== 'engine') return;
-    let from = seekTo ?? time;
-    if (duration > 0 && from >= duration - 0.25) from = 0;
-    const resume = started && seekTo === null;
+    const asked = seekTo;
+    let from = asked ?? time;
+    // Play pressed after the end starts the track again. A place that was asked for (a seek, another device)
+    // is kept, just short of the end so the decoder is never sent past the file.
+    if (asked === null && duration > 0 && from >= duration - 0.25) from = 0;
+    else if (duration > 0) from = Math.min(from, Math.max(0, duration - 0.5));
+    const resume = started && asked === null;
     const s = await send(() => (resume ? api.resume() : api.play(path, from, device())));
     if (g !== gen) return;
     if (!s || s.state === 'failed') return fail(s?.reason ?? 'The bit-perfect player didn’t answer.', from);
     started = true;
     // Windows may refuse exclusive use only now that the device is opened: the engine then plays it the shared way.
     if (s.exclusive === false) report({ mode: 'normal', format: s.format, device: s.device, reason: s.reason });
-    if (seekTo === from) seekTo = null;
+    // A seek made while it was starting goes ahead now. Nothing else may leave `seekTo` set, or the position
+    // would stop following the music.
+    const moved = seekTo !== asked ? seekTo : null;
+    seekTo = null;
     if (paused) {
       // Paused while it was starting.
+      if (moved !== null) seekTo = time = moved;
       void send(() => api.pause());
       return;
     }
-    if (seekTo === null) time = s.position;
+    time = s.position;
     fire('playing');
     fire('timeupdate');
     watch();
+    if (moved !== null) seek(moved);
   }
 
   function pause() {

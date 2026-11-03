@@ -270,7 +270,7 @@ namespace Nightjar
                         failure = plan.Shared ? plan.Why : null;
                         o.Play();
                         state = "playing";
-                        Log.Write((plan.Shared ? "Through Windows (" + plan.Why + "): " : "Bit-perfect: ") + Path.GetFileName(file) + " on " + deviceName + " (" + formatText + ")");
+                        Log.Write((plan.Shared ? "Through Windows (" + plan.Why + "): " : "Bit-perfect: ") + Path.GetFileName(file) + " on " + deviceName + " (" + formatText + ")" + (from > 0 ? " from " + TimeSpan.FromSeconds(from).ToString(@"m\:ss") : ""));
                         return Status();
                     }
                 }
