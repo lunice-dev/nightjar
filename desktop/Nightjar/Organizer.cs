@@ -68,14 +68,42 @@ namespace Nightjar
 
         public static bool IsAudio(string f) => Audio.Contains(Path.GetExtension(f).ToLowerInvariant());
 
+        // A folder for one disc or side of an album ("CD 01", "Disc 2", "Side A"): the same rule as the page's.
+        static readonly Regex DiscFolder = new Regex(@"^((cd|disc|disk)\s*\d{1,2}(\s*[-–—:._]\s*.+|\s*[([].+[)\]])?|(side|vinyl|lp)\s*[\da-d]{1,2}|\d{1,2}(""|''|”|in|inch)?\s*vinyl\s*\d{1,2})$", RegexOptions.IgnoreCase);
+
+        internal static bool IsDiscFolder(string name) => DiscFolder.IsMatch((name ?? "").Trim());
+
+        /// <summary>The album a folder belongs to: a disc folder's parent, unless that parent is the downloads folder itself.</summary>
+        internal static string AlbumOf(string dir)
+        {
+            var parent = Path.GetDirectoryName(dir.TrimEnd(Path.DirectorySeparatorChar));
+            if (string.IsNullOrEmpty(parent) || !IsDiscFolder(Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar)))) return dir;
+            var dl = Config.DownloadDir();
+            if (!string.IsNullOrEmpty(dl) && string.Equals(Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(dl).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase)) return dir;
+            return parent;
+        }
+
+        /// <summary>An album's audio files: in its own folder and in its disc folders.</summary>
+        internal static List<string> AlbumAudio(string dir)
+        {
+            var list = Directory.GetFiles(dir).Where(IsAudio).ToList();
+            foreach (var sub in Directory.GetDirectories(dir))
+                if (IsDiscFolder(Path.GetFileName(sub))) try { list.AddRange(Directory.GetFiles(sub).Where(IsAudio)); } catch { }
+            return list;
+        }
+
         // ---------------------------------------------------------------- what's waiting
 
-        /// <summary>Album folders in the downloads folder: any folder with audio files directly in it.</summary>
+        /// <summary>
+        /// Album folders in the downloads folder: any folder with audio files directly in it, where the disc folders of one
+        /// album ("Album\CD 01", "Album\CD 02") count as that album, once.
+        /// </summary>
         public static List<object> Waiting()
         {
             var list = new List<object>();
             var root = Config.DownloadDir();
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return list;
+            var albums = new Dictionary<string, (string dir, int tracks, long size, DateTime when)>(StringComparer.OrdinalIgnoreCase);
             foreach (var dir in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).Take(5000))
             {
                 string[] files;
@@ -86,8 +114,13 @@ namespace Nightjar
                 foreach (var f in files) try { size += new FileInfo(f).Length; } catch { }
                 DateTime when = DateTime.MinValue;
                 try { when = Directory.GetLastWriteTimeUtc(dir); } catch { }
-                list.Add(new { dir, name = Path.GetFileName(dir), tracks = audio.Count, size, at = (long)(when - new DateTime(1970, 1, 1)).TotalMilliseconds });
+                var album = AlbumOf(dir);
+                albums[album] = albums.TryGetValue(album, out var e)
+                    ? (e.dir, e.tracks + audio.Count, e.size + size, when > e.when ? when : e.when)
+                    : (album, audio.Count, size, when);
             }
+            foreach (var a in albums.Values)
+                list.Add(new { dir = a.dir, name = Path.GetFileName(a.dir), tracks = a.tracks, size = a.size, at = (long)(a.when - new DateTime(1970, 1, 1)).TotalMilliseconds });
             return list;
         }
 
@@ -156,8 +189,10 @@ namespace Nightjar
 
         public static object Plan(string dir)
         {
+            // Asked about one disc of an album: the plan is for the whole album, with the tracks of all its discs.
+            dir = AlbumOf(dir);
             var root = AppSettings.LibraryRoot;
-            var files = Directory.GetFiles(dir).Where(IsAudio).ToList();
+            var files = AlbumAudio(dir);
             var artists = new List<string>();
             var albums = new List<string>();
             var years = new List<string>();
@@ -340,6 +375,7 @@ namespace Nightjar
                 var root = AppSettings.LibraryRoot;
                 if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return new { ok = false, error = "Choose your library folder in Settings first." };
                 var dl = Config.DownloadDir();
+                if (!string.IsNullOrEmpty(dir)) dir = AlbumOf(dir); // one disc asked for: the whole album moves, its disc folders with it
                 if (!Under(dir, dl) || !Directory.Exists(dir)) return new { ok = false, error = "That album isn't in your downloads folder any more." };
                 if (!Formats.Contains(format)) return new { ok = false, error = "Unknown format folder." };
                 if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(folder)) return new { ok = false, error = "The artist and the album folder need a name." };
