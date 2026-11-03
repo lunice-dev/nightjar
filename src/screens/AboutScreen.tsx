@@ -42,6 +42,27 @@ export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '
  */
 const CHANGES: { version: string; date: string; title: string; items: string[] }[] = [
   {
+    version: '0.11.0',
+    date: '9 Nov 2026',
+    title: 'Bit-perfect',
+    items: [
+      'Bit-perfect playback on a computer: FLAC and WAV files reach your sound device exactly as they are, at their own sample rate',
+      'Turn bit-perfect on and pick the sound device right from the player',
+      'A new Sound panel in the large player shows how each track reaches your device, and why when Windows has to convert it',
+      'While bit-perfect plays, the volume is set on the device itself. After half a minute paused, other programs can use it again',
+      'A device that can’t take a file as it is still plays it, converted by Windows',
+      'A Statistics page: lifetime totals, a chart over time, people, file types, busiest hours and records. On a phone it is in More',
+      'Asking for an album that is already downloading no longer starts a second copy',
+      'An album no longer shows as waiting in the short gap between two tracks',
+      'More of an album goes into its folder, and tracks already there are left out',
+      'An album split across folders can be gathered into one',
+      'Albums you are downloading are kept by nightjar on the computer, so every device sees the same ones',
+      'One slim scrollbar wherever there is a mouse',
+      'The large player’s tracklist lines up with the cover and the controls',
+      'Fixed the lyrics layout in the large player',
+    ],
+  },
+  {
     version: '0.10.0',
     date: '2 Nov 2026',
     title: 'A new look',
