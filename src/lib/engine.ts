@@ -19,13 +19,18 @@ export interface EngineStatus {
   path: string | null;
   position: number;
   duration: number;
+  /** False when the track goes through Windows' mixer on the chosen device (it wouldn't take it as it is). */
+  exclusive?: boolean;
   format: string | null;
   device: string | null;
   reason: string | null;
 }
 
 export interface EngineCheck {
+  /** The engine can play it on the chosen device… */
   ok: boolean;
+  /** …untouched (false: through Windows' mixer, with `reason`). Older apps don't say, and only answer ok for untouched. */
+  exclusive?: boolean;
   format: string | null;
   reason: string | null;
   device: string | null;
@@ -47,6 +52,8 @@ export interface EngineApi {
   resume(): Promise<EngineStatus>;
   stop(): Promise<EngineStatus>;
   status(): Promise<EngineStatus>;
+  /** 0 to 1, for tracks that go through Windows; untouched ones ignore it. */
+  volume(v: number): Promise<EngineStatus>;
 }
 
 async function call<T>(what: string, q: Record<string, string | number | null> = {}): Promise<T> {
@@ -66,6 +73,7 @@ export const engineApi: EngineApi & { devices(): Promise<{ devices: EngineDevice
   resume: () => call('resume'),
   stop: () => call('stop'),
   status: () => call('status'),
+  volume: (v) => call('volume', { v: Math.max(0, Math.min(1, v)).toFixed(3) }),
 };
 
 /** "96000:16/24/32" lines in words: "44.1 to 192 kHz, up to 32-bit". */
@@ -245,9 +253,11 @@ export function takeOver(el: MediaLike, opts: Options = {}): () => void {
       const c = target.original && path ? await send(() => api.check(path, device())) : null;
       if (g !== gen) return;
       if (c?.ok) {
+        // The engine plays it on the chosen device: untouched, or (when the device won't take it as it is) through Windows there.
         mode = 'engine';
         duration = c.duration;
-        report({ mode: 'engine', format: c.format, device: c.device, reason: null });
+        const untouched = c.exclusive !== false;
+        report({ mode: untouched ? 'engine' : 'normal', format: c.format, device: c.device, reason: untouched ? null : c.reason });
         fire('durationchange');
         fire('loadedmetadata');
         fire('canplay');
@@ -306,6 +316,8 @@ export function takeOver(el: MediaLike, opts: Options = {}): () => void {
     if (g !== gen) return;
     if (!s || s.state === 'failed') return fail(s?.reason ?? 'The bit-perfect player didn’t answer.', from);
     started = true;
+    // Windows may refuse exclusive use only now that the device is opened: the engine then plays it the shared way.
+    if (s.exclusive === false) report({ mode: 'normal', format: s.format, device: s.device, reason: s.reason });
     if (seekTo === from) seekTo = null;
     if (paused) {
       // Paused while it was starting.
@@ -417,6 +429,7 @@ export function takeOver(el: MediaLike, opts: Options = {}): () => void {
     set: (v: number) => {
       volume = v;
       fb.volume = v;
+      void api.volume(v).catch(() => undefined);
     },
   });
   own('play', { value: play });
@@ -427,7 +440,8 @@ export function takeOver(el: MediaLike, opts: Options = {}): () => void {
 
   // A page reload leaves no player behind: whatever an earlier page started stops now, and on the way out.
   void send(() => api.stop());
-  const leave = () => void api.stop().catch(() => undefined);
+  void send(() => api.volume(volume));
+  const leave =() => void api.stop().catch(() => undefined);
   if (typeof window !== 'undefined') window.addEventListener('pagehide', leave);
 
   // Another output chosen: the track starts again there, from the same place.

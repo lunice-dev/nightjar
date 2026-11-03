@@ -451,7 +451,10 @@ function QualityInfo() {
         {now?.mode === 'normal' && (
           <>
             <dt>Bit-perfect</dt>
-            <dd>{now.reason ? `Not for this track: ${now.reason} It plays through Windows instead.` : 'Not for this track: it plays through Windows.'}</dd>
+            <dd>
+              {now.reason ? `Not for this track: ${now.reason}` : 'Not for this track.'}{' '}
+              {now.device && now.format ? `On ${now.device}, ${now.format}.` : 'It plays through Windows instead.'}
+            </dd>
           </>
         )}
         {ios && (

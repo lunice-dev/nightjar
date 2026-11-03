@@ -614,7 +614,7 @@ namespace Nightjar
         static readonly HashSet<string> ThisComputerOnly = new HashSet<string>
         {
             "/pick-folder", "/pick-image", "/image", "/reveal", "/upnp", "/firewall", "/quit", "/show",
-            "/engine/devices", "/engine/check", "/engine/play", "/engine/pause", "/engine/resume", "/engine/stop", "/engine/status",
+            "/engine/devices", "/engine/check", "/engine/play", "/engine/pause", "/engine/resume", "/engine/stop", "/engine/status", "/engine/volume",
             "/remote/code", "/remote/lan", "/tailscale/install", "/tailscale/login", "/tailscale/serve", "/tailscale/test",
         };
 
@@ -929,6 +929,12 @@ namespace Nightjar
                 case "/engine/resume": Reply(stream, 200, origin, BitPerfect.Resume()); return;
                 case "/engine/stop": Reply(stream, 200, origin, BitPerfect.Stop()); return;
                 case "/engine/status": Reply(stream, 200, origin, BitPerfect.Status()); return;
+                case "/engine/volume":
+                    {
+                        double.TryParse(req.Q("v"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v);
+                        Reply(stream, 200, origin, BitPerfect.SetVolume(v));
+                        return;
+                    }
                 case "/exists":
                     {
                         var p = req.Q("path");

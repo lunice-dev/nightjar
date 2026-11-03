@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { describeFormats, streamTarget, takeOver, type EngineApi, type EngineCheck, type EngineNow, type EngineStatus, type MediaLike } from './engine';
+import { describeFormats, streamTarget, takeOver, useEngine, type EngineApi, type EngineCheck, type EngineNow, type EngineStatus, type MediaLike } from './engine';
 
 // No browser here: the app window and the helper address are stand-ins.
 vi.mock('./host', () => ({ inApp: true }));
@@ -56,15 +56,22 @@ const url = (extra = '') => `http://127.0.0.1:5031/stream?k=x&path=${encodeURICo
 
 function engine(check: Partial<EngineCheck> = {}) {
   const calls: string[] = [];
+  const devices: (string | null)[] = [];
+  const volumes: number[] = [];
   let st: EngineStatus = { state: 'idle', path: null, position: 0, duration: 200, format: null, device: null, reason: null };
   const api: EngineApi = {
     check: async (path) => {
       calls.push('check');
       return { ok: true, format: '24-bit / 96 kHz, exclusive', reason: null, device: 'DAC', duration: 200, path, ...check };
     },
-    play: async (path, from) => {
+    play: async (path, from, device) => {
       calls.push(`play ${from}`);
+      devices.push(device);
       st = { ...st, state: 'playing', path, position: from };
+      return st;
+    },
+    volume: async (v) => {
+      volumes.push(v);
       return st;
     },
     pause: async () => {
@@ -84,7 +91,7 @@ function engine(check: Partial<EngineCheck> = {}) {
     },
     status: async () => st,
   };
-  return { api, calls, set: (s: Partial<EngineStatus>) => (st = { ...st, ...s }) };
+  return { api, calls, devices, volumes, set: (s: Partial<EngineStatus>) => (st = { ...st, ...s }) };
 }
 
 function setup(check: Partial<EngineCheck> = {}) {
@@ -92,7 +99,7 @@ function setup(check: Partial<EngineCheck> = {}) {
   const fb = new FakeAudio();
   const e = engine(check);
   const reports: (EngineNow | null)[] = [];
-  const release = takeOver(el, { api: e.api, makeFallback: () => fb, device: () => null, report: (n) => reports.push(n), every: 5 });
+  const release = takeOver(el, { api: e.api, makeFallback: () => fb, device: () => useEngine.getState().device, report: (n) => reports.push(n), every: 5 });
   return { el, fb, ...e, reports, release, now: () => reports[reports.length - 1] };
 }
 
@@ -191,6 +198,34 @@ describe('bit-perfect playback standing in for the audio element', () => {
     expect(t.calls).not.toContain('play 0');
     expect(t.now()).toMatchObject({ mode: 'normal', reason: expect.stringContaining('88.2 kHz') });
     t.release();
+  });
+
+  it('plays on the chosen device through Windows when it won’t take the file as it is', async () => {
+    const t = setup({ exclusive: false, reason: 'The headset doesn’t accept 24-bit / 96 kHz in exclusive mode.', device: 'Headset', format: 'converted by Windows to 48 kHz' });
+    t.el.src = url();
+    await t.el.play();
+    expect(t.calls).toContain('play 0');
+    expect(t.fb.src).toBe('');
+    expect(t.now()).toMatchObject({ mode: 'normal', device: 'Headset', format: 'converted by Windows to 48 kHz', reason: expect.stringContaining('headset') });
+    // Windows' volume applies to these, so the slider reaches the engine.
+    t.el.volume = 0.4;
+    expect(t.volumes).toContain(0.4);
+    t.release();
+  });
+
+  it('moves to another sound device from the same place when one is chosen', async () => {
+    useEngine.getState().setDevice(null);
+    const t = setup();
+    t.el.src = url();
+    await t.el.play();
+    t.el.currentTime = 25;
+    await vi.waitFor(() => expect(t.calls).toContain('play 25'));
+    useEngine.getState().setDevice('headset-id');
+    await vi.waitFor(() => expect(t.devices[t.devices.length - 1]).toBe('headset-id'));
+    expect(t.calls[t.calls.length - 1]).toBe('play 25');
+    expect(t.el.paused).toBe(false);
+    t.release();
+    useEngine.getState().setDevice(null);
   });
 
   it('sends an AAC copy straight to the usual player without asking the engine', async () => {

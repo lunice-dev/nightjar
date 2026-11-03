@@ -28,6 +28,8 @@ namespace Nightjar
         static string path, deviceName, formatText, failure;
         static double duration, startAt;
         static string state = "idle"; // idle, playing, paused, ended, failed
+        static bool shared; // the current track goes through Windows' mixer (the device wouldn't take it as it is)
+        static double volume = 1;
 
         // After a while paused the device is let go, so other programs can use it; playing again takes it back.
         static readonly TimeSpan ParkAfter = TimeSpan.FromSeconds(30);
@@ -62,7 +64,37 @@ namespace Nightjar
         static WaveFormat Make(int rate, int container, int channels)
         {
             if (container == 16 && channels <= 2) return new WaveFormat(rate, 16, channels);
-            return new WaveFormatExtensible(rate, container, channels);
+            return new PcmExtensible(rate, container, channels);
+        }
+
+        /// <summary>
+        /// Integer samples in a 24- or 32-bit slot. NAudio's own WaveFormatExtensible calls every 32-bit format
+        /// floating point, which would send whole numbers to a device expecting floats.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, Pack = 2)]
+        sealed class PcmExtensible : WaveFormat
+        {
+            readonly short validBits;
+            readonly int channelMask;
+            readonly Guid subFormat = new Guid("00000001-0000-0010-8000-00aa00389b71"); // KSDATAFORMAT_SUBTYPE_PCM
+
+            public PcmExtensible(int rate, int bits, int channels) : base(rate, bits, channels)
+            {
+                waveFormatTag = WaveFormatEncoding.Extensible;
+                extraSize = 22;
+                validBits = (short)bits;
+                channelMask = channels == 1 ? 4 : 3; // centre, or front left and right
+            }
+
+            public override void Serialize(BinaryWriter writer)
+            {
+                base.Serialize(writer);
+                writer.Write(validBits);
+                writer.Write(channelMask);
+                writer.Write(subFormat.ToByteArray());
+            }
+
+            public override string ToString() => "PCM " + SampleRate + " Hz " + BitsPerSample + "-bit " + Channels + " ch (extensible)";
         }
 
         static bool Accepts(MMDevice dev, WaveFormat f)
@@ -106,6 +138,20 @@ namespace Nightjar
             public int Container;
             public string Why;
             public string Describe;
+            /// <summary>Not untouched on this device: it still plays there, through Windows' mixer, which converts it.</summary>
+            public bool Shared;
+        }
+
+        static Plan SharedPlan(MMDevice dev, PcmSource src, string why)
+        {
+            int slot = src.Bits <= 16 ? 16 : 32;
+            string to = null;
+            try { to = Khz(dev.AudioClient.MixFormat.SampleRate); } catch { }
+            return new Plan
+            {
+                Source = src, Format = Make(src.Rate, slot, 2), Container = slot, Shared = true, Why = why,
+                Describe = to == null ? "converted by Windows" : to == Khz(src.Rate) ? "through Windows at " + to : "converted by Windows to " + to,
+            };
         }
 
         static Plan MakePlan(MMDevice dev, string file)
@@ -137,14 +183,12 @@ namespace Nightjar
                     };
                 }
             }
-            var name = dev.FriendlyName;
-            src.Dispose();
-            return new Plan { Why = name + " doesn't accept " + src.Bits + "-bit / " + Khz(src.Rate) + " in exclusive mode." };
+            return SharedPlan(dev, src, dev.FriendlyName + " doesn't accept " + src.Bits + "-bit / " + Khz(src.Rate) + " in exclusive mode.");
         }
 
         static string Khz(int rate) => Math.Round(rate / 1000.0, 1).ToString(System.Globalization.CultureInfo.InvariantCulture) + " kHz";
 
-        /// <summary>Can this file be played untouched on this device? Doesn't play anything.</summary>
+        /// <summary>Can this file be played on this device, and untouched (`exclusive`)? Doesn't play anything.</summary>
         public static object Check(string file, string deviceId)
         {
             try
@@ -155,7 +199,7 @@ namespace Nightjar
                     var plan = MakePlan(dev, file);
                     var seconds = plan.Source != null ? plan.Source.Frames / (double)plan.Source.Rate : 0;
                     plan.Source?.Dispose();
-                    return new { ok = plan.Source != null, format = plan.Describe, reason = plan.Why, device = dev.FriendlyName, duration = seconds };
+                    return new { ok = plan.Source != null, exclusive = plan.Source != null && !plan.Shared, format = plan.Describe, reason = plan.Why, device = dev.FriendlyName, duration = seconds };
                 }
             }
             catch (Exception e) { return new { ok = false, reason = "No sound device is available: " + e.Message }; }
@@ -187,32 +231,46 @@ namespace Nightjar
 
                         if (from > 0) plan.Source.Seek((long)(from * plan.Source.Rate));
                         var f = new PcmFeed(plan.Source, plan.Container / 8, plan.Format.Channels);
-                        var o = new WasapiOut(dev, AudioClientShareMode.Exclusive, true, 100);
+                        var o = new WasapiOut(dev, plan.Shared ? AudioClientShareMode.Shared : AudioClientShareMode.Exclusive, true, plan.Shared ? 200 : 100);
                         try { o.Init(f); }
+                        catch (Exception e) when (!plan.Shared && Refused(e))
+                        {
+                            // Windows doesn't let programs take this device for themselves: play it the shared way.
+                            o.Dispose();
+                            var why = Explain(e, dev.FriendlyName);
+                            plan = SharedPlan(dev, plan.Source, why);
+                            f = new PcmFeed(plan.Source, plan.Container / 8, plan.Format.Channels);
+                            o = new WasapiOut(dev, AudioClientShareMode.Shared, true, 200);
+                            try { o.Init(f); }
+                            catch (Exception e2) { o.Dispose(); f.Dispose(); return Fail(Explain(e2, dev.FriendlyName)); }
+                        }
                         catch (Exception e)
                         {
                             o.Dispose(); f.Dispose();
                             return Fail(Explain(e, dev.FriendlyName));
                         }
+                        if (plan.Shared) try { o.Volume = (float)volume; } catch { }
+                        var name = dev.FriendlyName;
                         o.PlaybackStopped += (s, a) =>
                         {
                             lock (gate)
                             {
                                 if (output != s) return;
                                 // Stopping before a single sample came out means the decoder failed, not that the track ended.
-                                if (a.Exception != null) { state = "failed"; failure = a.Exception.Message; }
+                                if (a.Exception != null) { state = "failed"; failure = Explain(a.Exception, name); }
                                 else if (f.Frames == 0) { state = "failed"; failure = "nightjar couldn't decode " + Path.GetFileName(file) + "."; }
                                 else state = "ended";
                                 if (state == "failed") Log.Write("Bit-perfect stopped: " + failure);
                             }
                             Notify();
                         };
-                        output = o; feed = f; lastDevice = deviceId;
-                        path = file; deviceName = dev.FriendlyName; formatText = plan.Describe;
-                        duration = plan.Source.Frames / (double)plan.Source.Rate; startAt = from; failure = null;
+                        output = o; feed = f; lastDevice = deviceId; shared = plan.Shared;
+                        path = file; deviceName = name; formatText = plan.Describe;
+                        duration = plan.Source.Frames / (double)plan.Source.Rate; startAt = from;
+                        failure = plan.Shared ? plan.Why : null;
                         o.Play();
                         state = "playing";
-                        Log.Write("Bit-perfect: " + Path.GetFileName(file) + " on " + deviceName + " (" + formatText + ")");
+                        Log.Write((plan.Shared ? "Through Windows (" + plan.Why + "): " : "Bit-perfect: ") + Path.GetFileName(file) + " on " + deviceName + " (" + formatText + ")");
                         return Status();
                     }
                 }
@@ -225,8 +283,27 @@ namespace Nightjar
             var hr = (uint)e.HResult;
             if (hr == 0x8889000A) return device + " is being used by another program in exclusive mode.";
             if (hr == 0x88890008) return device + " doesn't accept that format.";
-            if (hr == 0x8007005 || hr == 0x80070005) return "Windows isn't letting programs take exclusive control of " + device + ". Turn on \"Allow applications to take exclusive control\" in the device's properties.";
-            return device + " refused exclusive mode: " + e.Message;
+            if (hr == 0x88890004 || hr == 0x88890026) return device + " was disconnected.";
+            if (Refused(e)) return "Windows isn't letting programs take exclusive control of " + device + ". Turn on \"Allow applications to take exclusive control\" in the device's properties.";
+            return device + " stopped: " + e.Message;
+        }
+
+        /// <summary>Exclusive mode is switched off for the device (its "Allow applications to take exclusive control" box, or a policy).</summary>
+        static bool Refused(Exception e)
+        {
+            var hr = (uint)e.HResult;
+            return hr == 0x8889000E || hr == 0x80070005;
+        }
+
+        /// <summary>The volume for tracks played through Windows (0 to 1). Untouched tracks ignore it: that's what keeps them untouched.</summary>
+        public static object SetVolume(double v)
+        {
+            lock (gate)
+            {
+                volume = Math.Max(0, Math.Min(1, v));
+                if (output != null && shared) try { output.Volume = (float)volume; } catch { }
+            }
+            return Status();
         }
 
         static object Fail(string why)
@@ -317,7 +394,7 @@ namespace Nightjar
 
         public static object Status()
         {
-            lock (gate) return new { state, path, position = Position(), duration, format = formatText, device = deviceName, reason = failure };
+            lock (gate) return new { state, path, position = Position(), duration, exclusive = !shared, format = formatText, device = deviceName, reason = failure };
         }
 
         static double Position()
