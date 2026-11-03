@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -204,8 +205,10 @@ namespace Nightjar
             return Status();
         }
 
-        public static object Pause() { lock (gate) { if (output != null && state == "playing") { output.Pause(); state = "paused"; } return Status(); } }
-        public static object Resume() { lock (gate) { if (output != null && state == "paused") { output.Play(); state = "playing"; } return Status(); } }
+        // Pausing keeps the stream running and sends silence: stopping an exclusive stream makes some
+        // devices repeat their last buffer, which sounds like the track got stuck.
+        public static object Pause() { lock (gate) { if (feed != null && state == "playing") { feed.Paused = true; state = "paused"; } return Status(); } }
+        public static object Resume() { lock (gate) { if (feed != null && state == "paused") { feed.Paused = false; state = "playing"; } return Status(); } }
         public static object Stop()
         {
             lock (turn)
@@ -247,9 +250,14 @@ namespace Nightjar
             readonly PcmSource src;
             readonly int slot, srcBytes, devChannels;
             byte[] tmp = new byte[0];
+            bool finished;
+            public volatile bool Paused;
             public long Frames;
             public int Rate => src.Rate;
             public WaveFormat WaveFormat { get; }
+
+            [ThreadStatic] static bool scheduled;
+            [DllImport("avrt.dll", CharSet = CharSet.Unicode)] static extern IntPtr AvSetMmThreadCharacteristics(string task, ref uint index);
 
             public PcmFeed(PcmSource src, int slotBytes, int devChannels)
             {
@@ -259,8 +267,14 @@ namespace Nightjar
 
             public int Read(byte[] buffer, int offset, int count)
             {
+                // Only NAudio's playback thread calls this: put it in Windows' audio schedule, so a busy
+                // computer doesn't make it miss a buffer (the device would repeat the old one).
+                if (!scheduled) { scheduled = true; uint i = 0; try { AvSetMmThreadCharacteristics("Pro Audio", ref i); } catch { } }
+
                 int outFrame = slot * devChannels, inFrame = srcBytes * src.Channels;
                 int frames = count / outFrame;
+                if (finished) return 0;
+                if (Paused) { Array.Clear(buffer, offset, frames * outFrame); return frames * outFrame; }
                 if (tmp.Length < frames * inFrame) tmp = new byte[frames * inFrame];
                 int got = 0;
                 while (got < frames * inFrame)
@@ -282,7 +296,12 @@ namespace Nightjar
                     }
                 }
                 Frames += done;
-                return done * outFrame;
+                if (done == frames) return done * outFrame;
+                // The file ran out: an exclusive device wants whole buffers, so fill the last one with silence.
+                finished = true;
+                if (done == 0) return 0;
+                Array.Clear(buffer, offset + done * outFrame, (frames - done) * outFrame);
+                return frames * outFrame;
             }
 
             public void Dispose() => src.Dispose();
