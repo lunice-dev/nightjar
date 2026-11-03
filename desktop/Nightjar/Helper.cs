@@ -614,6 +614,7 @@ namespace Nightjar
         static readonly HashSet<string> ThisComputerOnly = new HashSet<string>
         {
             "/pick-folder", "/pick-image", "/image", "/reveal", "/upnp", "/firewall", "/quit", "/show",
+            "/engine/devices", "/engine/check", "/engine/play", "/engine/pause", "/engine/resume", "/engine/stop", "/engine/status",
             "/remote/code", "/remote/lan", "/tailscale/install", "/tailscale/login", "/tailscale/serve", "/tailscale/test",
         };
 
@@ -906,6 +907,28 @@ namespace Nightjar
                         });
                         return;
                     }
+                case "/engine/devices":
+                    Reply(stream, 200, origin, BitPerfect.Devices());
+                    return;
+                case "/engine/check":
+                    {
+                        var file = Media.Allowed(req.Q("path"));
+                        if (file == null || !File.Exists(file)) { Reply(stream, 404, origin, new { ok = false, reason = "That file isn't in your library." }); return; }
+                        Reply(stream, 200, origin, BitPerfect.Check(file, req.Q("device")));
+                        return;
+                    }
+                case "/engine/play":
+                    {
+                        var file = Media.Allowed(req.Q("path"));
+                        if (file == null || !File.Exists(file)) { Reply(stream, 404, origin, new { state = "failed", reason = "That file isn't in your library." }); return; }
+                        double.TryParse(req.Q("from"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var from);
+                        Reply(stream, 200, origin, BitPerfect.Play(file, from, req.Q("device")));
+                        return;
+                    }
+                case "/engine/pause": Reply(stream, 200, origin, BitPerfect.Pause()); return;
+                case "/engine/resume": Reply(stream, 200, origin, BitPerfect.Resume()); return;
+                case "/engine/stop": Reply(stream, 200, origin, BitPerfect.Stop()); return;
+                case "/engine/status": Reply(stream, 200, origin, BitPerfect.Status()); return;
                 case "/exists":
                     {
                         var p = req.Q("path");

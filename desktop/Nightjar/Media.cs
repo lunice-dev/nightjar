@@ -189,6 +189,9 @@ namespace Nightjar
             catch { return null; }
         }
 
+        /// <summary>The FLAC file's rate, channels, bits and length in samples, for the bit-perfect player.</summary>
+        public static (int rate, int channels, int bits, long samples)? FlacStreamInfo(string file) => FlacInfo(file);
+
         public static bool CanSendPcm(string file) =>
             Path.GetExtension(file).Equals(".flac", StringComparison.OrdinalIgnoreCase) && File.Exists(FlacExe) && FlacInfo(file) != null;
 
