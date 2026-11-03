@@ -2,7 +2,7 @@ import { enqueueOnce } from '../lib/ask';
 import { usePlayer } from '../lib/player';
 import { AlbumPlay } from '../components/AlbumPlay';
 import { onThisComputer } from '../api/remote';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Direction } from '../api/backend';
 import { Icon } from '../components/Icon';
 import { AUDIO_EXT, basename, bytes, extOf, speed } from '../lib/quality';
@@ -21,8 +21,8 @@ import { uuid } from '../lib/uuid';
 import { rescanSoon } from '../lib/shareVersion';
 import { uploadStats } from '../lib/uploadStats';
 import { OrganizeDialog } from '../components/Organize';
+import { ReadyForLibrary } from '../components/ReadyForLibrary';
 import { useFilesAvailable } from '../lib/files';
-import type { RecentMove, WaitingAlbum } from '../api/library';
 import { CheckButton, CheckResult, useQualityCheck } from '../components/QualityCheck';
 import { blockAndStop, setBlocked, useBlocked } from '../lib/blocking';
 import { GuardNotice } from '../components/GuardNotice';
@@ -171,7 +171,7 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
           </>
         )}
         {direction === 'upload' && <UploadActivity />}
-        {direction === 'download' && <NotInLibrary busy={busyDirs} />}
+        {direction === 'download' && <ReadyForLibrary busy={busyDirs} />}
       </div>
     </div>
   );
@@ -227,101 +227,6 @@ function UploadSummary() {
         <p className="pulse-sub">Your speed in their search results{stats?.uploads ? ` · ${stats.uploads.toLocaleString()} uploads in total` : ''}</p>
       </article>
     </section>
-  );
-}
-
-/**
- * Everything in your downloads folder that isn't in the library yet (the whole UNSORTED folder, including
- * albums downloaded before Nightjar), each with Put in library and Check quality, plus the latest moves to undo.
- */
-function NotInLibrary({ busy }: { busy: Set<string> }) {
-  const backend = useStore((s) => s.backend);
-  const toast = useStore((s) => s.toast);
-  const canFiles = useFilesAvailable();
-  const [data, setData] = useState<{ albums: WaitingAlbum[]; recent: RecentMove[] } | null>(null);
-  const [limit, setLimit] = useState(12);
-  const load = useCallback(() => {
-    backend?.library.waiting().then((d) => d && setData(d));
-  }, [backend]);
-  useEffect(() => {
-    if (!canFiles) return;
-    load();
-    // An album put in the library from its row above changes this list too.
-    window.addEventListener('nightjar-library-changed', load);
-    return () => window.removeEventListener('nightjar-library-changed', load);
-  }, [canFiles, load]);
-  if (!canFiles || !data) return null;
-  const albums = data.albums.filter((a) => !busy.has(a.dir.toLowerCase())).sort((a, b) => b.at - a.at);
-  if (albums.length === 0 && data.recent.length === 0) return null;
-  const undo = async (m: RecentMove) => {
-    const r = await backend!.library.undo(m.id);
-    if (r.ok) {
-      usePrefs.getState().albumMoved(m.to, m.from);
-      window.dispatchEvent(new Event('nightjar-library-undone'));
-      rescanSoon(2000);
-      toast(`Moved back to ${m.from}`);
-    } else toast(r.error ?? 'Couldn’t undo it.', 'error');
-    load();
-  };
-  return (
-    <section className="dl-section library-section" aria-labelledby="unsorted-h">
-      <h2 className="dl-section-head" id="unsorted-h">
-        {albums.length ? (
-          <>
-            Also in your downloads folder, not in your library yet <span className="n">{albums.length}</span>
-          </>
-        ) : (
-          'Your library'
-        )}
-      </h2>
-      {albums.slice(0, limit).map((a) => (
-        <WaitingRow key={a.dir} a={a} onMoved={load} />
-      ))}
-      {albums.length > limit && (
-        <button className="btn quiet small" onClick={() => setLimit((l) => l + 24)}>
-          Show more ({albums.length - limit})
-        </button>
-      )}
-      {data.recent.length > 0 && (
-        <details className="recent-moves">
-          <summary>Recently put in your library ({data.recent.length})</summary>
-          <ul>
-            {data.recent.map((m) => (
-              <li key={m.id}>
-                <span className="path">{m.to}</span>
-                <button className="link" onClick={() => undo(m)}>
-                  Undo
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </section>
-  );
-}
-
-function WaitingRow({ a, onMoved }: { a: WaitingAlbum; onMoved: () => void }) {
-  const [organizing, setOrganizing] = useState(false);
-  const quality = useQualityCheck(a.dir);
-  const searchFor = useStore((s) => s.search);
-  return (
-    <div className="waiting-row">
-      <div className="waiting-head">
-        <div className="waiting-title">
-          <b>{a.name}</b>
-          <small>
-            {a.tracks} {a.tracks === 1 ? 'track' : 'tracks'} · {bytes(a.size)}
-          </small>
-        </div>
-        <CheckButton check={quality} />
-        <button className="btn quiet small" onClick={() => setOrganizing(true)}>
-          Put in library
-        </button>
-      </div>
-      <CheckResult check={quality} onFindAnother={() => searchFor(a.name.replace(/[\[(].*?[\])]/g, ' '))} />
-      {organizing && <OrganizeDialog dir={a.dir} onClose={() => setOrganizing(false)} onMoved={onMoved} />}
-    </div>
   );
 }
 

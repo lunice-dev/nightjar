@@ -15,6 +15,8 @@ export interface WaitingAlbum {
   dir: string;
   name: string;
   tracks: number;
+  /** How many disc folders ("CD 01", "CD 02") the album has; 0 or missing for one folder (older apps don't say). */
+  discs?: number;
   size: number;
   at: number;
 }

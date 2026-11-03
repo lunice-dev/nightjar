@@ -57,6 +57,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'More of an album goes into its folder, and tracks already there are left out',
       'An album split across folders can be gathered into one',
       'Albums with disc folders (CD 1, CD 2) go into your Library as one album, discs and all',
+      'Downloads shows albums waiting for your Library by name, artist and where each will go. Put them in one at a time or all at once',
       'Fixed a two-disc album being called “in several folders” and its discs being mixed into one',
       'Albums you are downloading are kept by nightjar on the computer, so every device sees the same ones',
       'One slim scrollbar wherever there is a mouse',

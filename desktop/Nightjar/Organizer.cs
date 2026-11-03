@@ -103,7 +103,7 @@ namespace Nightjar
             var list = new List<object>();
             var root = Config.DownloadDir();
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return list;
-            var albums = new Dictionary<string, (string dir, int tracks, long size, DateTime when)>(StringComparer.OrdinalIgnoreCase);
+            var albums = new Dictionary<string, (string dir, int tracks, long size, DateTime when, int discs)>(StringComparer.OrdinalIgnoreCase);
             foreach (var dir in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).Take(5000))
             {
                 string[] files;
@@ -115,12 +115,13 @@ namespace Nightjar
                 DateTime when = DateTime.MinValue;
                 try { when = Directory.GetLastWriteTimeUtc(dir); } catch { }
                 var album = AlbumOf(dir);
+                var disc = album == dir ? 0 : 1;
                 albums[album] = albums.TryGetValue(album, out var e)
-                    ? (e.dir, e.tracks + audio.Count, e.size + size, when > e.when ? when : e.when)
-                    : (album, audio.Count, size, when);
+                    ? (e.dir, e.tracks + audio.Count, e.size + size, when > e.when ? when : e.when, e.discs + disc)
+                    : (album, audio.Count, size, when, disc);
             }
             foreach (var a in albums.Values)
-                list.Add(new { dir = a.dir, name = Path.GetFileName(a.dir), tracks = a.tracks, size = a.size, at = (long)(a.when - new DateTime(1970, 1, 1)).TotalMilliseconds });
+                list.Add(new { dir = a.dir, name = Path.GetFileName(a.dir), tracks = a.tracks, discs = a.discs, size = a.size, at = (long)(a.when - new DateTime(1970, 1, 1)).TotalMilliseconds });
             return list;
         }
 
