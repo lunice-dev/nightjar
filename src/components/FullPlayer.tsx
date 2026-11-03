@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { audioCtl, canSetVolume, fmtTime, trackTier, usePlayer, type QueueItem } from '../lib/player';
-import { useEngine } from '../lib/engine';
+import { bitPerfectAvailable, useEngine } from '../lib/engine';
+import { HeldVolume, OutputControl } from './SoundOutput';
 import { generatedCover } from '../lib/covers';
 import { Icon } from './Icon';
 import { WindowControls } from './WindowControls';
@@ -528,22 +529,47 @@ export function FullPlayer({
             </button>
           </div>
 
-          {canSetVolume && !exclusive && (
-            <div className="fp-volume">
-              <VolumeGlyph level={0} />
-              <input
-                className="fp-seek fp-vol"
-                type="range"
-                min={0}
-                max={1}
-                step={0.02}
-                value={volume}
-                aria-label="Volume"
-                style={{ ['--p' as string]: `${volume * 100}%` }}
-                onChange={(e) => p.setVolume(parseFloat(e.target.value))}
-              />
-              <VolumeGlyph level={2} />
+          {bitPerfectAvailable ? (
+            // On the computer the volume's place also says where the sound goes, and holds the menu to change it.
+            <div className="fp-volume fp-sound">
+              {canSetVolume && !exclusive && (
+                <div className="fp-vol-row">
+                  <VolumeGlyph level={0} />
+                  <input
+                    className="fp-seek fp-vol"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    value={volume}
+                    aria-label="Volume"
+                    style={{ ['--p' as string]: `${volume * 100}%` }}
+                    onChange={(e) => p.setVolume(parseFloat(e.target.value))}
+                  />
+                  <VolumeGlyph level={2} />
+                </div>
+              )}
+              <HeldVolume className="fp-held" />
+              <OutputControl />
             </div>
+          ) : (
+            canSetVolume && (
+              <div className="fp-volume">
+                <VolumeGlyph level={0} />
+                <input
+                  className="fp-seek fp-vol"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.02}
+                  value={volume}
+                  aria-label="Volume"
+                  style={{ ['--p' as string]: `${volume * 100}%` }}
+                  onChange={(e) => p.setVolume(parseFloat(e.target.value))}
+                />
+                <VolumeGlyph level={2} />
+              </div>
+            )
           )}
 
           <div className="fp-options">

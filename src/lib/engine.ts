@@ -43,6 +43,22 @@ export interface EngineDevice {
   isDefault: boolean;
   /** What it takes in exclusive mode, as "rate:depths", for example "96000:16/24/32". */
   exclusive: string[];
+  /** The rate Windows mixes at for it (older apps don't say). */
+  mix?: number;
+}
+
+/** "Auscultadores (KM-HIFI-384KHZ)" → name "KM-HIFI-384KHZ", kind "Auscultadores": Windows puts the kind of output first. */
+export function splitDeviceName(full: string | null | undefined): { name: string; kind: string } {
+  const m = /^(.+?)\s*\((.+)\)\s*$/.exec(full ?? '');
+  return m ? { name: m[2], kind: m[1] } : { name: full ?? '', kind: '' };
+}
+
+/** Whether a device takes a file as it is: the file's own rate, at its depth or in a wider slot. */
+export function takesAsIs(d: EngineDevice, rate: number, bits: number) {
+  return d.exclusive.some((x) => {
+    const [r, depths] = x.split(':');
+    return +r === rate && depths.split('/').some((b) => +b >= bits);
+  });
 }
 
 export interface EngineApi {
@@ -122,6 +138,9 @@ interface EngineState {
   /** The chosen output, or null for whatever Windows uses by default. */
   device: string | null;
   now: EngineNow | null;
+  /** The computer's sound outputs, once asked for (null before, or with an app too old to say). */
+  devices: EngineDevice[] | null;
+  loadDevices(): Promise<void>;
   setOn(on: boolean): void;
   setDevice(id: string | null): void;
 }
@@ -130,6 +149,16 @@ export const useEngine = create<EngineState>((set) => ({
   on: bitPerfectAvailable && read(ON_KEY) === '1',
   device: read(DEVICE_KEY) || null,
   now: null,
+  devices: null,
+  async loadDevices() {
+    if (!bitPerfectAvailable) return;
+    try {
+      const r = await engineApi.devices();
+      if (Array.isArray(r?.devices)) set({ devices: r.devices });
+    } catch {
+      /* the app is busy or too old: the menu shows what it had */
+    }
+  },
   setOn(on) {
     write(ON_KEY, on ? '1' : null);
     set({ on: on && bitPerfectAvailable, now: null });

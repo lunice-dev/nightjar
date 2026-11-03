@@ -121,7 +121,9 @@ namespace Nightjar
                             var depths = Depths.Where(b => Accepts(dev, Make(r, b, 2))).ToList();
                             if (depths.Count > 0) formats.Add(r + ":" + string.Join("/", depths));
                         }
-                        list.Add(new { id = dev.ID, name = dev.FriendlyName, isDefault = dev.ID == def, exclusive = formats });
+                        int mix = 0;
+                        try { mix = dev.AudioClient.MixFormat.SampleRate; } catch { }
+                        list.Add(new { id = dev.ID, name = dev.FriendlyName, isDefault = dev.ID == def, exclusive = formats, mix });
                     }
                 }
             }

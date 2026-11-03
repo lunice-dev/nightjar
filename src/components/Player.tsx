@@ -12,6 +12,7 @@ import { dockGroupOf, useNowDock } from '../lib/nowDock';
 import { useDockVisible } from './NowDock';
 import { bitPerfectAvailable, takeOver, useEngine } from '../lib/engine';
 import { onMediaKey } from '../lib/host';
+import { OutputControl, SoundPanel } from './SoundOutput';
 
 /**
  * Tells the lock screen exactly where the song is, at the moments its own guess would drift: a new track,
@@ -357,6 +358,7 @@ export function Player() {
           <button className={`player-queue-btn${dockOn ? ' on' : ''}`} onClick={() => useNowDock.getState().toggle(dockGroupOf(useStore.getState().route))} aria-pressed={dockOn} title="Show or hide the panel with the tracklist">
             Queue
           </button>
+          <OutputControl compact />
           {canSetVolume && !exclusive && (
             <span className="player-vol">
               <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -385,7 +387,7 @@ export function Player() {
         </div>
       </div>
     </div>
-      {expanded && <FullPlayer cover={cover} time={time} duration={duration} waiting={waiting} quality={<QualityInfo />} chip={<QualityChip />} />}
+      {expanded && <FullPlayer cover={cover} time={time} duration={duration} waiting={waiting} quality={bitPerfectAvailable ? <SoundPanel /> : <QualityInfo />} chip={<QualityChip />} />}
     </>
   );
 }
@@ -414,29 +416,11 @@ function QualityChip() {
  */
 function QualityInfo() {
   const { queue, index, dataSaver, converted } = usePlayer();
-  const engine = useEngine();
   const t = queue[index];
   if (!t) return null;
   const src = sourceQuality(t);
   const s = sending(t, dataSaver, converted);
   const ios = isIos();
-  const now = engine.on ? engine.now : null;
-  if (now?.mode === 'engine') {
-    return (
-      <div className="pq">
-        <dl>
-          <dt>The file</dt>
-          <dd>{src.long}</dd>
-          <dt>Sound device</dt>
-          <dd>
-            {now.device}: {now.format}. Bit-perfect: the file’s own samples, at its own rate, with nothing from Windows in between.
-          </dd>
-          <dt>Volume</dt>
-          <dd>Set it on the device or amplifier. Windows’ volume doesn’t apply while nightjar has the device.</dd>
-        </dl>
-      </div>
-    );
-  }
   const above48 = t.rate > 48000;
   return (
     <div className="pq">
@@ -448,15 +432,6 @@ function QualityInfo() {
           {s.label}
           {converted && !dataSaver ? ' (this device couldn’t play the original)' : dataSaver && s.aac ? ' (Use less data is on)' : src.lossless && !s.aac ? ', bit for bit' : ''}
         </dd>
-        {now?.mode === 'normal' && (
-          <>
-            <dt>Bit-perfect</dt>
-            <dd>
-              {now.reason ? `Not for this track: ${now.reason}` : 'Not for this track.'}{' '}
-              {now.device && now.format ? `On ${now.device}, ${now.format}.` : 'It plays through Windows instead.'}
-            </dd>
-          </>
-        )}
         {ios && (
           <>
             <dt>iPhone</dt>
