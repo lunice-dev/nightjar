@@ -16,6 +16,7 @@ import { useStore } from '../store';
 import { useLocalFiles, groupCoverDir, relocatedDir } from '../lib/useLocal';
 import { Cover } from '../components/Cover';
 import { dirOf, joinPath, localShareDir } from '../lib/covers';
+import { albumFolders } from '../lib/albumFolders';
 import { uuid } from '../lib/uuid';
 import { rescanSoon } from '../lib/shareVersion';
 import { uploadStats } from '../lib/uploadStats';
@@ -660,28 +661,26 @@ function TransferRow({
     setDiskTick((n) => n + 1);
   };
   // Parts of one album in several folders (a retry went to the engine's own folder): where most of it is, and the rest.
-  const folders = useMemo(() => {
-    const dl = where.downloadDir?.replace(/[\\/]+$/, '').toLowerCase();
-    const count = new Map<string, { dir: string; n: number }>();
-    for (const p of saved) {
-      const dir = dirOf(p);
-      if (!dl || !dir.toLowerCase().startsWith(dl + '\\')) continue;
-      const e = count.get(dir.toLowerCase()) ?? { dir, n: 0 };
-      e.n++;
-      count.set(dir.toLowerCase(), e);
-    }
-    const list = [...count.values()].sort((a, b) => b.n - a.n);
-    return { target: list[0]?.dir, others: list.slice(1).map((e) => e.dir), all: list.length };
-  }, [saved, where.downloadDir]);
+  // Counted by album folder: "CD 01" and "CD 02" are one album's discs, not two places.
+  const folders = useMemo(() => albumFolders(saved, where.downloadDir), [saved, where.downloadDir]);
   const gather = async () => {
-    if (!folders.target) return;
-    const r = await backend?.files.mergeFolders(folders.others, folders.target);
-    if (!r) toast('This needs the newest nightjar app on your computer. Update it, then try again.', 'error');
-    else {
-      // Their files are in the one folder now: cards and plans follow.
-      folders.others.forEach((from) => folders.target && usePrefs.getState().albumMoved(from, folders.target));
-      toast(`Gathered into one folder:${r.moved} moved${r.duplicates ? `, ${r.duplicates} extra ${r.duplicates === 1 ? 'copy' : 'copies'} to the Recycle Bin` : ''}`, 'info');
+    if (!folders.target || !backend) return;
+    // The app moves the files sitting in a folder, so each disc goes into the same disc of the album that stays.
+    let moved = 0;
+    let duplicates = 0;
+    for (const disc of folders.discs) {
+      const from = folders.others.map((o) => (disc ? joinPath(o, disc) : o));
+      const r = await backend.files.mergeFolders(from, disc ? joinPath(folders.target, disc) : folders.target);
+      if (!r) {
+        toast('This needs the newest nightjar app on your computer. Update it, then try again.', 'error');
+        return;
+      }
+      moved += r.moved;
+      duplicates += r.duplicates;
     }
+    // Their files are in the one folder now: cards and plans follow.
+    folders.others.forEach((from) => folders.target && usePrefs.getState().albumMoved(from, folders.target));
+    toast(`Gathered into one folder:${moved} moved${duplicates ? `, ${duplicates} extra ${duplicates === 1 ? 'copy' : 'copies'} to the Recycle Bin` : ''}`, 'info');
     setDiskTick((n) => n + 1);
     rescanSoon(2000);
   };

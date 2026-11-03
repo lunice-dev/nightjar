@@ -100,6 +100,9 @@ const SEP = /[\\/]/;
 // Sub-folders for one disc or side of an album: "CD1", "Disc 2", "Disc 2 - Twilight to Starlight", "Side A", '12" Vinyl 01'
 const DISC = /^((cd|disc|disk)\s*\d{1,2}(\s*[-–—:._]\s*.+|\s*[([].+[)\]])?|(side|vinyl|lp)\s*[\da-d]{1,2}|\d{1,2}("|''|”|in|inch)?\s*vinyl\s*\d{1,2})$/i;
 
+/** A folder for one disc or side of an album ("CD 01", "Disc 2", "Side A"), not an album of its own. */
+export const isDiscFolder = (name: string) => DISC.test(name.trim());
+
 export function splitFolder(path: string) {
   const parts = path.split(SEP).filter(Boolean);
   parts.pop(); // file name
