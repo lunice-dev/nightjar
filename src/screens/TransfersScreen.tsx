@@ -62,10 +62,13 @@ export function TransfersScreen({ direction }: { direction: Direction }) {
   const queued = groups.filter((g) => g.phase === 'queued');
   // An album paused as the wrong one isn't finished: it waits for your answer.
   const ended = (g: DownloadGroup) => g.phase === 'done' || g.phase === 'cancelled';
-  const failedGroups = groups.filter((g) => g.phase === 'failed' || (ended(g) && wrongAlbum(g)));
+  // An upload that stopped on their side (they cancelled, went offline, lost their connection) needs nothing from you:
+  // it is simply over, and its card still says why. Needs attention keeps the ones on this computer.
+  const theirs = (g: DownloadGroup) => direction === 'upload' && g.phase === 'failed' && !g.files.some((f) => uploadReason(f)?.ours);
+  const failedGroups = groups.filter((g) => (g.phase === 'failed' && !theirs(g)) || (ended(g) && wrongAlbum(g)));
   // Finished: most recently ended first, so the newest is always at the top of its day.
   const done = groups
-    .filter((g) => ended(g) && !wrongAlbum(g))
+    .filter((g) => (ended(g) && !wrongAlbum(g)) || theirs(g))
     .sort((a, b) => (b.endedAt || b.time) - (a.endedAt || a.time));
   const finished = [...failedGroups, ...done];
   // slskd sends one file at a time to each person: a waiting upload may only be waiting behind their other album.

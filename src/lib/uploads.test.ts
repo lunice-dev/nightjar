@@ -30,6 +30,14 @@ describe('why an upload didn’t go through', () => {
     expect(r('Completed, Errored', 'User jirayang appears to be offline')?.text).toBe('They went offline');
     expect(r('Completed, Rejected', 'Transfer rejected: Cancelled')?.text).toBe('They cancelled it');
     expect(r('Completed, TimedOut')?.text).toBe('They didn’t start it in time');
+    // Windows adds its own reason in the system's language; the English part is enough.
+    expect(r('Completed, Errored', 'Write error: Unable to write data to the transport connection: Uma ligação existente foi forçada a fechar pelo anfitrião.')?.text).toMatch(/^Their side stopped it/);
+  });
+
+  it('never shows the engine’s raw message as the reason (it stays under Details)', () => {
+    const odd = r('Completed, Errored', 'System.InvalidOperationException: Sequence contains more than one element');
+    expect(odd?.text).toBe('It stopped for a reason nightjar doesn’t recognise');
+    expect(odd?.detail).toContain('Sequence contains');
   });
 
   it('stays neutral when either side could be the cause', () => {

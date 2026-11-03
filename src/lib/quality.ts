@@ -103,15 +103,24 @@ const DISC = /^((cd|disc|disk)\s*\d{1,2}(\s*[-–—:._]\s*.+|\s*[([].+[)\]])?|(
 /** A folder for one disc or side of an album ("CD 01", "Disc 2", "Side A"), not an album of its own. */
 export const isDiscFolder = (name: string) => DISC.test(name.trim());
 
+// Folders named only after the format ("24bit", "FLAC 24-96", "MP3 320", "[Hi-Res]"): the album's name is the folder above.
+const FORMAT_ONLY = /^[[(]?\s*(\d{2}\s*-?\s*bits?(\s*[/ -]\s*\d{2,3}([.,]\d)?\s*k?hz)?|\d{2}\s*[-/]\s*\d{2,3}([.,]\d)?(\s*k?hz)?|\d{2,3}([.,]\d)?\s*k?hz|flac(\s*\d{2}(\s*-?\s*bits?)?)?(\s*\d{2}\s*[-/]\s*\d{2,3}([.,]\d)?)?|hi-?res|lossless|mp3(\s*\d{3})?|\d{3}\s*kbps|v0|wav|alac|aiff?)\s*[\])]?$/i;
+
+/** A folder named only after the format ("24bit", "FLAC", "MP3 320"), not after the album. */
+export const isFormatFolder = (name: string) => FORMAT_ONLY.test(name.trim());
+
 export function splitFolder(path: string) {
   const parts = path.split(SEP).filter(Boolean);
   parts.pop(); // file name
   let titleIdx = parts.length - 1;
   if (titleIdx > 0 && DISC.test(parts[titleIdx])) titleIdx--;
+  // The album's files stay where they are (a "24bit" folder's parent may also hold the "16bit" one); only its name comes from above.
+  const rootIdx = titleIdx;
+  if (titleIdx > 0 && isFormatFolder(parts[titleIdx])) titleIdx--;
   return {
     folder: parts.join('\\'),
     /** The album's own folder: the same as `folder`, or its parent when the file sits in a disc folder. */
-    root: parts.slice(0, titleIdx + 1).join('\\'),
+    root: parts.slice(0, rootIdx + 1).join('\\'),
     title: parts[titleIdx] ?? '(root)',
     parent: parts[titleIdx - 1] ?? '',
   };

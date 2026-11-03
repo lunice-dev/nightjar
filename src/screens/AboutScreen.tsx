@@ -64,6 +64,11 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'The large player’s tracklist lines up with the cover and the controls',
       'Fixed the lyrics layout in the large player',
       'Fixed pop-up messages being hard to read in the Glass theme',
+      'The Library and Home show an album as soon as it is put in the Library',
+      'Messages shows the last message of each conversation',
+      'Uploads that the other person stopped go to Finished instead of Needs attention',
+      'Fixed some upload problems showing Windows’ own error text',
+      'Search names an album kept in a folder like “24bit” or “FLAC” after its real folder',
     ],
   },
   {

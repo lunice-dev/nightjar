@@ -10,7 +10,28 @@ export function MessagesScreen() {
   const chatWith = useStore((s) => s.chatWith);
   const message = useStore((s) => s.message);
   const ignored = usePrefs((s) => s.ignored);
+  const backend = useStore((s) => s.backend);
   const [start, setStart] = useState('');
+
+  // The engine lists conversations without their messages, so each one's newest message is asked for here: again when
+  // its unread count changes (a message came in) and when another conversation is opened (one may have gone out).
+  const [latest, setLatest] = useState<Record<string, ChatMessage | undefined>>({});
+  const changed = conversations.map((c) => `${c.username}:${c.unAcknowledgedMessageCount}`).join('|');
+  useEffect(() => {
+    if (!backend) return;
+    let alive = true;
+    for (const c of conversations) {
+      if (c.messages?.length) continue;
+      backend
+        .messages(c.username)
+        .then((m) => alive && setLatest((l) => ({ ...l, [c.username]: m[m.length - 1] })))
+        .catch(() => undefined);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [backend, changed, chatWith]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lastOf = (c: { username: string; messages?: ChatMessage[] }) => c.messages?.[c.messages.length - 1] ?? latest[c.username];
 
   const list = useMemo(() => {
     const items = conversations.filter((c) => !ignored.includes(c.username) || c.username === chatWith);
@@ -18,9 +39,9 @@ export function MessagesScreen() {
     if (chatWith && !items.some((c) => c.username === chatWith)) {
       items.unshift({ username: chatWith, isActive: true, unAcknowledgedMessageCount: 0, messages: [] });
     }
-    const last = (c: (typeof items)[number]) => c.messages?.[c.messages.length - 1]?.timestamp ?? '9';
+    const last = (c: (typeof items)[number]) => lastOf(c)?.timestamp ?? '9';
     return items.sort((a, b) => last(b).localeCompare(last(a)));
-  }, [conversations, chatWith, ignored]);
+  }, [conversations, chatWith, ignored, latest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="split">
@@ -43,7 +64,7 @@ export function MessagesScreen() {
         {list.length === 0 && <p className="hint-text pad">No conversations yet. Type a username above, or choose Message on someone’s profile.</p>}
         <ul className="convos">
           {list.map((c) => {
-            const last = c.messages?.[c.messages.length - 1];
+            const last = lastOf(c);
             return (
               <li key={c.username}>
                 <button className="convo" aria-current={chatWith === c.username} onClick={() => message(c.username)}>

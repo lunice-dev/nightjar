@@ -146,3 +146,17 @@ export const useLibraryReview = create<Review>()(
     },
   ),
 );
+
+// An album put in the library (or moved back to Downloads) changes what the library holds: look again once the moves
+// settle, so Library and search results show it without pressing "Look again". Only when there is a look to refresh.
+if (typeof window !== 'undefined') {
+  let soon: ReturnType<typeof setTimeout> | undefined;
+  const again = () => {
+    clearTimeout(soon);
+    soon = setTimeout(() => {
+      if (useLibraryReview.getState().scan) void useLibraryReview.getState().load(true);
+    }, 1500);
+  };
+  window.addEventListener('nightjar-library-changed', again);
+  window.addEventListener('nightjar-library-undone', again);
+}

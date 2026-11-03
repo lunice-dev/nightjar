@@ -54,9 +54,11 @@ export function uploadReason(t: Pick<Transfer, 'state' | 'exception'>): UploadRe
   if (e.includes('offline')) return say('They went offline');
   if (s === 'Completed, Rejected' || /rejected|cancelled by the remote|remote.*cancel/.test(e)) return say('They cancelled it');
   if (s === 'Completed, TimedOut' || e.includes('timed out')) return say('They didn’t start it in time');
-  if (/remote connection closed|failed to read|connection reset|forcibly closed/.test(e))
+  // The connection dropped mid-file. Windows adds its own reason in the system's language, so match .NET's English part.
+  if (/remote connection closed|failed to read|connection reset|forcibly closed|transport connection|unable to (read|write) data|connection was aborted/.test(e))
     return say('Their side stopped it: they cancelled, closed their app or lost their connection');
   if (/direct or indirect/.test(e))
     return say('Couldn’t connect to them. Usually their port is closed; if this happens with everyone, check yours in Settings');
-  return say(detail ? detail.replace(/^.*?:\s*(?=[A-Z])/, '').slice(0, 120) : 'It stopped');
+  // Anything else: plain words here, the engine's own message stays under Details.
+  return say('It stopped for a reason nightjar doesn’t recognise');
 }
