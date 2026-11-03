@@ -2,6 +2,27 @@ import type { DownloadPlan } from '../prefs';
 
 const SAME_ALBUM_WITHIN_MS = 6 * 3_600_000;
 
+/** A title or artist as people write it, without case, punctuation, years in brackets or tags like "[FLAC 24]". */
+const plain = (s?: string | null) =>
+  (s ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\[[^\]]*\]|\((?:19|20)\d\d\)|\{[^}]*\}/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+/**
+ * The same album from someone else's copy: the same title and artist, however each person named their folder. When one
+ * folder doesn't say who the artist is, the title alone decides.
+ */
+export function sameRelease(a: { title?: string | null; artist?: string | null }, b: { title?: string | null; artist?: string | null }) {
+  const ta = plain(a.title);
+  if (!ta || ta !== plain(b.title)) return false;
+  const aa = plain(a.artist);
+  const ab = plain(b.artist);
+  return !aa || !ab || aa === ab;
+}
+
 const sameAlbum = (a: DownloadPlan, b: DownloadPlan) =>
   a.key === b.key && a.destination.toLowerCase() === b.destination.toLowerCase() && Math.abs(a.createdAt - b.createdAt) < SAME_ALBUM_WITHIN_MS;
 

@@ -1,5 +1,5 @@
 import { enqueueOnce } from './ask';
-import { mergeDuplicatePlans } from './plans';
+import { mergeDuplicatePlans, sameRelease } from './plans';
 import type { EnqueueFile, Transfer, TransferUser } from '../api/types';
 import { usePrefs, type DownloadPlan, type PlanTrack, type SourceOption } from '../prefs';
 import { useStore } from '../store';
@@ -236,10 +236,12 @@ export async function smartDownload(release: Release, chosen: FolderResult) {
   if (!backend) return;
   const { smart, plans } = usePrefs.getState();
 
-  // The same album asked for again while it is still coming would be a second plan, a second card and a second set of files.
-  const again = plans.find((p) => p.key === chosen.key && !p.finishedAt && Date.now() - p.createdAt < 6 * 3_600_000);
+  // The same album asked for again while it is still coming would be a second plan, a second card and a second set of
+  // files: from the same copy, or from someone else's (another device may have picked a different one a moment ago).
+  const coming = plans.filter((p) => !p.finishedAt && Date.now() - p.createdAt < 6 * 3_600_000);
+  const again = coming.find((p) => p.key === chosen.key) ?? coming.find((p) => sameRelease(p, { title: chosen.title, artist: chosen.parent }));
   if (again) {
-    toast(`${again.title} is already downloading`);
+    toast(again.key === chosen.key ? `${again.title} is already downloading` : `${again.title} is already downloading from another copy. To get this one instead, cancel that one in Downloads.`);
     return;
   }
 

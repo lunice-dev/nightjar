@@ -52,7 +52,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'While bit-perfect plays, the volume is set on the device itself. After half a minute paused, other programs can use it again',
       'A device that can’t take a file as it is still plays it, converted by Windows',
       'A Statistics page: lifetime totals, a chart over time, people, file types, busiest hours and records. On a phone it is in More',
-      'Asking for an album that is already downloading no longer starts a second copy',
+      'Asking for an album that is already downloading no longer starts a second copy, even from someone else’s copy or another device',
       'An album no longer shows as waiting in the short gap between two tracks',
       'More of an album goes into its folder, and tracks already there are left out',
       'An album split across folders can be gathered into one',
