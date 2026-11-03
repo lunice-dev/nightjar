@@ -3047,11 +3047,11 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 
 .snd { padding: 22px 24px 20px; border-radius: 16px; background: rgb(0 0 0 / 0.22); color: var(--fp-ink); font-size: 14px; --hl: var(--fp-ink-2); }
 .fp-details .snd { margin-bottom: 12px; }
-/* Beside the player, the panel takes the queue's place: its head (with the way back to the queue) stays at the top,
-   and the Sound panel sits in the middle of the space below, without a box of its own. */
-.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details .fp-panel-head { display: flex; }
-.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) { display: flex; flex-direction: column; }
-.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details > .snd { margin: auto 0; background: none; }
+/* Beside the player, the panel takes the queue's place: its head (with the way back to the queue) and the Sound panel
+   stay together as one block in the middle of that space, on the same left edge, without a box of their own. */
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details .fp-panel-head { display: flex; position: static; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details:has(> .snd) { display: flex; flex-direction: column; justify-content: center; }
+.full-player.rail .fp-body.np:not(.lyrics-on) .fp-details > .snd { margin: 0; padding: 10px 4px 0; background: none; }
 .snd-perfect { --hl: var(--so-ok); }
 .snd-converted { --hl: var(--so-warn); }
 .snd-verdict { display: flex; align-items: center; gap: 12px; }
