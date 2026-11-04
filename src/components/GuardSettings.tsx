@@ -51,6 +51,20 @@ export function GuardSection({ settings, readOnly, onSaved }: { settings: Settin
     if (await setBlocked(user, false)) allow(user);
   };
 
+  // A wave of new accounts is one row; allowing it again lifts every account in one change to the list.
+  const undoWave = async (b: { user: string; users?: string[] }) => {
+    const users = b.users ?? [];
+    try {
+      const s = await backend!.settings();
+      await backend!.saveSettings({ blocked: s.blocked.filter((u) => !users.includes(u)) });
+      for (const u of users) allow(u);
+      useGuard.setState((g) => ({ blocked: g.blocked.filter((x) => x.user !== b.user), waves: Object.fromEntries(Object.entries(g.waves).filter(([k]) => `wave:${k}` !== b.user)) }));
+      toast(`${users.length} accounts can download from you again`);
+    } catch (e) {
+      toast(`Couldn't update your sharing list: ${(e as Error).message}`, 'error');
+    }
+  };
+
   return (
     <section className="settings-block" id="programs" aria-labelledby="programs-h">
       <h2 id="programs-h">Programs and heavy downloading</h2>
@@ -65,7 +79,8 @@ export function GuardSection({ settings, readOnly, onSaved }: { settings: Settin
           Block programs automatically
           <small className="dim" style={{ display: 'block' }}>
             Anyone who opens more than 40 of your folders in a minute, asks for 1,000 files in half an hour or takes 800 files in an hour is blocked
-            at once and their downloads stop. People on your People list are never blocked.
+            at once and their downloads stop. So is a wave of new accounts with made-up names (five or more inside an hour, each taking a few
+            files). People on your People list are never blocked.
             {!onThisComputer && ' This runs on the computer where nightjar is installed.'}
           </small>
         </span>
@@ -115,12 +130,12 @@ export function GuardSection({ settings, readOnly, onSaved }: { settings: Settin
             {blocked.map((b) => (
               <li key={b.user}>
                 <span>
-                  <b>{b.user}</b>
+                  <b>{b.users ? `${b.users.length} new accounts with made-up names` : b.user}</b>
                   <small className="dim">
-                    {when(b.at)}: {b.summary}
+                    {when(b.at)}: {b.users ? 'a wave of accounts like “' + b.users[0] + '”, each taking a few files' : b.summary}
                   </small>
                 </span>
-                <button className="link" disabled={readOnly} onClick={() => undo(b.user)}>
+                <button className="link" disabled={readOnly} onClick={() => (b.users ? undoWave(b) : undo(b.user))}>
                   Allow again
                 </button>
               </li>

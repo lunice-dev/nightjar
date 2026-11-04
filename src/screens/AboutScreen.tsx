@@ -74,6 +74,7 @@ const CHANGES: { version: string; date: string; title: string; items: string[] }
       'Signed-in devices show when each one was added, so phones with the same name can be told apart',
       'A search with more than a thousand answers says so',
       'Fixed Escape closing the whole large player when only its “…” menu was open',
+      'Protection blocks a wave of new accounts with made-up names that each take a few files, and lists the wave as one entry you can allow again',
     ],
   },
   {
