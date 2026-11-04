@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverDirs } from './Cover';
+import { coverDirs } from './coverDirs';
 
 describe('where an album’s picture can be', () => {
   it('is the album folder above a disc folder as well', () => {

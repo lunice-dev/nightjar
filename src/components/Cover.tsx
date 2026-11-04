@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { dirOf, generatedCover, onlineCover } from '../lib/covers';
-import { basename, isDiscFolder } from '../lib/quality';
+import { generatedCover, onlineCover } from '../lib/covers';
+import { coverDirs } from '../lib/coverDirs';
 import { coverSize } from '../api/slskd';
 import { useStore } from '../store';
 
@@ -13,9 +13,6 @@ import { useStore } from '../store';
 const found = new Map<string, string>();
 /** The last picture shown for an album at any size: a cover that mounts again shows it at once, then sharpens if needed. */
 const foundAny = new Map<string, string>();
-
-/** The folders that may hold an album's picture: a track's disc folder (CD 1) keeps it in the album folder above. */
-export const coverDirs = (dir?: string): string[] => (!dir ? [] : isDiscFolder(basename(dir)) ? [dir, dirOf(dir)] : [dir]);
 
 /** A picture already shown for this folder (or its album folder) anywhere in the app, whatever it came from. */
 export function shownCoverFor(dir?: string): string | undefined {
