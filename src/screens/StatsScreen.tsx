@@ -145,7 +145,7 @@ function Big({ label, value, sub, delta }: { label: string; value: string; sub?:
     <div className="st-card">
       <p className="st-label">{label}</p>
       <p className="st-big">{value}</p>
-      <p className="st-sub">
+      <p className="sx-sub">
         {delta && <span className={delta.up ? 'up' : 'down'}>{delta.text}</span>} {sub}
       </p>
     </div>

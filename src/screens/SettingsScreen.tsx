@@ -528,7 +528,7 @@ function Notifications() {
       </div>
       <p className="hint-text" style={{ marginTop: 14 }}>
         {!supported || permission === 'denied' ? (
-          'System notifications are blocked in this browser. Allow them in the site settings to get them.'
+          'Notifications are blocked for this page. Allow them in the browser’s or the phone’s settings for nightjar to get them.'
         ) : permission === 'granted' ? (
           'System notifications are on.'
         ) : (

@@ -346,7 +346,9 @@ function Middle() {
             </form>
           )}
           {playlists.length === 0 ? (
-            !naming && <p className="hx-empty">Add an album to a playlist from the “…” beside its name, or right-click a cover.</p>
+            !naming && (
+              <p className="hx-empty">Add an album to a playlist from the “…” beside its name{matchMedia('(pointer: coarse)').matches ? '' : ', or right-click a cover'}.</p>
+            )
           ) : (
             <Fit items={playlists}>
               {(p) => (
