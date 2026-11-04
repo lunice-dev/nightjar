@@ -3197,3 +3197,15 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .fp-controls .fp-icon.small { display: none; }
   .fp-controls { justify-content: center; gap: 28px; }
 }
+
+/* Rooms and Messages on touch screens: the restyle's wider paddings and the people column had won over the narrow-screen rules. */
+@media (max-width: 1000px) {
+  .room { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 699px) {
+  .thread-head { padding: 10px 12px; }
+  .thread-title { font-size: 18px; }
+  .messages { padding: 12px 16px; }
+  .composer { padding: 10px 16px 12px; gap: 8px; }
+  .msg-body { overflow-wrap: anywhere; }
+}
