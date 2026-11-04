@@ -255,6 +255,7 @@ function useDownloadManager() {
     let busy = false;
     let pulled = Date.now(); // the page just loaded the shared copy
     let tidied = 0;
+    let groupsTidied = false;
     const id = uuid();
     const t = setInterval(async () => {
       if (busy) return;
@@ -272,6 +273,16 @@ function useDownloadManager() {
         const backend = useStore.getState().backend;
         managing = !!backend && (await backend.files.lease(id));
         if (!backend || !managing) return;
+        // "Uploads at once" counts people: each person gets one file at a time (once, where nobody has set it already).
+        if (!groupsTidied) {
+          groupsTidied = true;
+          backend
+            .oneFilePerPerson()
+            .then(async (changed) => {
+              if (changed && (await backend.restartNeeded().catch(() => false))) useStore.getState().toast('Each person now gets one file at a time. Restart nightjar for it to start.');
+            })
+            .catch(() => undefined);
+        }
         // Retries of uploads that failed: clear the failed entry the engine would trip over (every 30 s is plenty).
         if (Date.now() - tidied > 30_000) {
           tidied = Date.now();

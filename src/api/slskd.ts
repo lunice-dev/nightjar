@@ -1,3 +1,4 @@
+import { oneFilePerPersonYaml } from '../lib/uploadGroups';
 import type { StreamAs } from '../lib/player';
 import { uuid } from '../lib/uuid';
 import { quietEnough } from '../lib/searchQuiet';
@@ -385,6 +386,18 @@ export class SlskdBackend implements Backend {
     return this.request<TransferUser[]>('GET', `/transfers/${direction}s`);
   }
 
+  async oneFilePerPerson() {
+    const o = await this.request<SlskdOptions>('GET', '/options');
+    if (!o.remoteConfiguration) return false;
+    const raw = await this.request<string>('GET', '/options/yaml');
+    const yaml = oneFilePerPersonYaml(typeof raw === 'string' ? raw : '');
+    if (!yaml) return false;
+    const errors = await this.request<string | null>('POST', '/options/yaml/validate', yaml).catch(() => null);
+    if (errors) throw new ApiError(String(errors), 400);
+    await this.request('PUT', '/options/yaml', yaml);
+    return true;
+  }
+
   async history(direction: Direction) {
     const users = await this.request<TransferUser[]>('GET', `/transfers/${direction}s?includeRemoved=true`, undefined, 120_000);
     return users.flatMap((u) => u.directories.flatMap((d) => d.files));
@@ -616,7 +629,7 @@ export class SlskdBackend implements Backend {
         if (doc.getIn([...DEFAULT_GROUP, 'upload', 'priority']) === 2) doc.deleteIn([...DEFAULT_GROUP, 'upload', 'priority']);
       } else {
         // Friends are priority 1, everyone else 2: the engine serves the lowest number first.
-        if (!doc.hasIn(FRIENDS)) doc.setIn(FRIENDS, { upload: { priority: 1, strategy: 'firstinfirstout' }, members: [] });
+        if (!doc.hasIn(FRIENDS)) doc.setIn(FRIENDS, { upload: { priority: 1, strategy: 'firstinfirstout', slots: 1 }, members: [] });
         doc.setIn([...DEFAULT_GROUP, 'upload', 'priority'], 2);
         if (patch.friends !== undefined) setList(doc, [...FRIENDS, 'members'], patch.friends);
       }

@@ -401,6 +401,10 @@ export class DemoBackend implements Backend {
     peekTags: async () => null,
   };
 
+  async oneFilePerPerson() {
+    return false;
+  }
+
   async history(direction: Direction): Promise<Transfer[]> {
     const want = direction === 'upload' ? 'Upload' : 'Download';
     const r = rng(`history:${want}`);

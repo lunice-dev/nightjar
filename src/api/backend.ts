@@ -66,6 +66,8 @@ export interface Backend {
   pastResponses(text: string, exceptId: string): Promise<SearchResponse[]>;
   cancel(direction: Direction, username: string, id: string, remove: boolean): Promise<void>;
   clearCompleted(direction: Direction): Promise<void>;
+  /** Each person gets one file at a time, so Uploads at once counts people, not files. True when the config was changed (the engine may need a restart). */
+  oneFilePerPerson(): Promise<boolean>;
 
   browse(username: string): Promise<BrowseResult>;
   /**
