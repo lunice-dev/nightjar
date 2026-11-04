@@ -14,15 +14,19 @@ export const WAVE = { accounts: 5, window: 60 * MIN, maxFiles: 10 };
 export const WAVE_MEMORY = 7 * 24 * 60 * MIN;
 
 /**
- * The kind of name when it looks machine-made, else null: a letter or nothing, then ten or more hex digits with both
- * digits and a–f in them ("u3f9a1c07be2d" is "u:12": a "u" and twelve digits). Plain numbers ("936442997") and words are people.
+ * The kind of name when it looks machine-made, else null: ten or more hex digits, with a letter in front ("u3f9a1c07be2d"
+ * is "u:12": a "u" and twelve digits; random hex is sometimes all digits, so that is fine) or, with no letter in front,
+ * both digits and a–f in them. Plain numbers ("936442997") and words are people.
  */
 export function nameKind(user: string): string | null {
   const m = /^([a-z]?)([0-9a-f]{10,32})$/.exec(user);
   if (!m) return null;
-  const hex = m[2];
-  if ((hex.match(/[0-9]/g)?.length ?? 0) < 2 || (hex.match(/[a-f]/g)?.length ?? 0) < 2) return null;
-  return `${m[1] || '-'}:${hex.length}`;
+  const [, prefix, hex] = m;
+  const digits = hex.match(/[0-9]/g)?.length ?? 0;
+  const letters = hex.match(/[a-f]/g)?.length ?? 0;
+  if (digits < 2) return null;
+  if (!prefix && letters < 2) return null;
+  return `${prefix || '-'}:${hex.length}`;
 }
 
 export interface Account {

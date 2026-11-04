@@ -11,6 +11,10 @@ describe('names no person types', () => {
     expect(nameKind('u3f9a1c07be2d')).toBe('u:12');
     expect(nameKind('9a1c07be2d4f81')).toBe('-:14');
   });
+  it('accepts random hex that happens to be nearly all digits, when a letter leads', () => {
+    expect(nameKind('u006381267601')).toBe('u:12');
+    expect(nameKind('u733b23986979')).toBe('u:12');
+  });
   it('leaves people alone', () => {
     for (const n of ['936442997', 'MusicMan2000', 'soularr_7c371d6567', 'dom2015', 'deadbeef', 'abcdefabcdef', '0123456789012']) expect(nameKind(n)).toBeNull();
   });
