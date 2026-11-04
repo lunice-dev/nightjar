@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { generatedCover, onlineCover } from '../lib/covers';
+import { dirOf, generatedCover, onlineCover } from '../lib/covers';
+import { basename, isDiscFolder } from '../lib/quality';
 import { coverSize } from '../api/slskd';
 import { useStore } from '../store';
 
@@ -12,6 +13,16 @@ import { useStore } from '../store';
 const found = new Map<string, string>();
 /** The last picture shown for an album at any size: a cover that mounts again shows it at once, then sharpens if needed. */
 const foundAny = new Map<string, string>();
+
+/** The folders that may hold an album's picture: a track's disc folder (CD 1) keeps it in the album folder above. */
+export const coverDirs = (dir?: string): string[] => (!dir ? [] : isDiscFolder(basename(dir)) ? [dir, dirOf(dir)] : [dir]);
+
+/** A picture already shown for this folder (or its album folder) anywhere in the app, whatever it came from. */
+export function shownCoverFor(dir?: string): string | undefined {
+  for (const d of coverDirs(dir))
+    for (const [k, v] of foundAny) if (k.startsWith(d + '|')) return v;
+  return undefined;
+}
 
 export function Cover({
   dir,
@@ -99,17 +110,19 @@ export function Cover({
     (async () => {
       if (dir && backend) {
         // Never wait long on the helper: a phone, or a browser that blocks it, just moves on.
-        const local = await Promise.race([
-          backend.files.coverUrl(dir, px).catch(() => null),
+        const asked = await Promise.race([
+          Promise.all(coverDirs(dir).map((d) => backend.files.coverUrl(d, px).catch(() => null))),
           new Promise<null>((r) => setTimeout(() => r(null), 3000)),
         ]);
+        const locals = (asked ?? []).filter((u): u is string => !!u);
+        const local = locals[0];
         if (!gone && local) {
           // Already showing this album: the sharper copy takes over only once it has loaded, so nothing blinks.
           if (foundAny.has(baseKey)) {
             const im = new Image();
             im.onload = () => !gone && setSrcs([local]);
             im.src = local;
-          } else setSrcs([local]);
+          } else setSrcs(locals);
         }
       }
       if (!gone) setLocalDone(true);

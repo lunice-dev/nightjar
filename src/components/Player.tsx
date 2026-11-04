@@ -7,6 +7,7 @@ import { FullPlayer, morph, warmArt } from './FullPlayer';
 import { useScrub } from '../lib/scrub';
 import { useHoldToScan, useSeekKeys } from '../lib/seek';
 import { generatedCover, onlineCover } from '../lib/covers';
+import { coverDirs, shownCoverFor } from './Cover';
 import { prefetchLyrics } from '../lib/lyrics';
 import { dockGroupOf, useNowDock } from '../lib/nowDock';
 import { useDockVisible } from './NowDock';
@@ -134,8 +135,14 @@ export function Player() {
     let alive = true;
     setCover(null);
     (async () => {
-      const local = await backend.files.coverUrl(track.dir, 1000).catch(() => null);
-      if (local && (await loads(local))) return alive && setCover(local);
+      // The track's own folder, then the album folder above when it is a disc folder (CD 1): that is where the picture is.
+      for (const d of coverDirs(track.dir)) {
+        const local = await backend.files.coverUrl(d, 1000).catch(() => null);
+        if (local && (await loads(local))) return alive && setCover(local);
+      }
+      // Not on this computer (or not readable from here): the picture the rest of the app already found, then the web.
+      const shown = shownCoverFor(track.dir);
+      if (shown && (await loads(shown))) return alive && setCover(shown);
       const web = await onlineCover(track.artist ?? undefined, track.album ?? undefined).catch(() => null);
       if (web && (await loads(web))) return alive && setCover(web);
     })();
