@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => ({
     __DEMO__: JSON.stringify(mode === 'demo'),
     // The version in package.json, which is also the release's: About shows it.
     __APP_VERSION__: JSON.stringify(pkg.version),
+    // When this page was built, so a phone can tell which copy it is running (About shows it).
+    __BUILD__: JSON.stringify(new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })),
   },
   build: {
     outDir: mode === 'demo' ? 'dist-demo' : 'dist',

@@ -33,6 +33,9 @@ const screenNote = () => {
 declare const __APP_VERSION__: string;
 /** This page's version (package.json at build time), e.g. "0.8.0". */
 export const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '';
+declare const __BUILD__: string;
+/** When this copy of the page was built, e.g. "5 Nov, 01:52": tells which copy a phone is running. */
+const BUILD = typeof __BUILD__ === 'string' ? __BUILD__ : '';
 
 /**
  * What changed in each version, newest first. Shown in About and published as the release notes.
@@ -309,6 +312,7 @@ export function AboutScreen() {
           <div>
             <h1 className="page-title about-title" onClick={tap}>
               <span className="about-name">nightjar</span> <span className="about-version">{VERSION}</span>
+              {BUILD && <span className="about-build" title="When this copy of the page was built"> · page of {BUILD}</span>}
             </h1>
             <p className="page-sub">A modern client for the Soulseek network.</p>
           </div>

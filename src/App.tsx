@@ -23,6 +23,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { SetupScreen } from './screens/SetupScreen';
 import { AboutScreen } from './screens/AboutScreen';
 import { StatsScreen } from './screens/StatsScreen';
+import { StaleBanner } from './components/StaleBanner';
 import { WishlistScreen } from './screens/WishlistScreen';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { TransfersScreen } from './screens/TransfersScreen';
@@ -663,6 +664,7 @@ function Shell() {
       <FolderBrowserHost helper={HELPER} />
       <PlaylistPicker />
       <Toasts />
+      <StaleBanner />
     </div>
   );
 }
