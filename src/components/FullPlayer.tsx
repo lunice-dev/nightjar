@@ -449,8 +449,8 @@ export function FullPlayer({
       <div className={`fp-backdrop ${closing ? 'out' : ''}`} onClick={close} aria-hidden />
       <div ref={sheet} className={`full-player ${mode} ${dozing ? 'dozing' : ''} ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} onPointerDownCapture={hush ? wake : undefined} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
       <Backdrop src={backdropArt} />
+      {dbg && <div className="fp-debug">{dbg}</div>}
       {hush && (
-        {dbg && <div className="fp-debug">{dbg}</div>}
         <div className="fp-hairline" aria-hidden>
           <i style={{ width: `${progress}%` }} />
         </div>
