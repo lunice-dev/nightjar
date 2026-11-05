@@ -3210,16 +3210,16 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .msg-body { overflow-wrap: anywhere; }
 }
 
-/* The large player on a tablet held sideways (and short computer windows): the cover as big as the height allows, level with the text under it. */
+/* The large player on a tablet held sideways (and short computer windows): the cover as big as the height allows, centred over the progress bar and the buttons. */
 @media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) {
   .full-player.rail .fp-body.np:not(.lyrics-on) { row-gap: 18px; }
-  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { place-items: end start; padding: 0; height: auto; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { place-items: end center; justify-self: center; padding: 0; height: auto; }
   /* an iPad does not get the computer's rules for a big window: no 180px cap on the cover, and the controls and the volume sit on one line */
   /* square whatever the picture's own shape: Safari lets a wide picture override the ratio when the height is left to it */
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { max-width: none; width: var(--art-fit, var(--art)); height: var(--art-fit, var(--art)); aspect-ratio: 1 / 1; object-fit: cover; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { align-self: center; }
-  /* pausing shrinks the cover towards the corner it shares with the text, so the left edges stay level */
-  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art.paused { transform-origin: left bottom; }
+  /* pausing shrinks the cover towards its bottom edge, so it stays centred */
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art.paused { transform-origin: center bottom; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-jumps { justify-content: flex-start; margin-top: 12px; }
 }
 
