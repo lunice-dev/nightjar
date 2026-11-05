@@ -269,6 +269,33 @@ export function FullPlayer({
     return () => ro.disconnect();
   }, [lyricsOpen, wide]);
 
+  // The cover takes the height the rest of the column leaves, worked out from what is on screen (an iPad's window can
+  // be any size, and the screen's height says little about it). The stylesheet's guess holds until this has run.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const fit = () => {
+      const title = body.querySelector<HTMLElement>('.fp-titlerow');
+      const time = body.querySelector<HTMLElement>('.fp-time');
+      const controls = body.querySelector<HTMLElement>('.fp-controls');
+      const cs = getComputedStyle(body);
+      if (!title || !time || !controls || cs.display !== 'grid' || body.classList.contains('lyrics-on') || !title.offsetWidth) {
+        body.style.removeProperty('--art-fit');
+        return;
+      }
+      const inner = body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const below = title.offsetHeight + time.offsetHeight + controls.offsetHeight + 3 * (parseFloat(cs.rowGap) || 0);
+      const size = Math.floor(Math.min(520, title.offsetWidth, inner - below - 24));
+      if (size >= 160) body.style.setProperty('--art-fit', `${size}px`);
+      else body.style.removeProperty('--art-fit');
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(body);
+    body.querySelectorAll('.fp-titlerow, .fp-time, .fp-controls').forEach((e) => ro.observe(e));
+    return () => ro.disconnect();
+  }, [lyricsOpen, wide]);
   // Opening the queue shows the track that is playing.
   useEffect(() => {
     if (panel !== 'queue') return;
@@ -434,7 +461,7 @@ export function FullPlayer({
       ) : lyricsOpen && !wide ? (
         <LyricsView state={lyrics} onRetry={retryLyrics} time={time} duration={duration} art={art} title={track.title} artist={track.artist} playing={playing} />
       ) : (
-      <div className={`fp-body np ${lyricsOpen && wide ? 'lyrics-on' : ''}`} {...queueSwipe}>
+      <div ref={bodyRef} className={`fp-body np ${lyricsOpen && wide ? 'lyrics-on' : ''}`} {...queueSwipe}>
         <div className="fp-art-col" {...artTouch}>
           <div
             className="fp-art-tap"

@@ -2844,8 +2844,8 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
     grid-template-rows: 1fr auto auto auto auto auto 1fr; column-gap: clamp(32px, 5vw, 80px); row-gap: 14px;
     padding: 6px clamp(28px, 6vw, 120px) 24px;
   }
-  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { grid-column: 1; grid-row: 2; align-self: end; justify-self: start; width: var(--art); }
-  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { width: var(--art); border-radius: 14px; box-shadow: 0 30px 60px -34px rgb(0 0 0 / 0.6); }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { grid-column: 1; grid-row: 2; align-self: end; justify-self: start; width: var(--art-fit, var(--art)); }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { width: var(--art-fit, var(--art)); border-radius: 14px; box-shadow: 0 30px 60px -34px rgb(0 0 0 / 0.6); }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-titlerow { grid-column: 1; grid-row: 3; margin-top: 8px; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-time { grid-column: 1; grid-row: 4; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls { grid-column: 1; grid-row: 5; justify-content: flex-start; gap: 14px; padding: 0; }
@@ -3216,9 +3216,22 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { place-items: end start; padding: 0; height: auto; }
   /* an iPad does not get the computer's rules for a big window: no 180px cap on the cover, and the controls and the volume sit on one line */
   /* square whatever the picture's own shape: Safari lets a wide picture override the ratio when the height is left to it */
-  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { max-width: none; width: var(--art); height: var(--art); aspect-ratio: 1 / 1; object-fit: cover; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { max-width: none; width: var(--art-fit, var(--art)); height: var(--art-fit, var(--art)); aspect-ratio: 1 / 1; object-fit: cover; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { align-self: center; }
   /* pausing shrinks the cover towards the corner it shares with the text, so the left edges stay level */
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art.paused { transform-origin: left bottom; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-jumps { justify-content: flex-start; margin-top: 12px; }
+}
+
+/* A screen that is not very tall (an iPad held sideways, a small window): the text, the progress and the buttons take less room, so the cover can have it. */
+@media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) and (max-height: 900px) {
+  .full-player.rail .fp-body.np:not(.lyrics-on) { row-gap: 12px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-now h2 { font-size: 23px; line-height: 1.1; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-artist { font-size: 14px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-album { font-size: 12px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-play { width: 48px; height: 48px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-play svg { width: 22px; height: 22px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-icon.big { width: 38px; height: 38px; }
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-jumps { margin-top: 6px; }
+  .full-player.rail { --art: clamp(220px, calc(100vh - 340px), 520px); }
 }
