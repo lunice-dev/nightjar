@@ -285,7 +285,10 @@ export function FullPlayer({
         return;
       }
       const inner = body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      const below = title.offsetHeight + time.offsetHeight + controls.offsetHeight + 3 * (parseFloat(cs.rowGap) || 0);
+      // Everything under the cover: the three rows, the space above each, and any gap between rows (empty rows count too).
+      const rows = cs.gridTemplateRows.split(' ').length;
+      const lead = (e: HTMLElement) => parseFloat(getComputedStyle(e).marginTop) || 0;
+      const below = title.offsetHeight + time.offsetHeight + controls.offsetHeight + lead(title) + lead(time) + lead(controls) + (rows - 1) * (parseFloat(cs.rowGap) || 0);
       const size = Math.floor(Math.min(520, title.offsetWidth, inner - below - 24));
       if (size >= 160) body.style.setProperty('--art-fit', `${size}px`);
       else body.style.removeProperty('--art-fit');
