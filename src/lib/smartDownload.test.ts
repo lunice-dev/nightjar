@@ -98,3 +98,27 @@ describe('starting a download when someone can’t be reached', () => {
     expect(usePrefs.getState().plans).toHaveLength(0);
   });
 });
+
+describe('asking again for an album that was cancelled', () => {
+  beforeEach(() => {
+    forgetRecent();
+    usePrefs.setState({ smart: { enabled: true, queueMinutes: 10, parallel: false } });
+  });
+  const old = (extra = {}) => ({ id: 'old', key: copy('anna').key, title: 'Issues', artist: 'Korn', destination: 'Korn - Issues', createdAt: Date.now() - 3_600_000, batches: ['b'], notes: [], tracks: [], sources: [], identical: [], ...extra }) as never;
+
+  it('is not held up by the cancelled plan, which is marked finished', async () => {
+    usePrefs.setState({ plans: [old()] });
+    const asked = engine([]);
+    await smartDownload(release(copy('anna')), copy('anna'));
+    expect(asked.length).toBeGreaterThan(0);
+    expect(usePrefs.getState().plans.find((p) => p.id === 'old')?.finishedAt).toBeTruthy();
+  });
+
+  it('still says it is already downloading while something is coming', async () => {
+    usePrefs.setState({ plans: [old()] });
+    const asked = engine([]);
+    useStore.setState({ downloads: [{ username: 'anna', directories: [{ directory: DIR, files: [{ id: 't', username: 'anna', filename: names[0], size: 1000, state: 'InProgress', batchId: 'b' }] }] }] } as never);
+    await smartDownload(release(copy('anna')), copy('anna'));
+    expect(asked).toHaveLength(0);
+  });
+});

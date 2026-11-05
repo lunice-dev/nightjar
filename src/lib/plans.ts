@@ -24,6 +24,8 @@ export function sameRelease(a: { title?: string | null; artist?: string | null }
 }
 
 const sameAlbum = (a: DownloadPlan, b: DownloadPlan) =>
+  // A finished plan and a new one are two downloads of the album (one after the other), not one asked for twice.
+  !a.finishedAt === !b.finishedAt &&
   a.key === b.key && a.destination.toLowerCase() === b.destination.toLowerCase() && Math.abs(a.createdAt - b.createdAt) < SAME_ALBUM_WITHIN_MS;
 
 /**

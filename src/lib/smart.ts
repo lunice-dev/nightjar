@@ -232,13 +232,23 @@ export function splitRuns(n: number, weights: number[]) {
  * when they exist, and remembers every other copy as a fallback.
  */
 export async function smartDownload(release: Release, chosen: FolderResult) {
-  const { backend, toast, refreshTransfers } = useStore.getState();
+  const { backend, toast, refreshTransfers, downloads } = useStore.getState();
   if (!backend) return;
-  const { smart, plans } = usePrefs.getState();
+  const { smart, plans, updatePlan } = usePrefs.getState();
 
   // The same album asked for again while it is still coming would be a second plan, a second card and a second set of
   // files: from the same copy, or from someone else's (another device may have picked a different one a moment ago).
-  const coming = plans.filter((p) => !p.finishedAt && Date.now() - p.createdAt < 6 * 3_600_000);
+  // Only an album something is really coming for counts: one that was cancelled or cleared stays unfinished in the plans for a while, and must not hold up asking for it again.
+  const planOf = planFinder(plans);
+  const alive = (downloads ?? []).flatMap((u) => u.directories.flatMap((d) => d.files)).filter((t) => ['active', 'queued'].includes(phaseOf(t.state)));
+  const now = Date.now();
+  const coming = plans.filter((p) => {
+    if (p.finishedAt) return false;
+    // Just started: the engine's list may not show its files yet.
+    if (now - p.createdAt < 120_000 || alive.some((t) => planOf(t) === p)) return now - p.createdAt < 6 * 3_600_000;
+    updatePlan(p.id, { finishedAt: now });
+    return false;
+  });
   const again = coming.find((p) => p.key === chosen.key) ?? coming.find((p) => sameRelease(p, { title: chosen.title, artist: chosen.parent }));
   if (again) {
     toast(again.key === chosen.key ? `${again.title} is already downloading` : `${again.title} is already downloading from another copy. To get this one instead, cancel that one in Downloads.`);

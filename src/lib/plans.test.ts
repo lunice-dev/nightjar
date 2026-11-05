@@ -32,6 +32,9 @@ describe('the same album asked for twice', () => {
   it('is unfinished while either one is', () => {
     expect(mergeDuplicatePlans([plan('a', 1_000_000, { finishedAt: 5 }), plan('b', 2_000_000)])[0].finishedAt).toBeUndefined();
   });
+  it('keeps a finished download and a new one of the same album apart', () => {
+    expect(mergeDuplicatePlans([plan('a', 1_000_000, { finishedAt: 5 }), plan('b', 2_000_000)])).toHaveLength(2);
+  });
   it('leaves an album downloaded again much later, or somewhere else, alone', () => {
     expect(mergeDuplicatePlans([plan('a', 0), plan('b', 10 * 3_600_000)])).toHaveLength(2);
     expect(mergeDuplicatePlans([plan('a', 0), plan('b', 1000, { destination: 'Another folder' })])).toHaveLength(2);
