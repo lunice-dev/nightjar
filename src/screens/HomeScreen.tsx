@@ -2,11 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, 
 import { createPortal } from 'react-dom';
 import { usePcShell } from '../lib/pcShell';
 import { NowPanel } from '../components/NowPanel';
-import type { LibAlbum } from '../api/library';
+import type { LibAlbum, RecentMove, WaitingAlbum } from '../api/library';
 import { Cover } from '../components/Cover';
 import { Icon } from '../components/Icon';
 import { tone } from '../components/LibraryAlbums';
 import { PlaylistCover, addToPlaylist, fmtLength, playlistsChanged, usePlaylists } from '../components/Playlists';
+import { recentAlbums } from '../lib/recentAlbums';
 import { useBlocked } from '../lib/blocking';
 import { verdictText } from '../lib/check';
 import { useSuspects } from '../lib/guard';
@@ -135,25 +136,43 @@ function Middle() {
     [downloads, plans, files, where.downloadDir],
   );
 
-  // Arrived lately: the home page's history, matched with the library for its quality.
-  const recent = useMemo(() => {
-    const live = new Set(coming.map((c) => c.key));
-    const seen = new Set<string>();
-    const rows: { h: (typeof history)[number]; a: LibAlbum | undefined }[] = [];
-    for (const h of history) {
-      if (live.has(h.key)) continue;
-      // The same album downloaded twice (or from two people) is one tile.
-      const id = `${(h.artist ?? '').toLowerCase()}|${h.title.toLowerCase()}`;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      // Where it is now: albums Nightjar moved into the library (Put in library, Tidy) went along with their folder.
-      const dir = h.dir ? relocatedDir(h.dir, moves) : h.dir;
-      rows.push({ h: dir === h.dir ? h : { ...h, dir }, a: dir ? byDir.get(dir.toLowerCase()) : undefined });
-    }
-    // Newest first, as downloaded. (Not the ones the library already lists first: the library review doesn't look in the
-    // downloads folder, so the newest albums aren't in it yet, and they'd drop behind older ones once it was read.)
-    return rows.slice(0, 16);
-  }, [history, coming, byDir, moves]);
+  // Albums waiting in the downloads folder and albums put in the library lately: the history alone misses albums that
+  // finished while no window was open, and albums with a track that failed.
+  const [onDisk, setOnDisk] = useState<{ albums: WaitingAlbum[]; recent: RecentMove[] } | null>(null);
+  useEffect(() => {
+    if (!backend) return;
+    let alive = true;
+    const load = () =>
+      void backend.library
+        .waiting()
+        .then((d) => alive && d && setOnDisk(d))
+        .catch(() => undefined);
+    load();
+    const t = setInterval(load, 60_000);
+    window.addEventListener('nightjar-library-changed', load);
+    return () => {
+      alive = false;
+      clearInterval(t);
+      window.removeEventListener('nightjar-library-changed', load);
+    };
+  }, [backend, history.length]);
+
+  // Arrived lately, newest first (the library review doesn't look in the downloads folder, so the newest albums aren't
+  // in it yet: the history and the downloads folder lead).
+  const recent = useMemo(
+    () =>
+      recentAlbums({
+        history,
+        waiting: onDisk?.albums ?? [],
+        moved: onDisk?.recent ?? [],
+        live: new Set(coming.map((c) => c.key)),
+        comingDirs: coming.map((c) => c.dir ?? ''),
+        relocate: (dir) => relocatedDir(dir, moves),
+        library: byDir,
+        limit: 16,
+      }),
+    [history, onDisk, coming, byDir, moves],
+  );
 
   const rediscover = useMemo(() => shuffled(albums).slice(0, 14), [albums, again]); // eslint-disable-line react-hooks/exhaustive-deps
 
