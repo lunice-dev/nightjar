@@ -296,6 +296,38 @@ export function FullPlayer({
     body.querySelectorAll('.fp-titlerow, .fp-time, .fp-controls').forEach((e) => ro.observe(e));
     return () => ro.disconnect();
   }, [lyricsOpen, wide]);
+
+  // TEMPORARY: sizes of the cover and what holds it, read off a touch screen (one line at the bottom of the player).
+  const [dbg, setDbg] = useState('');
+  useEffect(() => {
+    if (!matchMedia('(pointer: coarse)').matches) return;
+    const t = setInterval(() => {
+      const body = bodyRef.current;
+      const img = artImg.current;
+      if (!body || !img) return;
+      const col = body.querySelector<HTMLElement>('.fp-art-col');
+      const tap = body.querySelector<HTMLElement>('.fp-art-tap');
+      const r = (e: Element | null) => {
+        if (!e) return '-';
+        const b = e.getBoundingClientRect();
+        return `${Math.round(b.width)}x${Math.round(b.height)}`;
+      };
+      const cs = getComputedStyle(img);
+      setDbg(
+        [
+          `win ${innerWidth}x${innerHeight}`,
+          `body ${r(body)}`,
+          `col ${r(col)}`,
+          `tap ${r(tap)}`,
+          `img ${r(img)} nat ${img.naturalWidth}x${img.naturalHeight}`,
+          `fit ${body.style.getPropertyValue('--art-fit') || 'none'}`,
+          `css ${cs.width} ${cs.height} max ${cs.maxHeight} ${cs.aspectRatio} ${cs.objectFit}`,
+          `ov ${col ? getComputedStyle(col).overflow : '-'}/${tap ? getComputedStyle(tap).overflow : '-'} ${col ? getComputedStyle(col).containerType : ''}`,
+        ].join(' | '),
+      );
+    }, 1000);
+    return () => clearInterval(t);
+  }, [lyricsOpen, wide]);
   // Opening the queue shows the track that is playing.
   useEffect(() => {
     if (panel !== 'queue') return;
@@ -418,6 +450,7 @@ export function FullPlayer({
       <div ref={sheet} className={`full-player ${mode} ${dozing ? 'dozing' : ''} ${tint ? 'tinted' : ''} ${closing ? 'closing' : ''} ${grown ? 'morph' : ''}`} onPointerDownCapture={hush ? wake : undefined} role="dialog" aria-label={view.kind === "album" ? "Album" : view.kind === "playlist" ? "Playlist" : "Now playing"} style={style}>
       <Backdrop src={backdropArt} />
       {hush && (
+        {dbg && <div className="fp-debug">{dbg}</div>}
         <div className="fp-hairline" aria-hidden>
           <i style={{ width: `${progress}%` }} />
         </div>
