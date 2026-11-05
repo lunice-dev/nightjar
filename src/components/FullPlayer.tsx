@@ -255,6 +255,20 @@ export function FullPlayer({
     run.oncancel = done;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Safari lets a wide picture override the square ratio when the height is left to it, which cuts the cover off:
+  // the box is made square by hand, in every layout.
+  useEffect(() => {
+    const img = artImg.current;
+    if (!img) return;
+    const square = () => {
+      if (img.offsetWidth) img.style.height = `${img.offsetWidth}px`;
+    };
+    square();
+    const ro = new ResizeObserver(square);
+    ro.observe(img);
+    return () => ro.disconnect();
+  }, [lyricsOpen, wide]);
+
   // Opening the queue shows the track that is playing.
   useEffect(() => {
     if (panel !== 'queue') return;

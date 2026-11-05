@@ -3215,7 +3215,8 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .full-player.rail .fp-body.np:not(.lyrics-on) { row-gap: 18px; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art-col { place-items: end start; padding: 0; height: auto; }
   /* an iPad does not get the computer's rules for a big window: no 180px cap on the cover, and the controls and the volume sit on one line */
-  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { max-width: none; height: auto; }
+  /* square whatever the picture's own shape: Safari lets a wide picture override the ratio when the height is left to it */
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art { max-width: none; width: var(--art); height: var(--art); aspect-ratio: 1 / 1; object-fit: cover; }
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-controls, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-volume { align-self: center; }
   /* pausing shrinks the cover towards the corner it shares with the text, so the left edges stay level */
   .full-player.rail .fp-body.np:not(.lyrics-on) .fp-art.paused { transform-origin: left bottom; }
