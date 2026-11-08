@@ -6,7 +6,10 @@ import { useFilesAvailable } from '../lib/files';
 import { bytes } from '../lib/quality';
 import { rescanSoon } from '../lib/shareVersion';
 import { openSettings } from '../lib/settingsNav';
+import { uuid } from '../lib/uuid';
+import { useMoveProgress, type MoveView } from '../lib/moveProgress';
 import { Cover } from './Cover';
+import { MoveBar } from './MoveBar';
 import { CheckResult, useQualityCheck } from './QualityCheck';
 
 /**
@@ -47,6 +50,9 @@ export function ReadyForLibrary({ busy }: { busy: Set<string> }) {
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
   const [recentOpen, setRecentOpen] = useState(false);
   const [moving, setMoving] = useState(false);
+  // The album being copied to another drive right now, and how far it has got.
+  const [activeMove, setActiveMove] = useState<{ key: string; id: string } | null>(null);
+  const moveView = useMoveProgress(backend?.library, activeMove?.id ?? null);
 
   const load = useCallback(() => {
     backend?.library.waiting().then((d) => d && setData(d));
@@ -88,7 +94,10 @@ export function ReadyForLibrary({ busy }: { busy: Set<string> }) {
     const k = keyOf(a.dir);
     const d = drafts[k];
     if (!backend || !ready(d)) return null;
-    const r = await backend.library.move(a.dir, d.format, d.artist.trim(), folderOf(d), groupOf(d));
+    const id = uuid();
+    setActiveMove({ key: k, id });
+    const r = await backend.library.move(a.dir, d.format, d.artist.trim(), folderOf(d), groupOf(d), id);
+    setActiveMove(null);
     if (!r.ok || !r.to) {
       edit(k, { error: r.error ?? 'It couldn’t be moved.' });
       return null;
@@ -165,6 +174,7 @@ export function ReadyForLibrary({ busy }: { busy: Set<string> }) {
               editing={editing === keyOf(a.dir)}
               leaving={leaving.has(keyOf(a.dir))}
               moving={moving}
+              progress={activeMove?.key === keyOf(a.dir) ? moveView : null}
               onEdit={() => setEditing((e) => (e === keyOf(a.dir) ? null : keyOf(a.dir)))}
               onChange={(c) => edit(keyOf(a.dir), c)}
               onPut={() => putOne(a)}
@@ -202,6 +212,7 @@ function ReadyRow({
   editing,
   leaving,
   moving,
+  progress,
   onEdit,
   onChange,
   onPut,
@@ -211,6 +222,8 @@ function ReadyRow({
   editing: boolean;
   leaving: boolean;
   moving: boolean;
+  /** Set while this album is being copied to another drive. */
+  progress: MoveView | null;
   onEdit: () => void;
   onChange: (c: Partial<Draft>) => void;
   onPut: () => void;
@@ -274,6 +287,7 @@ function ReadyRow({
         ) : plan ? (
           <div className="rl-need">The album and the artist need a name. Add them under Edit.</div>
         ) : null}
+        <MoveBar view={progress} />
         <div className="rl-from">Folder in Downloads: {a.name}</div>
         {editing && d && plan && (
           <div className="rl-edit">

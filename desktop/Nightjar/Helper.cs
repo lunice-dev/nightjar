@@ -831,9 +831,12 @@ namespace Nightjar
                     {
                         var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));
                         string V(string k) => body.TryGetValue(k, out var v) ? v as string : null;
-                        Reply(stream, 200, origin, Organizer.Apply(V("dir"), V("format"), V("artist"), V("folder"), V("group")));
+                        Reply(stream, 200, origin, Organizer.Apply(V("dir"), V("format"), V("artist"), V("folder"), V("group"), V("progress")));
                         return;
                     }
+                case "/organize/progress":
+                    Reply(stream, 200, origin, Organizer.ProgressOf(req.Q("id")));
+                    return;
                 case "/organize/undo":
                     {
                         var body = Json.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(req.Body));

@@ -4,6 +4,9 @@ import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { rescanSoon } from '../lib/shareVersion';
 import { openSettings } from '../lib/settingsNav';
+import { uuid } from '../lib/uuid';
+import { useMoveProgress } from '../lib/moveProgress';
+import { MoveBar } from './MoveBar';
 
 /**
  * Puts one album into the library: Library\Format\Artist\Year - Album. Shows where it will go, lets you
@@ -20,6 +23,8 @@ export function OrganizeDialog({ dir, onClose, onMoved }: { dir: string; onClose
   const [noYear, setNoYear] = useState(false);
   const [album, setAlbum] = useState('');
   const [busy, setBusy] = useState(false);
+  const [moveId, setMoveId] = useState<string | null>(null);
+  const moveView = useMoveProgress(backend?.library, moveId);
 
   useEffect(() => {
     backend?.library.plan(dir).then((p) => {
@@ -53,7 +58,10 @@ export function OrganizeDialog({ dir, onClose, onMoved }: { dir: string; onClose
   const move = async () => {
     if (!backend || !ready) return;
     setBusy(true);
-    const r = await backend.library.move(dir, format, artist.trim(), folder, group);
+    const id = uuid();
+    setMoveId(id);
+    const r = await backend.library.move(dir, format, artist.trim(), folder, group, id);
+    setMoveId(null);
     setBusy(false);
     if (!r.ok || !r.to) {
       setError(r.error ?? 'It couldn’t be moved.');
@@ -142,6 +150,7 @@ export function OrganizeDialog({ dir, onClose, onMoved }: { dir: string; onClose
               <span className="dim">Goes to</span>
               <code>{target}</code>
             </div>
+            <MoveBar view={moveView} />
             <div className="save-row">
               <button className="btn" disabled={!ready || busy} onClick={move}>
                 {busy ? 'Moving…' : 'Move'}

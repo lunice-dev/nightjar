@@ -47,6 +47,15 @@ export interface OrganizePlan {
   formats: string[];
 }
 
+/** How far a move to another drive has got. A move within one drive is instant and reports nothing. */
+export interface MoveProgress {
+  phase: 'unknown' | 'starting' | 'copying' | 'finishing' | 'done';
+  total?: number;
+  done?: number;
+  files?: number;
+  filesDone?: number;
+}
+
 export interface MoveResult {
   ok: boolean;
   to?: string;
@@ -158,7 +167,9 @@ export interface LibraryAccess {
   setRoot(root: string): Promise<{ ok: boolean; error?: string }>;
   waiting(): Promise<{ albums: WaitingAlbum[]; recent: RecentMove[] } | null>;
   plan(dir: string): Promise<OrganizePlan | { error: string }>;
-  move(dir: string, format: string, artist: string, folder: string, group?: string | null): Promise<MoveResult>;
+  /** `progressId` is any unique text: ask `moveProgress` with it while the move runs. */
+  move(dir: string, format: string, artist: string, folder: string, group?: string | null, progressId?: string): Promise<MoveResult>;
+  moveProgress(id: string): Promise<MoveProgress | null>;
   undo(id: string): Promise<MoveResult>;
   check(dir: string): Promise<{ id?: string; error?: string }>;
   progress(id: string): Promise<CheckProgress | null>;
@@ -279,7 +290,8 @@ export function helperLibrary(helper: string): LibraryAccess {
     setRoot: (root) => post('/library', { root }, 10_000),
     waiting: () => get('/organize/waiting', 30_000),
     plan: async (dir) => (await get<OrganizePlan | { error: string }>(`/organize/plan?dir=${enc(dir)}`, 60_000)) ?? { error: 'The nightjar app didn’t answer.' },
-    move: (dir, format, artist, folder, group) => post('/organize/move', { dir, format, artist, folder, group: group ?? null }),
+    move: (dir, format, artist, folder, group, progressId) => post('/organize/move', { dir, format, artist, folder, group: group ?? null, progress: progressId ?? null }),
+    moveProgress: (id) => get<MoveProgress>(`/organize/progress?id=${enc(id)}`, 4000),
     undo: (id) => post('/organize/undo', { id }),
     check: (dir) => post('/validate', { dir }, 15_000),
     progress: (id) => get<CheckProgress>(`/validate?id=${enc(id)}`, 10_000),
@@ -387,6 +399,7 @@ export function demoLibrary(): LibraryAccess {
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
   let albums: LibAlbum[] | null = null;
   let applied: LibApply | null = null;
+  const moves = new Map<string, number>();
   const batches: { batch: string; at: number; moves: { from: string; to: string }[] }[] = [];
   let scanAt = 0;
   const lib = () => (albums ??= demoAlbums(root ?? 'C:\\Users\\you\\Music\\Library'));
@@ -415,9 +428,21 @@ export function demoLibrary(): LibraryAccess {
       format: 'FLAC',
       formats: ['FLAC', 'Hi-Res', 'MP3', 'Other'],
     }),
-    move: async (_dir, format, artist, folder) => {
-      await wait(500);
+    move: async (_dir, format, artist, folder, _group, progressId) => {
+      // Sample data pretends to copy 640 MB to another drive over 8 seconds, so the bar can be seen.
+      if (progressId) moves.set(progressId, Date.now());
+      await wait(progressId ? 8200 : 500);
       return { ok: true, to: `${root ?? 'C:\\Music'}\\${format}\\${artist}\\${folder}`, id: 'demo', newArtist: true };
+    },
+    moveProgress: async (id) => {
+      const at = moves.get(id);
+      if (at === undefined) return { phase: 'unknown' };
+      const t = Date.now() - at;
+      const total = 640_000_000;
+      if (t >= 8000) return { phase: 'done', total, done: total, files: 12, filesDone: 12 };
+      if (t >= 7500) return { phase: 'finishing', total, done: total, files: 12, filesDone: 12 };
+      const done = Math.round((t / 7500) * total);
+      return { phase: 'copying', total, done, files: 12, filesDone: Math.floor((done / total) * 12) };
     },
     undo: async () => ({ ok: true }),
     scan: async () => {

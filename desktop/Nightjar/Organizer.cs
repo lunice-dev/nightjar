@@ -313,14 +313,56 @@ namespace Nightjar
 
         static bool SameVolume(string a, string b) => string.Equals(Path.GetPathRoot(Path.GetFullPath(a)), Path.GetPathRoot(Path.GetFullPath(b)), StringComparison.OrdinalIgnoreCase);
 
+        /// <summary>How far a move to another drive has got, so the app can show a bar and an estimate. Same-drive moves are instant and report nothing.</summary>
+        internal sealed class MoveProgress
+        {
+            public long total, done, startedAt;
+            public int files, filesDone;
+            /// <summary>starting, copying, finishing, done</summary>
+            public string phase = "starting";
+        }
+
+        static readonly Dictionary<string, MoveProgress> Progresses = new Dictionary<string, MoveProgress>();
+
+        internal static MoveProgress StartProgress(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            var p = new MoveProgress { startedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+            lock (Progresses)
+            {
+                // Finished ones are only kept long enough for the app to read the last state.
+                var old = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 10 * 60 * 1000;
+                foreach (var k in Progresses.Where(x => x.Value.startedAt < old).Select(x => x.Key).ToList()) Progresses.Remove(k);
+                Progresses[id] = p;
+            }
+            return p;
+        }
+
+        public static object ProgressOf(string id)
+        {
+            MoveProgress p;
+            lock (Progresses) Progresses.TryGetValue(id ?? "", out p);
+            if (p == null) return new { phase = "unknown" };
+            return new { p.phase, p.total, done = System.Threading.Interlocked.Read(ref p.done), p.files, p.filesDone, p.startedAt, now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+        }
+
         /// <summary>Moves a folder, copying and checking sizes first when it goes to another drive.</summary>
-        internal static void MoveDir(string from, string to)
+        internal static void MoveDir(string from, string to, MoveProgress progress = null)
         {
             try
             {
-                if (SameVolume(from, to)) { Directory.Move(from, to); return; }
-                CopyDir(from, to);
+                if (SameVolume(from, to)) { Directory.Move(from, to); if (progress != null) progress.phase = "done"; return; }
+                if (progress != null)
+                {
+                    var all = Directory.GetFiles(from, "*", SearchOption.AllDirectories);
+                    progress.files = all.Length;
+                    progress.total = all.Sum(f => new FileInfo(f).Length);
+                    progress.phase = "copying";
+                }
+                CopyDir(from, to, progress);
+                if (progress != null) progress.phase = "finishing";
                 Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(from, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                if (progress != null) progress.phase = "done";
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
@@ -350,16 +392,37 @@ namespace Nightjar
             return open;
         }
 
-        static void CopyDir(string from, string to)
+        static void CopyDir(string from, string to, MoveProgress progress = null)
         {
             Directory.CreateDirectory(to);
             foreach (var f in Directory.GetFiles(from))
             {
                 var dest = Path.Combine(to, Path.GetFileName(f));
-                File.Copy(f, dest, false);
+                CopyFile(f, dest, progress);
                 if (new FileInfo(dest).Length != new FileInfo(f).Length) throw new IOException("Copy of " + Path.GetFileName(f) + " doesn't match the original.");
+                if (progress != null) progress.filesDone++;
             }
-            foreach (var d in Directory.GetDirectories(from)) CopyDir(d, Path.Combine(to, Path.GetFileName(d)));
+            foreach (var d in Directory.GetDirectories(from)) CopyDir(d, Path.Combine(to, Path.GetFileName(d)), progress);
+        }
+
+        /// <summary>Copies one file in 1 MB pieces, counting them as it goes (File.Copy reports nothing until it is finished). Keeps the dates and attributes.</summary>
+        static void CopyFile(string from, string to, MoveProgress progress)
+        {
+            if (progress == null) { File.Copy(from, to, false); return; }
+            var buffer = new byte[1 << 20];
+            using (var src = new FileStream(from, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length))
+            using (var dst = new FileStream(to, FileMode.CreateNew, FileAccess.Write, FileShare.None, buffer.Length))
+            {
+                int n;
+                while ((n = src.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    dst.Write(buffer, 0, n);
+                    System.Threading.Interlocked.Add(ref progress.done, n);
+                }
+            }
+            File.SetCreationTimeUtc(to, File.GetCreationTimeUtc(from));
+            File.SetLastWriteTimeUtc(to, File.GetLastWriteTimeUtc(from));
+            File.SetAttributes(to, File.GetAttributes(from));
         }
 
         internal static bool SameContents(string a, string b)
@@ -369,10 +432,11 @@ namespace Nightjar
             return fa.SequenceEqual(fb);
         }
 
-        public static object Apply(string dir, string format, string artist, string folder, string group = null)
+        public static object Apply(string dir, string format, string artist, string folder, string group = null, string progressId = null)
         {
             lock (Gate)
             {
+                var progress = StartProgress(progressId);
                 var root = AppSettings.LibraryRoot;
                 if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return new { ok = false, error = "Choose your library folder in Settings first." };
                 var dl = Config.DownloadDir();
@@ -400,9 +464,10 @@ namespace Nightjar
                     while (Directory.Exists(to)) to = baseTo + " (" + n++ + ")";
                 }
                 Directory.CreateDirectory(artistDir);
-                try { MoveDir(dir, to); }
+                try { MoveDir(dir, to, progress); }
                 catch (Exception e)
                 {
+                    if (progress != null) progress.phase = "done";
                     if (createdArtist) try { if (!Directory.EnumerateFileSystemEntries(artistDir).Any()) Directory.Delete(artistDir); } catch { }
                     return new { ok = false, error = "Couldn't move it: " + e.Message };
                 }

@@ -226,9 +226,14 @@ else {
     MakeAlbum $cross @{ albumArtist = "Portishead"; artist = "Portishead"; album = "Third"; year = 2008 } 3 16 44100 0.6
     Set-Content (Join-Path $cross "cover.jpg") "a picture"
     $crossFiles = Contents $cross
-    $mx = Helper "/organize/move" "POST" @{ dir = $cross; format = "FLAC"; artist = "Portishead"; folder = "2008 - Third" }
+    $mx = Helper "/organize/move" "POST" @{ dir = $cross; format = "FLAC"; artist = "Portishead"; folder = "2008 - Third"; progress = "test-cross" }
     $there = "$far\FLAC\Portishead\2008 - Third"
     Check "Across drives: the album arrives on the other drive, every file intact" ([bool]$mx.ok -and $mx.to -eq $there -and (Same $crossFiles (Contents $there))) "$($mx.to) $($mx.error)"
+    # The app shows a bar while this runs; afterwards the progress says it finished, with every byte and file counted.
+    $px = Helper "/organize/progress?id=test-cross"
+    $want = @(Get-ChildItem $there -Recurse -File)
+    Check "Across drives: progress ends complete, every byte and file counted" ($px.phase -eq "done" -and $px.total -gt 0 -and $px.done -eq $px.total -and $px.files -eq $want.Count -and $px.filesDone -eq $px.files) "phase $($px.phase), $($px.done) of $($px.total) bytes, $($px.filesDone) of $($px.files) files (found $($want.Count))"
+    Check "Across drives: progress of a move nobody asked for says so" ((Helper "/organize/progress?id=never-asked").phase -eq "unknown")
     Check "Across drives: and only then leaves Downloads" (-not (Test-Path $cross))
     $ux = Helper "/organize/undo" "POST" @{ id = $mx.id }
     Check "Across drives: undo brings it back, every file intact" ([bool]$ux.ok -and (Same $crossFiles (Contents $cross)) -and -not (Test-Path $there)) $ux.error

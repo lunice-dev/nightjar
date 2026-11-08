@@ -3243,3 +3243,10 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
 .stale-banner { position: fixed; z-index: 90; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 13.5px; box-shadow: var(--shadow-pop); }
 .stale-banner button { padding: 6px 14px; border: 0; border-radius: 999px; background: var(--on-ink); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }
 .about-build { color: var(--ink-3); font-size: 13px; }
+
+/* Copying an album to another drive: one thin line and one sentence (Organize dialog and Ready for your Library). */
+.move-bar { margin-top: 14px; }
+.move-track { height: 3px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+.move-track i { display: block; height: 100%; border-radius: 3px; background: var(--ink); transition: width 0.9s linear; }
+.move-text { margin: 8px 0 0; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.org-target + .move-bar { margin-bottom: 4px; }
