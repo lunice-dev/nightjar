@@ -3239,6 +3239,11 @@ html.full-screen .fp-backdrop, html.full-screen .sheet-backdrop, html.full-scree
   .full-player.rail { --art: clamp(220px, calc(100vh - 340px), 520px); }
 }
 
+/* The tracklist spans the same rows as the cover and the buttons. A long one (25 tracks) stretches those rows to its own height, so the column grows taller than the window and the cover's top and the top bar are pushed out of view: its size is ignored when the rows are sized, and it simply fills them (and scrolls). */
+@media (min-width: 1000px) and (min-height: 560px) and (min-aspect-ratio: 1/1) {
+  .full-player.rail .fp-body.np:not(.lyrics-on) .fp-queue.np, .full-player.rail .fp-body.np:not(.lyrics-on) .fp-details { contain: size; }
+}
+
 /* A newer copy of the page is ready (see StaleBanner) */
 .stale-banner { position: fixed; z-index: 90; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 13.5px; box-shadow: var(--shadow-pop); }
 .stale-banner button { padding: 6px 14px; border: 0; border-radius: 999px; background: var(--on-ink); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }

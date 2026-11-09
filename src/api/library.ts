@@ -518,7 +518,8 @@ export function demoLibrary(): LibraryAccess {
     tracks: async (dir) => {
       // Sample data: a made-up album, so the player can be tried (it plays silence).
       const name = dir.split(/[\\/]/).pop() ?? 'Sample album';
-      const titles = worstCase() ? WORST_TRACKS : ['Harbour Lights', 'Slow Tide', 'The Long Road In', 'Paper Moons', 'Northern Rooms', 'Low Country', 'Ember', 'Glass Houses'];
+      // The worst case is also a long album: 25 tracks, as a big release has.
+      const titles = worstCase() ? Array.from({ length: 25 }, (_, i) => (i < WORST_TRACKS.length ? WORST_TRACKS[i] : `Track number ${i + 1}`)) : ['Harbour Lights', 'Slow Tide', 'The Long Road In', 'Paper Moons', 'Northern Rooms', 'Low Country', 'Ember', 'Glass Houses'];
       return {
         dir,
         tracks: titles.map((title, i) => ({ path: `${dir}\\${String(i + 1).padStart(2, '0')} ${title}.flac`, title, artist: 'Halvard Moss', album: name.replace(/^\d{4} - /, ''), no: i + 1, disc: 0, seconds: 30, format: 'flac', bits: 16, rate: 44100, kbps: 900, size: 30_000_000 })),
